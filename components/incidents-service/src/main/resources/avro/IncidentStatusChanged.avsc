@@ -1,0 +1,64 @@
+{
+  "type": "record",
+  "name": "IncidentStatusChanged",
+  "namespace": "com.guidewire.events.incidents",
+  "doc": "Evento emitido cuando cambia el estado de un siniestro. Publicado en el topic incidents.incident-status-changed.",
+  "fields": [
+    {
+      "name": "eventId",
+      "type": "string",
+      "doc": "UUID unico del evento"
+    },
+    {
+      "name": "eventTimestamp",
+      "type": {
+        "type": "long",
+        "logicalType": "timestamp-millis"
+      },
+      "doc": "Momento de emision del evento (milisegundos desde epoch)"
+    },
+    {
+      "name": "incidentId",
+      "type": "string",
+      "doc": "UUID de la incidencia"
+    },
+    {
+      "name": "claimId",
+      "type": "string",
+      "doc": "UUID del siniestro en ClaimCenter"
+    },
+    {
+      "name": "previousStatus",
+      "type": {
+        "type": "enum",
+        "name": "IncidentStatus",
+        "namespace": "com.guidewire.events.incidents",
+        "doc": "Estados posibles de una incidencia",
+        "symbols": ["OPEN", "IN_PROGRESS", "RESOLVED", "CLOSED", "ESCALATED"]
+      },
+      "doc": "Estado anterior de la incidencia"
+    },
+    {
+      "name": "newStatus",
+      "type": "IncidentStatus",
+      "doc": "Nuevo estado de la incidencia"
+    },
+    {
+      "name": "assignedTo",
+      "type": ["null", "string"],
+      "default": null,
+      "doc": "Persona asignada a la incidencia"
+    },
+    {
+      "name": "changedBy",
+      "type": "string",
+      "doc": "Usuario o sistema que realizo el cambio"
+    },
+    {
+      "name": "reason",
+      "type": ["null", "string"],
+      "default": null,
+      "doc": "Motivo del cambio de estado"
+    }
+  ]
+}

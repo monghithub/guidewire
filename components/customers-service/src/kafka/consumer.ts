@@ -69,11 +69,11 @@ export async function startKafkaConsumer(prisma: PrismaClient): Promise<Consumer
 
         switch (topic) {
           case config.kafka.topics.customerRegistered:
-            await handleCustomerRegistered(service, message.value, messageId);
+            await handleCustomerRegistered(service, message.value, messageId, prisma);
             break;
 
           case config.kafka.topics.customerStatusChanged:
-            await handleCustomerStatusChanged(service, message.value, messageId);
+            await handleCustomerStatusChanged(service, message.value, messageId, prisma);
             break;
 
           default:
@@ -100,6 +100,7 @@ async function handleCustomerRegistered(
   service: CustomerService,
   value: Buffer,
   messageId: string,
+  prisma: PrismaClient,
 ): Promise<void> {
   let event: CustomerRegisteredEvent;
 
@@ -112,6 +113,20 @@ async function handleCustomerRegistered(
   }
 
   logger.info({ email: event.email, messageId }, 'Processing CustomerRegistered event');
+
+  const sourceEvent = `customer-registered:${messageId}`;
+
+  // Idempotency check: skip if this event was already processed
+  const existing = await prisma.customer.findFirst({
+    where: { sourceEvent },
+  });
+  if (existing) {
+    logger.info(
+      { email: event.email, sourceEvent },
+      'Duplicate event detected, skipping CustomerRegistered',
+    );
+    return;
+  }
 
   const documentType = event.documentType as DocumentType;
   if (!Object.values(DocumentType).includes(documentType)) {
@@ -131,7 +146,7 @@ async function handleCustomerRegistered(
     state: event.state,
     zipCode: event.zipCode,
     country: event.country,
-    sourceEvent: `customer-registered:${messageId}`,
+    sourceEvent,
   });
 }
 
@@ -139,6 +154,7 @@ async function handleCustomerStatusChanged(
   service: CustomerService,
   value: Buffer,
   messageId: string,
+  prisma: PrismaClient,
 ): Promise<void> {
   let event: CustomerStatusChangedEvent;
 
@@ -155,6 +171,20 @@ async function handleCustomerStatusChanged(
     'Processing CustomerStatusChanged event',
   );
 
+  const sourceEvent = `customer-status-changed:${messageId}`;
+
+  // Idempotency check: skip if this event was already processed
+  const existing = await prisma.customer.findFirst({
+    where: { sourceEvent },
+  });
+  if (existing) {
+    logger.info(
+      { email: event.email, sourceEvent },
+      'Duplicate event detected, skipping CustomerStatusChanged',
+    );
+    return;
+  }
+
   const status = event.status as CustomerStatus;
   if (!Object.values(CustomerStatus).includes(status)) {
     logger.error({ status: event.status }, 'Invalid status in event');
@@ -164,7 +194,7 @@ async function handleCustomerStatusChanged(
   await service.updateStatusFromEvent(
     event.email,
     status,
-    `customer-status-changed:${messageId}`,
+    sourceEvent,
   );
 }
 

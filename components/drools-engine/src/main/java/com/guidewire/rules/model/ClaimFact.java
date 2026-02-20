@@ -23,9 +23,13 @@ public class ClaimFact {
     private LocalDate customerRegistrationDate;
     private int claimCount;
     private String priority;
+    private String claimType;          // COLLISION, THEFT, FIRE, FLOOD, LIABILITY
+    private boolean hasPoliceReport;
+    private boolean hasWitnesses;
 
     // Output fields set by rules
     private String riskLevel;
+    private int fraudScore;            // 0-100 cumulative score
 
     @Builder.Default
     private List<String> flaggedReasons = new ArrayList<>();

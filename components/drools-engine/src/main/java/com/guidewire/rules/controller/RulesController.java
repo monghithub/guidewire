@@ -29,8 +29,9 @@ public class RulesController {
     public ResponseEntity<ClaimFact> fraudCheck(@RequestBody ClaimFact claimFact) {
         log.info("Received fraud check request for claim: {}", claimFact.getClaimId());
         ClaimFact result = rulesService.evaluateFraudRules(claimFact);
-        log.info("Fraud check result for claim {}: riskLevel={}, flaggedReasons={}",
-                result.getClaimId(), result.getRiskLevel(), result.getFlaggedReasons());
+        log.info("Fraud check result for claim {}: riskLevel={}, fraudScore={}, flaggedReasons={}",
+                result.getClaimId(), result.getRiskLevel(), result.getFraudScore(),
+                result.getFlaggedReasons());
         return ResponseEntity.ok(result);
     }
 
@@ -38,8 +39,9 @@ public class RulesController {
     public ResponseEntity<PolicyFact> policyValidation(@RequestBody PolicyFact policyFact) {
         log.info("Received policy validation request for policy: {}", policyFact.getPolicyId());
         PolicyFact result = rulesService.evaluatePolicyValidation(policyFact);
-        log.info("Policy validation result for policy {}: eligible={}, rejectionReason={}",
-                result.getPolicyId(), result.isEligible(), result.getRejectionReason());
+        log.info("Policy validation result for policy {}: eligible={}, errors={}, rejectionReason={}",
+                result.getPolicyId(), result.isEligible(), result.getValidationErrors(),
+                result.getRejectionReason());
         return ResponseEntity.ok(result);
     }
 
@@ -47,17 +49,19 @@ public class RulesController {
     public ResponseEntity<CommissionFact> commissionCalculation(@RequestBody CommissionFact commissionFact) {
         log.info("Received commission calculation request for product: {}", commissionFact.getProductType());
         CommissionFact result = rulesService.evaluateCommissionRules(commissionFact);
-        log.info("Commission result for product {}: {}%",
-                result.getProductType(), result.getCommissionPercentage());
+        log.info("Commission result for product {}: {}% (tier={}, amount={})",
+                result.getProductType(), result.getCommissionPercentage(),
+                result.getCommissionTier(), result.getCommissionAmount());
         return ResponseEntity.ok(result);
     }
 
     @PostMapping("/incident-routing")
     public ResponseEntity<IncidentRoutingFact> incidentRouting(@RequestBody IncidentRoutingFact routingFact) {
-        log.info("Received incident routing request for priority: {}", routingFact.getPriority());
+        log.info("Received incident routing request: priority={}, severity={}, customerTier={}",
+                routingFact.getPriority(), routingFact.getSeverity(), routingFact.getCustomerTier());
         IncidentRoutingFact result = rulesService.evaluateRoutingRules(routingFact);
-        log.info("Routing result for priority {}: assignedTeam={}",
-                result.getPriority(), result.getAssignedTeam());
+        log.info("Routing result: assignedTeam={}, slaHours={}, escalated={}",
+                result.getAssignedTeam(), result.getSlaHours(), result.isEscalated());
         return ResponseEntity.ok(result);
     }
 }

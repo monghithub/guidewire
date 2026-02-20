@@ -1,0 +1,135 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<definitions xmlns="http://schemas.xmlsoap.org/wsdl/"
+             xmlns:soap="http://schemas.xmlsoap.org/wsdl/soap/"
+             xmlns:tns="http://guidewire.com/policycenter/ws"
+             xmlns:xsd="http://www.w3.org/2001/XMLSchema"
+             name="PolicyCenterService"
+             targetNamespace="http://guidewire.com/policycenter/ws">
+
+    <types>
+        <xsd:schema targetNamespace="http://guidewire.com/policycenter/ws">
+            <xsd:element name="GetPolicyRequest">
+                <xsd:complexType>
+                    <xsd:sequence>
+                        <xsd:element name="policyNumber" type="xsd:string"/>
+                    </xsd:sequence>
+                </xsd:complexType>
+            </xsd:element>
+            <xsd:element name="GetPolicyResponse">
+                <xsd:complexType>
+                    <xsd:sequence>
+                        <xsd:element name="policyNumber" type="xsd:string"/>
+                        <xsd:element name="policyType" type="xsd:string"/>
+                        <xsd:element name="status" type="xsd:string"/>
+                        <xsd:element name="effectiveDate" type="xsd:string"/>
+                        <xsd:element name="expirationDate" type="xsd:string"/>
+                        <xsd:element name="premium" type="xsd:decimal"/>
+                        <xsd:element name="customerId" type="xsd:string"/>
+                    </xsd:sequence>
+                </xsd:complexType>
+            </xsd:element>
+            <xsd:element name="CreatePolicyRequest">
+                <xsd:complexType>
+                    <xsd:sequence>
+                        <xsd:element name="policyType" type="xsd:string"/>
+                        <xsd:element name="customerId" type="xsd:string"/>
+                        <xsd:element name="effectiveDate" type="xsd:string"/>
+                        <xsd:element name="expirationDate" type="xsd:string"/>
+                        <xsd:element name="premium" type="xsd:decimal"/>
+                    </xsd:sequence>
+                </xsd:complexType>
+            </xsd:element>
+            <xsd:element name="CreatePolicyResponse">
+                <xsd:complexType>
+                    <xsd:sequence>
+                        <xsd:element name="policyNumber" type="xsd:string"/>
+                        <xsd:element name="status" type="xsd:string"/>
+                        <xsd:element name="message" type="xsd:string"/>
+                    </xsd:sequence>
+                </xsd:complexType>
+            </xsd:element>
+            <xsd:element name="ListPoliciesRequest">
+                <xsd:complexType>
+                    <xsd:sequence>
+                        <xsd:element name="customerId" type="xsd:string" minOccurs="0"/>
+                    </xsd:sequence>
+                </xsd:complexType>
+            </xsd:element>
+            <xsd:element name="ListPoliciesResponse">
+                <xsd:complexType>
+                    <xsd:sequence>
+                        <xsd:element name="policy" maxOccurs="unbounded" minOccurs="0">
+                            <xsd:complexType>
+                                <xsd:sequence>
+                                    <xsd:element name="policyNumber" type="xsd:string"/>
+                                    <xsd:element name="policyType" type="xsd:string"/>
+                                    <xsd:element name="status" type="xsd:string"/>
+                                    <xsd:element name="premium" type="xsd:decimal"/>
+                                </xsd:sequence>
+                            </xsd:complexType>
+                        </xsd:element>
+                    </xsd:sequence>
+                </xsd:complexType>
+            </xsd:element>
+        </xsd:schema>
+    </types>
+
+    <message name="GetPolicyInput">
+        <part name="parameters" element="tns:GetPolicyRequest"/>
+    </message>
+    <message name="GetPolicyOutput">
+        <part name="parameters" element="tns:GetPolicyResponse"/>
+    </message>
+    <message name="CreatePolicyInput">
+        <part name="parameters" element="tns:CreatePolicyRequest"/>
+    </message>
+    <message name="CreatePolicyOutput">
+        <part name="parameters" element="tns:CreatePolicyResponse"/>
+    </message>
+    <message name="ListPoliciesInput">
+        <part name="parameters" element="tns:ListPoliciesRequest"/>
+    </message>
+    <message name="ListPoliciesOutput">
+        <part name="parameters" element="tns:ListPoliciesResponse"/>
+    </message>
+
+    <portType name="PolicyCenterPortType">
+        <operation name="getPolicy">
+            <input message="tns:GetPolicyInput"/>
+            <output message="tns:GetPolicyOutput"/>
+        </operation>
+        <operation name="createPolicy">
+            <input message="tns:CreatePolicyInput"/>
+            <output message="tns:CreatePolicyOutput"/>
+        </operation>
+        <operation name="listPolicies">
+            <input message="tns:ListPoliciesInput"/>
+            <output message="tns:ListPoliciesOutput"/>
+        </operation>
+    </portType>
+
+    <binding name="PolicyCenterBinding" type="tns:PolicyCenterPortType">
+        <soap:binding style="document" transport="http://schemas.xmlsoap.org/soap/http"/>
+        <operation name="getPolicy">
+            <soap:operation soapAction="http://guidewire.com/policycenter/ws/getPolicy"/>
+            <input><soap:body use="literal"/></input>
+            <output><soap:body use="literal"/></output>
+        </operation>
+        <operation name="createPolicy">
+            <soap:operation soapAction="http://guidewire.com/policycenter/ws/createPolicy"/>
+            <input><soap:body use="literal"/></input>
+            <output><soap:body use="literal"/></output>
+        </operation>
+        <operation name="listPolicies">
+            <soap:operation soapAction="http://guidewire.com/policycenter/ws/listPolicies"/>
+            <input><soap:body use="literal"/></input>
+            <output><soap:body use="literal"/></output>
+        </operation>
+    </binding>
+
+    <service name="PolicyCenterService">
+        <port name="PolicyCenterPort" binding="tns:PolicyCenterBinding">
+            <soap:address location="http://localhost:8083/ws/policycenter"/>
+        </port>
+    </service>
+</definitions>

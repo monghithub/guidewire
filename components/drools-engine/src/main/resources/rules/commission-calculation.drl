@@ -1,8 +1,15 @@
 package com.guidewire.rules.commission;
 
 import com.guidewire.rules.model.CommissionFact;
+import java.math.BigDecimal;
 
-// Base commission rates by product type
+// =============================================================================
+// COMMISSION CALCULATION RULES
+// Calculates agent commissions based on product type, premium amount,
+// sales channel, agent tier, and experience
+// =============================================================================
+
+// --- Base commission rates by product type (highest priority) ---
 
 rule "AutoCommission"
     salience 100
@@ -10,6 +17,8 @@ rule "AutoCommission"
         $commission : CommissionFact(productType == "AUTO", commissionPercentage == 0.0)
     then
         $commission.setCommissionPercentage(5.0);
+        $commission.setCommissionTier("BASE");
+        $commission.addAppliedRule("Base AUTO rate: 5.0%");
         update($commission);
 end
 
@@ -19,6 +28,8 @@ rule "HomeCommission"
         $commission : CommissionFact(productType == "HOME", commissionPercentage == 0.0)
     then
         $commission.setCommissionPercentage(7.0);
+        $commission.setCommissionTier("BASE");
+        $commission.addAppliedRule("Base HOME rate: 7.0%");
         update($commission);
 end
 
@@ -28,6 +39,8 @@ rule "LifeCommission"
         $commission : CommissionFact(productType == "LIFE", commissionPercentage == 0.0)
     then
         $commission.setCommissionPercentage(10.0);
+        $commission.setCommissionTier("BASE");
+        $commission.addAppliedRule("Base LIFE rate: 10.0%");
         update($commission);
 end
 
@@ -37,6 +50,8 @@ rule "HealthCommission"
         $commission : CommissionFact(productType == "HEALTH", commissionPercentage == 0.0)
     then
         $commission.setCommissionPercentage(8.0);
+        $commission.setCommissionTier("BASE");
+        $commission.addAppliedRule("Base HEALTH rate: 8.0%");
         update($commission);
 end
 
@@ -46,10 +61,51 @@ rule "CommercialCommission"
         $commission : CommissionFact(productType == "COMMERCIAL", commissionPercentage == 0.0)
     then
         $commission.setCommissionPercentage(6.0);
+        $commission.setCommissionTier("BASE");
+        $commission.addAppliedRule("Base COMMERCIAL rate: 6.0%");
         update($commission);
 end
 
-// Sales channel adjustments
+// --- Premium-based bonus tiers ---
+
+rule "PlatinumPremiumBonus"
+    salience 70
+    when
+        $commission : CommissionFact(premiumAmount > 500000, commissionPercentage > 0.0)
+    then
+        $commission.setCommissionPercentage($commission.getCommissionPercentage() + 3.0);
+        $commission.setCommissionTier("PLATINUM");
+        $commission.addAppliedRule("Platinum premium bonus (+3.0%): premium > 500,000 MXN");
+        update($commission);
+end
+
+rule "GoldPremiumBonus"
+    salience 65
+    when
+        $commission : CommissionFact(premiumAmount > 200000, premiumAmount <= 500000,
+                                     commissionPercentage > 0.0,
+                                     commissionTier == "BASE" || commissionTier == null)
+    then
+        $commission.setCommissionPercentage($commission.getCommissionPercentage() + 2.0);
+        $commission.setCommissionTier("GOLD");
+        $commission.addAppliedRule("Gold premium bonus (+2.0%): premium > 200,000 MXN");
+        update($commission);
+end
+
+rule "SilverPremiumBonus"
+    salience 60
+    when
+        $commission : CommissionFact(premiumAmount > 50000, premiumAmount <= 200000,
+                                     commissionPercentage > 0.0,
+                                     commissionTier == "BASE" || commissionTier == null)
+    then
+        $commission.setCommissionPercentage($commission.getCommissionPercentage() + 1.0);
+        $commission.setCommissionTier("SILVER");
+        $commission.addAppliedRule("Silver premium bonus (+1.0%): premium > 50,000 MXN");
+        update($commission);
+end
+
+// --- Sales channel adjustments ---
 
 rule "DirectChannelDiscount"
     salience 50
@@ -57,6 +113,7 @@ rule "DirectChannelDiscount"
         $commission : CommissionFact(salesChannel == "DIRECT", commissionPercentage > 0.0)
     then
         $commission.setCommissionPercentage($commission.getCommissionPercentage() - 1.0);
+        $commission.addAppliedRule("Direct channel discount (-1.0%): no intermediary");
         update($commission);
 end
 
@@ -66,5 +123,76 @@ rule "BrokerChannelBonus"
         $commission : CommissionFact(salesChannel == "BROKER", commissionPercentage > 0.0)
     then
         $commission.setCommissionPercentage($commission.getCommissionPercentage() + 2.0);
+        $commission.addAppliedRule("Broker channel bonus (+2.0%): intermediary incentive");
+        update($commission);
+end
+
+rule "DigitalChannelDiscount"
+    salience 50
+    when
+        $commission : CommissionFact(salesChannel == "DIGITAL", commissionPercentage > 0.0)
+    then
+        $commission.setCommissionPercentage($commission.getCommissionPercentage() - 2.0);
+        $commission.addAppliedRule("Digital channel discount (-2.0%): self-service");
+        update($commission);
+end
+
+// --- Agent tier adjustments ---
+
+rule "ExecutiveAgentBonus"
+    salience 40
+    when
+        $commission : CommissionFact(agentTier == "EXECUTIVE", commissionPercentage > 0.0)
+    then
+        $commission.setCommissionPercentage($commission.getCommissionPercentage() + 2.0);
+        $commission.addAppliedRule("Executive agent tier bonus (+2.0%)");
+        update($commission);
+end
+
+rule "SeniorAgentBonus"
+    salience 40
+    when
+        $commission : CommissionFact(agentTier == "SENIOR", commissionPercentage > 0.0)
+    then
+        $commission.setCommissionPercentage($commission.getCommissionPercentage() + 1.0);
+        $commission.addAppliedRule("Senior agent tier bonus (+1.0%)");
+        update($commission);
+end
+
+// --- Experience bonus ---
+
+rule "ExperienceBonus_Veteran"
+    salience 30
+    when
+        $commission : CommissionFact(yearsOfExperience > 10, commissionPercentage > 0.0)
+    then
+        $commission.setCommissionPercentage($commission.getCommissionPercentage() + 1.5);
+        $commission.addAppliedRule("Veteran experience bonus (+1.5%): 10+ years");
+        update($commission);
+end
+
+rule "ExperienceBonus_Experienced"
+    salience 30
+    when
+        $commission : CommissionFact(yearsOfExperience > 5, yearsOfExperience <= 10,
+                                     commissionPercentage > 0.0)
+    then
+        $commission.setCommissionPercentage($commission.getCommissionPercentage() + 0.5);
+        $commission.addAppliedRule("Experience bonus (+0.5%): 5-10 years");
+        update($commission);
+end
+
+// --- Final commission amount calculation ---
+
+rule "CalculateCommissionAmount"
+    salience 1
+    when
+        $commission : CommissionFact(commissionPercentage > 0.0, premiumAmount != null,
+                                     commissionAmount == null)
+    then
+        $commission.calculateCommissionAmount();
+        $commission.addAppliedRule("Final commission: " + $commission.getCommissionPercentage() +
+                                  "% of " + $commission.getPremiumAmount() +
+                                  " = " + $commission.getCommissionAmount() + " MXN");
         update($commission);
 end

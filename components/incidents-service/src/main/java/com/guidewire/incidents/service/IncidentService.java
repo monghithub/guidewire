@@ -9,6 +9,7 @@ import com.guidewire.incidents.entity.IncidentStatus;
 import com.guidewire.incidents.entity.Priority;
 import com.guidewire.incidents.exception.InvalidStatusTransitionException;
 import com.guidewire.incidents.exception.ResourceNotFoundException;
+import com.guidewire.incidents.kafka.IncidentEventProducer;
 import com.guidewire.incidents.mapper.IncidentMapper;
 import com.guidewire.incidents.repository.IncidentRepository;
 import jakarta.enterprise.context.ApplicationScoped;
@@ -29,6 +30,9 @@ public class IncidentService {
 
     @Inject
     IncidentMapper incidentMapper;
+
+    @Inject
+    IncidentEventProducer incidentEventProducer;
 
     @Transactional
     public IncidentResponse create(CreateIncidentRequest request) {
@@ -76,15 +80,18 @@ public class IncidentService {
         Incident incident = incidentRepository.findByIdOptional(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Incident", id));
 
+        IncidentStatus previousStatus = incident.getStatus();
+        boolean statusChanged = false;
+
         if (request.getStatus() != null) {
-            IncidentStatus currentStatus = incident.getStatus();
             IncidentStatus targetStatus = request.getStatus();
 
-            if (!currentStatus.canTransitionTo(targetStatus)) {
-                throw new InvalidStatusTransitionException(currentStatus.name(), targetStatus.name());
+            if (!previousStatus.canTransitionTo(targetStatus)) {
+                throw new InvalidStatusTransitionException(previousStatus.name(), targetStatus.name());
             }
             incident.setStatus(targetStatus);
-            LOG.infof("Incident %s status changed from %s to %s", id, currentStatus, targetStatus);
+            statusChanged = true;
+            LOG.infof("Incident %s status changed from %s to %s", id, previousStatus, targetStatus);
         }
 
         if (request.getPriority() != null) {
@@ -108,6 +115,16 @@ public class IncidentService {
         }
 
         incidentRepository.persist(incident);
+
+        if (statusChanged) {
+            incidentEventProducer.publishStatusChanged(
+                    incident,
+                    previousStatus,
+                    "incidents-service",
+                    request.getResolution()
+            );
+        }
+
         return incidentMapper.toResponse(incident);
     }
 }

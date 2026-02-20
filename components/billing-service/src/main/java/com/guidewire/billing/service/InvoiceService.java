@@ -8,6 +8,7 @@ import com.guidewire.billing.entity.InvoiceItem;
 import com.guidewire.billing.entity.InvoiceStatus;
 import com.guidewire.billing.exception.InvalidStatusTransitionException;
 import com.guidewire.billing.exception.ResourceNotFoundException;
+import com.guidewire.billing.kafka.InvoiceEventProducer;
 import com.guidewire.billing.mapper.InvoiceMapper;
 import com.guidewire.billing.repository.InvoiceRepository;
 import lombok.RequiredArgsConstructor;
@@ -27,6 +28,7 @@ public class InvoiceService {
 
     private final InvoiceRepository invoiceRepository;
     private final InvoiceMapper invoiceMapper;
+    private final InvoiceEventProducer invoiceEventProducer;
 
     @Transactional
     public InvoiceResponse create(CreateInvoiceRequest request) {
@@ -69,15 +71,18 @@ public class InvoiceService {
         Invoice invoice = invoiceRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Invoice", id));
 
+        InvoiceStatus previousStatus = invoice.getStatus();
+        boolean statusChanged = false;
+
         if (request.getStatus() != null) {
-            InvoiceStatus currentStatus = invoice.getStatus();
             InvoiceStatus targetStatus = request.getStatus();
 
-            if (!currentStatus.canTransitionTo(targetStatus)) {
-                throw new InvalidStatusTransitionException(currentStatus.name(), targetStatus.name());
+            if (!previousStatus.canTransitionTo(targetStatus)) {
+                throw new InvalidStatusTransitionException(previousStatus.name(), targetStatus.name());
             }
             invoice.setStatus(targetStatus);
-            log.info("Invoice {} status changed from {} to {}", id, currentStatus, targetStatus);
+            statusChanged = true;
+            log.info("Invoice {} status changed from {} to {}", id, previousStatus, targetStatus);
         }
 
         if (request.getCurrency() != null) {
@@ -89,6 +94,16 @@ public class InvoiceService {
         }
 
         Invoice updated = invoiceRepository.save(invoice);
+
+        if (statusChanged) {
+            invoiceEventProducer.publishStatusChanged(
+                    updated,
+                    previousStatus,
+                    "billing-service",
+                    request.getSourceEvent()
+            );
+        }
+
         return invoiceMapper.toResponse(updated);
     }
 

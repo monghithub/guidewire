@@ -6,6 +6,7 @@ import {
   PaginatedResponse,
   CustomerQuery,
 } from '../types';
+import { publishCustomerStatusChanged } from '../kafka/producer';
 import logger from '../utils/logger';
 
 const VALID_STATUS_TRANSITIONS: Record<CustomerStatus, CustomerStatus[]> = {
@@ -158,12 +159,24 @@ export class CustomerService {
       }
     }
 
+    const previousStatus = existing.status;
     const customer = await this.prisma.customer.update({
       where: { id },
       data: input,
     });
 
     logger.info({ customerId: customer.id }, 'Customer updated');
+
+    if (input.status && input.status !== previousStatus) {
+      await publishCustomerStatusChanged({
+        customerId: customer.id,
+        previousStatus,
+        newStatus: customer.status,
+        changedBy: 'customers-service',
+        reason: undefined,
+      });
+    }
+
     return customer;
   }
 

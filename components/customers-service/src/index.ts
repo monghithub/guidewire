@@ -10,6 +10,7 @@ import { config } from './config';
 import { createCustomerRouter } from './routes/customer.routes';
 import { errorHandler } from './middleware/error-handler';
 import { startKafkaConsumer, stopKafkaConsumer } from './kafka/consumer';
+import { stopKafkaProducer } from './kafka/producer';
 import logger from './utils/logger';
 
 const prisma = new PrismaClient();
@@ -63,6 +64,12 @@ async function start(): Promise<void> {
           await stopKafkaConsumer();
         } catch (error) {
           logger.error({ error }, 'Error stopping Kafka consumer');
+        }
+
+        try {
+          await stopKafkaProducer();
+        } catch (error) {
+          logger.error({ error }, 'Error stopping Kafka producer');
         }
 
         try {

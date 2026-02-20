@@ -7,7 +7,6 @@ import org.kie.api.builder.KieModule;
 import org.kie.api.builder.KieRepository;
 import org.kie.api.builder.Message;
 import org.kie.api.runtime.KieContainer;
-import org.kie.api.runtime.KieSession;
 import org.kie.internal.io.ResourceFactory;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -62,13 +61,6 @@ public class DroolsConfig {
         return kieServices.newKieContainer(kieRepository.getDefaultReleaseId());
     }
 
-    @Bean
-    public KieSession kieSession(KieContainer kieContainer) {
-        KieSession kieSession = kieContainer.newKieSession();
-        log.info("Drools KieSession created with {} rules loaded",
-                kieSession.getKieBase().getKiePackages().stream()
-                        .mapToInt(p -> p.getRules().size())
-                        .sum());
-        return kieSession;
-    }
+    // Note: KieSession is NOT a singleton bean. Each rule evaluation creates
+    // a new session from kieContainer in RulesService to ensure thread safety.
 }

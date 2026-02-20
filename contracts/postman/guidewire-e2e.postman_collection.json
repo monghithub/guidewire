@@ -1,0 +1,1494 @@
+{
+  "info": {
+    "_postman_id": "gw-e2e-001",
+    "name": "Guidewire Integration POC - E2E Tests",
+    "description": "End-to-end test collection for the Guidewire Integration POC ecosystem.\n\nTests the full flow: customer registration, invoice creation, incident creation, status updates, and Kafka event verification via Kafdrop.\n\nExecute with Newman:\n```\nnewman run guidewire-e2e.postman_collection.json -e local.postman_environment.json --reporters cli,junit --reporter-junit-export reports/e2e-results.xml\n```",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "customerId",
+      "value": ""
+    },
+    {
+      "key": "invoiceId",
+      "value": ""
+    },
+    {
+      "key": "incidentId",
+      "value": ""
+    },
+    {
+      "key": "testTimestamp",
+      "value": ""
+    }
+  ],
+  "item": [
+    {
+      "name": "0 - Health Checks",
+      "description": "Verify all services are up and responding before running E2E flows.",
+      "item": [
+        {
+          "name": "Health - Billing Service",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Billing Service is reachable', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Response time is acceptable', function () {",
+                  "    pm.expect(pm.response.responseTime).to.be.below(5000);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{billing_url}}/api/v1/invoices?page=0&size=1",
+              "host": ["{{billing_url}}"],
+              "path": ["api", "v1", "invoices"],
+              "query": [
+                { "key": "page", "value": "0" },
+                { "key": "size", "value": "1" }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Health - Incidents Service",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Incidents Service is reachable', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Response time is acceptable', function () {",
+                  "    pm.expect(pm.response.responseTime).to.be.below(5000);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{incidents_url}}/api/v1/incidents?page=0&size=1",
+              "host": ["{{incidents_url}}"],
+              "path": ["api", "v1", "incidents"],
+              "query": [
+                { "key": "page", "value": "0" },
+                { "key": "size", "value": "1" }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Health - Customers Service",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Customers Service is reachable', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Response time is acceptable', function () {",
+                  "    pm.expect(pm.response.responseTime).to.be.below(5000);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{customers_url}}/api/v1/customers?page=0&size=1",
+              "host": ["{{customers_url}}"],
+              "path": ["api", "v1", "customers"],
+              "query": [
+                { "key": "page", "value": "0" },
+                { "key": "size", "value": "1" }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Health - Camel Gateway",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Camel Gateway is reachable', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{camel_url}}/actuator/health",
+              "host": ["{{camel_url}}"],
+              "path": ["actuator", "health"]
+            }
+          }
+        },
+        {
+          "name": "Health - Drools Engine",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Drools Engine is reachable', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{drools_url}}/actuator/health",
+              "host": ["{{drools_url}}"],
+              "path": ["actuator", "health"]
+            }
+          }
+        },
+        {
+          "name": "Health - Kafdrop",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Kafdrop is reachable', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Accept", "value": "application/json" }
+            ],
+            "url": {
+              "raw": "{{kafdrop_url}}/topic",
+              "host": ["{{kafdrop_url}}"],
+              "path": ["topic"]
+            }
+          }
+        },
+        {
+          "name": "Health - Apicurio Registry",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Apicurio Registry is reachable', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{apicurio_url}}/apis/registry/v2/system/info",
+              "host": ["{{apicurio_url}}"],
+              "path": ["apis", "registry", "v2", "system", "info"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "1 - Create Customer",
+      "description": "Register a new customer and verify the response.",
+      "item": [
+        {
+          "name": "Set test timestamp",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  "const ts = Date.now();",
+                  "pm.collectionVariables.set('testTimestamp', ts.toString());"
+                ],
+                "type": "text/javascript"
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "// This is a setup step; the actual request is a no-op GET",
+                  "pm.test('Test timestamp set', function () {",
+                  "    pm.expect(pm.collectionVariables.get('testTimestamp')).to.not.be.empty;",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{customers_url}}/api/v1/customers?page=0&size=1",
+              "host": ["{{customers_url}}"],
+              "path": ["api", "v1", "customers"],
+              "query": [
+                { "key": "page", "value": "0" },
+                { "key": "size", "value": "1" }
+              ]
+            }
+          }
+        },
+        {
+          "name": "POST Create Customer",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  "const ts = pm.collectionVariables.get('testTimestamp');",
+                  "pm.variables.set('uniqueEmail', 'e2e.test.' + ts + '@guidewire-poc.com');",
+                  "pm.variables.set('uniqueDoc', 'E2E' + ts.substring(ts.length - 10));"
+                ],
+                "type": "text/javascript"
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 201 Created', function () {",
+                  "    pm.response.to.have.status(201);",
+                  "});",
+                  "",
+                  "pm.test('Response has correct content type', function () {",
+                  "    pm.response.to.have.header('Content-Type', /application\\/json/);",
+                  "});",
+                  "",
+                  "const body = pm.response.json();",
+                  "",
+                  "pm.test('Response contains customerId (UUID)', function () {",
+                  "    pm.expect(body.customerId).to.be.a('string');",
+                  "    pm.expect(body.customerId).to.match(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i);",
+                  "});",
+                  "",
+                  "pm.test('Customer status is ACTIVE', function () {",
+                  "    pm.expect(body.status).to.eql('ACTIVE');",
+                  "});",
+                  "",
+                  "pm.test('Customer firstName matches', function () {",
+                  "    pm.expect(body.firstName).to.eql('Juan');",
+                  "});",
+                  "",
+                  "pm.test('Customer lastName matches', function () {",
+                  "    pm.expect(body.lastName).to.eql('Perez Martinez');",
+                  "});",
+                  "",
+                  "pm.test('Response contains createdAt timestamp', function () {",
+                  "    pm.expect(body.createdAt).to.be.a('string');",
+                  "});",
+                  "",
+                  "pm.test('Response contains updatedAt timestamp', function () {",
+                  "    pm.expect(body.updatedAt).to.be.a('string');",
+                  "});",
+                  "",
+                  "// Save customerId for subsequent requests",
+                  "if (body.customerId) {",
+                  "    pm.collectionVariables.set('customerId', body.customerId);",
+                  "    console.log('Saved customerId: ' + body.customerId);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"firstName\": \"Juan\",\n  \"lastName\": \"Perez Martinez\",\n  \"email\": \"{{uniqueEmail}}\",\n  \"phone\": \"+52-55-1234-5678\",\n  \"documentType\": \"RFC\",\n  \"documentNumber\": \"{{uniqueDoc}}\",\n  \"address\": {\n    \"street\": \"Av. Reforma 222, Piso 10\",\n    \"city\": \"Ciudad de Mexico\",\n    \"state\": \"CDMX\",\n    \"zipCode\": \"06600\",\n    \"country\": \"MX\"\n  }\n}"
+            },
+            "url": {
+              "raw": "{{customers_url}}/api/v1/customers",
+              "host": ["{{customers_url}}"],
+              "path": ["api", "v1", "customers"]
+            }
+          }
+        },
+        {
+          "name": "GET Verify Customer Created",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200 OK', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "const body = pm.response.json();",
+                  "",
+                  "pm.test('Customer ID matches saved value', function () {",
+                  "    pm.expect(body.customerId).to.eql(pm.collectionVariables.get('customerId'));",
+                  "});",
+                  "",
+                  "pm.test('Customer data is consistent', function () {",
+                  "    pm.expect(body.firstName).to.eql('Juan');",
+                  "    pm.expect(body.lastName).to.eql('Perez Martinez');",
+                  "    pm.expect(body.status).to.eql('ACTIVE');",
+                  "    pm.expect(body.documentType).to.eql('RFC');",
+                  "});",
+                  "",
+                  "pm.test('Address structure is present', function () {",
+                  "    pm.expect(body.address).to.be.an('object');",
+                  "    pm.expect(body.address.city).to.eql('Ciudad de Mexico');",
+                  "    pm.expect(body.address.country).to.eql('MX');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{customers_url}}/api/v1/customers/{{customerId}}",
+              "host": ["{{customers_url}}"],
+              "path": ["api", "v1", "customers", "{{customerId}}"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "2 - Create Invoice",
+      "description": "Create an invoice linked to the customer, then verify it.",
+      "item": [
+        {
+          "name": "POST Create Invoice",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 201 Created', function () {",
+                  "    pm.response.to.have.status(201);",
+                  "});",
+                  "",
+                  "pm.test('Response has correct content type', function () {",
+                  "    pm.response.to.have.header('Content-Type', /application\\/json/);",
+                  "});",
+                  "",
+                  "const body = pm.response.json();",
+                  "",
+                  "pm.test('Response contains invoiceId (UUID)', function () {",
+                  "    pm.expect(body.invoiceId).to.be.a('string');",
+                  "    pm.expect(body.invoiceId).to.match(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i);",
+                  "});",
+                  "",
+                  "pm.test('Invoice status is PENDING', function () {",
+                  "    pm.expect(body.status).to.eql('PENDING');",
+                  "});",
+                  "",
+                  "pm.test('Invoice totalAmount is correct', function () {",
+                  "    pm.expect(body.totalAmount).to.eql(15000.00);",
+                  "});",
+                  "",
+                  "pm.test('Invoice currency is MXN', function () {",
+                  "    pm.expect(body.currency).to.eql('MXN');",
+                  "});",
+                  "",
+                  "pm.test('Invoice has items array', function () {",
+                  "    pm.expect(body.items).to.be.an('array');",
+                  "    pm.expect(body.items.length).to.be.at.least(1);",
+                  "});",
+                  "",
+                  "pm.test('Invoice item has correct structure', function () {",
+                  "    const item = body.items[0];",
+                  "    pm.expect(item.description).to.be.a('string');",
+                  "    pm.expect(item.quantity).to.be.a('number');",
+                  "    pm.expect(item.unitPrice).to.be.a('number');",
+                  "});",
+                  "",
+                  "pm.test('Invoice customerId matches', function () {",
+                  "    pm.expect(body.customerId).to.eql(pm.collectionVariables.get('customerId'));",
+                  "});",
+                  "",
+                  "pm.test('Response contains timestamps', function () {",
+                  "    pm.expect(body.createdAt).to.be.a('string');",
+                  "    pm.expect(body.updatedAt).to.be.a('string');",
+                  "});",
+                  "",
+                  "// Save invoiceId for subsequent requests",
+                  "if (body.invoiceId) {",
+                  "    pm.collectionVariables.set('invoiceId', body.invoiceId);",
+                  "    console.log('Saved invoiceId: ' + body.invoiceId);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"policyId\": \"a1b2c3d4-e5f6-7890-abcd-ef1234567890\",\n  \"customerId\": \"{{customerId}}\",\n  \"items\": [\n    {\n      \"description\": \"Prima anual - Seguro Auto\",\n      \"quantity\": 1,\n      \"unitPrice\": 15000.00\n    }\n  ],\n  \"sourceEvent\": \"evt-e2e-test-{{testTimestamp}}\"\n}"
+            },
+            "url": {
+              "raw": "{{billing_url}}/api/v1/invoices",
+              "host": ["{{billing_url}}"],
+              "path": ["api", "v1", "invoices"]
+            }
+          }
+        },
+        {
+          "name": "GET Verify Invoice Created",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200 OK', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "const body = pm.response.json();",
+                  "",
+                  "pm.test('Invoice ID matches saved value', function () {",
+                  "    pm.expect(body.invoiceId).to.eql(pm.collectionVariables.get('invoiceId'));",
+                  "});",
+                  "",
+                  "pm.test('Invoice data is consistent', function () {",
+                  "    pm.expect(body.status).to.eql('PENDING');",
+                  "    pm.expect(body.totalAmount).to.eql(15000.00);",
+                  "    pm.expect(body.currency).to.eql('MXN');",
+                  "});",
+                  "",
+                  "pm.test('Invoice has expected policyId', function () {",
+                  "    pm.expect(body.policyId).to.eql('a1b2c3d4-e5f6-7890-abcd-ef1234567890');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{billing_url}}/api/v1/invoices/{{invoiceId}}",
+              "host": ["{{billing_url}}"],
+              "path": ["api", "v1", "invoices", "{{invoiceId}}"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "3 - Create Incident",
+      "description": "Create an incident linked to the customer, then verify it.",
+      "item": [
+        {
+          "name": "POST Create Incident",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 201 Created', function () {",
+                  "    pm.response.to.have.status(201);",
+                  "});",
+                  "",
+                  "pm.test('Response has correct content type', function () {",
+                  "    pm.response.to.have.header('Content-Type', /application\\/json/);",
+                  "});",
+                  "",
+                  "const body = pm.response.json();",
+                  "",
+                  "pm.test('Response contains incidentId (UUID)', function () {",
+                  "    pm.expect(body.incidentId).to.be.a('string');",
+                  "    pm.expect(body.incidentId).to.match(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i);",
+                  "});",
+                  "",
+                  "pm.test('Incident status is OPEN', function () {",
+                  "    pm.expect(body.status).to.eql('OPEN');",
+                  "});",
+                  "",
+                  "pm.test('Incident priority is HIGH', function () {",
+                  "    pm.expect(body.priority).to.eql('HIGH');",
+                  "});",
+                  "",
+                  "pm.test('Incident title is present', function () {",
+                  "    pm.expect(body.title).to.be.a('string');",
+                  "    pm.expect(body.title.length).to.be.at.least(5);",
+                  "});",
+                  "",
+                  "pm.test('Incident description is present', function () {",
+                  "    pm.expect(body.description).to.be.a('string');",
+                  "    pm.expect(body.description.length).to.be.at.least(10);",
+                  "});",
+                  "",
+                  "pm.test('Incident customerId matches', function () {",
+                  "    pm.expect(body.customerId).to.eql(pm.collectionVariables.get('customerId'));",
+                  "});",
+                  "",
+                  "pm.test('Response contains timestamps', function () {",
+                  "    pm.expect(body.createdAt).to.be.a('string');",
+                  "    pm.expect(body.updatedAt).to.be.a('string');",
+                  "});",
+                  "",
+                  "// Save incidentId for subsequent requests",
+                  "if (body.incidentId) {",
+                  "    pm.collectionVariables.set('incidentId', body.incidentId);",
+                  "    console.log('Saved incidentId: ' + body.incidentId);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"claimId\": \"d4e5f6a7-b8c9-0123-4567-890abcdef012\",\n  \"customerId\": \"{{customerId}}\",\n  \"title\": \"Siniestro vehicular - Investigacion requerida E2E\",\n  \"description\": \"Colision vehicular reportada en autopista Mexico-Puebla km 45. Requiere investigacion de campo. Prueba E2E automatizada.\",\n  \"priority\": \"HIGH\"\n}"
+            },
+            "url": {
+              "raw": "{{incidents_url}}/api/v1/incidents",
+              "host": ["{{incidents_url}}"],
+              "path": ["api", "v1", "incidents"]
+            }
+          }
+        },
+        {
+          "name": "GET Verify Incident Created",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200 OK', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "const body = pm.response.json();",
+                  "",
+                  "pm.test('Incident ID matches saved value', function () {",
+                  "    pm.expect(body.incidentId).to.eql(pm.collectionVariables.get('incidentId'));",
+                  "});",
+                  "",
+                  "pm.test('Incident data is consistent', function () {",
+                  "    pm.expect(body.status).to.eql('OPEN');",
+                  "    pm.expect(body.priority).to.eql('HIGH');",
+                  "    pm.expect(body.claimId).to.eql('d4e5f6a7-b8c9-0123-4567-890abcdef012');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{incidents_url}}/api/v1/incidents/{{incidentId}}",
+              "host": ["{{incidents_url}}"],
+              "path": ["api", "v1", "incidents", "{{incidentId}}"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "4 - Update Invoice Status",
+      "description": "Transition invoice from PENDING to PROCESSING, then verify.",
+      "item": [
+        {
+          "name": "PATCH Update Invoice to PROCESSING",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200 OK', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "const body = pm.response.json();",
+                  "",
+                  "pm.test('Invoice status is now PROCESSING', function () {",
+                  "    pm.expect(body.status).to.eql('PROCESSING');",
+                  "});",
+                  "",
+                  "pm.test('Invoice ID is unchanged', function () {",
+                  "    pm.expect(body.invoiceId).to.eql(pm.collectionVariables.get('invoiceId'));",
+                  "});",
+                  "",
+                  "pm.test('updatedAt has changed', function () {",
+                  "    pm.expect(body.updatedAt).to.be.a('string');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "PATCH",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"PROCESSING\"\n}"
+            },
+            "url": {
+              "raw": "{{billing_url}}/api/v1/invoices/{{invoiceId}}",
+              "host": ["{{billing_url}}"],
+              "path": ["api", "v1", "invoices", "{{invoiceId}}"]
+            }
+          }
+        },
+        {
+          "name": "PATCH Update Invoice to COMPLETED",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200 OK', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "const body = pm.response.json();",
+                  "",
+                  "pm.test('Invoice status is now COMPLETED', function () {",
+                  "    pm.expect(body.status).to.eql('COMPLETED');",
+                  "});",
+                  "",
+                  "pm.test('Invoice totalAmount preserved', function () {",
+                  "    pm.expect(body.totalAmount).to.eql(15000.00);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "PATCH",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"COMPLETED\"\n}"
+            },
+            "url": {
+              "raw": "{{billing_url}}/api/v1/invoices/{{invoiceId}}",
+              "host": ["{{billing_url}}"],
+              "path": ["api", "v1", "invoices", "{{invoiceId}}"]
+            }
+          }
+        },
+        {
+          "name": "GET Verify Invoice Final State",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200 OK', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "const body = pm.response.json();",
+                  "",
+                  "pm.test('Invoice is in COMPLETED final state', function () {",
+                  "    pm.expect(body.status).to.eql('COMPLETED');",
+                  "});",
+                  "",
+                  "pm.test('All invoice fields are present', function () {",
+                  "    pm.expect(body).to.have.property('invoiceId');",
+                  "    pm.expect(body).to.have.property('policyId');",
+                  "    pm.expect(body).to.have.property('customerId');",
+                  "    pm.expect(body).to.have.property('status');",
+                  "    pm.expect(body).to.have.property('totalAmount');",
+                  "    pm.expect(body).to.have.property('currency');",
+                  "    pm.expect(body).to.have.property('items');",
+                  "    pm.expect(body).to.have.property('createdAt');",
+                  "    pm.expect(body).to.have.property('updatedAt');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{billing_url}}/api/v1/invoices/{{invoiceId}}",
+              "host": ["{{billing_url}}"],
+              "path": ["api", "v1", "invoices", "{{invoiceId}}"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "5 - Update Incident Status",
+      "description": "Transition incident through its lifecycle: OPEN -> IN_PROGRESS -> RESOLVED -> CLOSED.",
+      "item": [
+        {
+          "name": "PATCH Update Incident to IN_PROGRESS",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200 OK', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "const body = pm.response.json();",
+                  "",
+                  "pm.test('Incident status is now IN_PROGRESS', function () {",
+                  "    pm.expect(body.status).to.eql('IN_PROGRESS');",
+                  "});",
+                  "",
+                  "pm.test('Incident assignedTo is set', function () {",
+                  "    pm.expect(body.assignedTo).to.eql('ajustador.garcia');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "PATCH",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"IN_PROGRESS\",\n  \"assignedTo\": \"ajustador.garcia\"\n}"
+            },
+            "url": {
+              "raw": "{{incidents_url}}/api/v1/incidents/{{incidentId}}",
+              "host": ["{{incidents_url}}"],
+              "path": ["api", "v1", "incidents", "{{incidentId}}"]
+            }
+          }
+        },
+        {
+          "name": "PATCH Update Incident to RESOLVED",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200 OK', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "const body = pm.response.json();",
+                  "",
+                  "pm.test('Incident status is now RESOLVED', function () {",
+                  "    pm.expect(body.status).to.eql('RESOLVED');",
+                  "});",
+                  "",
+                  "pm.test('Incident resolution is set', function () {",
+                  "    pm.expect(body.resolution).to.be.a('string');",
+                  "    pm.expect(body.resolution.length).to.be.at.least(1);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "PATCH",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"RESOLVED\",\n  \"resolution\": \"Investigacion completada. Dano total confirmado. Indemnizacion aprobada por $50,000 MXN.\"\n}"
+            },
+            "url": {
+              "raw": "{{incidents_url}}/api/v1/incidents/{{incidentId}}",
+              "host": ["{{incidents_url}}"],
+              "path": ["api", "v1", "incidents", "{{incidentId}}"]
+            }
+          }
+        },
+        {
+          "name": "PATCH Update Incident to CLOSED",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200 OK', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "const body = pm.response.json();",
+                  "",
+                  "pm.test('Incident status is now CLOSED', function () {",
+                  "    pm.expect(body.status).to.eql('CLOSED');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "PATCH",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"CLOSED\"\n}"
+            },
+            "url": {
+              "raw": "{{incidents_url}}/api/v1/incidents/{{incidentId}}",
+              "host": ["{{incidents_url}}"],
+              "path": ["api", "v1", "incidents", "{{incidentId}}"]
+            }
+          }
+        },
+        {
+          "name": "GET Verify Incident Final State",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200 OK', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "const body = pm.response.json();",
+                  "",
+                  "pm.test('Incident is in CLOSED final state', function () {",
+                  "    pm.expect(body.status).to.eql('CLOSED');",
+                  "});",
+                  "",
+                  "pm.test('All incident fields are present', function () {",
+                  "    pm.expect(body).to.have.property('incidentId');",
+                  "    pm.expect(body).to.have.property('claimId');",
+                  "    pm.expect(body).to.have.property('customerId');",
+                  "    pm.expect(body).to.have.property('status');",
+                  "    pm.expect(body).to.have.property('priority');",
+                  "    pm.expect(body).to.have.property('title');",
+                  "    pm.expect(body).to.have.property('description');",
+                  "    pm.expect(body).to.have.property('createdAt');",
+                  "    pm.expect(body).to.have.property('updatedAt');",
+                  "});",
+                  "",
+                  "pm.test('Resolution is preserved', function () {",
+                  "    pm.expect(body.resolution).to.include('Investigacion completada');",
+                  "});",
+                  "",
+                  "pm.test('AssignedTo is preserved', function () {",
+                  "    pm.expect(body.assignedTo).to.eql('ajustador.garcia');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{incidents_url}}/api/v1/incidents/{{incidentId}}",
+              "host": ["{{incidents_url}}"],
+              "path": ["api", "v1", "incidents", "{{incidentId}}"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "6 - Verify Data via GET Endpoints",
+      "description": "Query list endpoints with filters to verify created data appears correctly.",
+      "item": [
+        {
+          "name": "GET List Customers (filter by status)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200 OK', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "const body = pm.response.json();",
+                  "",
+                  "pm.test('Response has paginated structure', function () {",
+                  "    pm.expect(body).to.have.property('content');",
+                  "    pm.expect(body).to.have.property('page');",
+                  "    pm.expect(body).to.have.property('size');",
+                  "    pm.expect(body).to.have.property('totalElements');",
+                  "    pm.expect(body).to.have.property('totalPages');",
+                  "});",
+                  "",
+                  "pm.test('Content is an array', function () {",
+                  "    pm.expect(body.content).to.be.an('array');",
+                  "});",
+                  "",
+                  "pm.test('At least one ACTIVE customer exists', function () {",
+                  "    pm.expect(body.totalElements).to.be.at.least(1);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{customers_url}}/api/v1/customers?status=ACTIVE&page=0&size=20",
+              "host": ["{{customers_url}}"],
+              "path": ["api", "v1", "customers"],
+              "query": [
+                { "key": "status", "value": "ACTIVE" },
+                { "key": "page", "value": "0" },
+                { "key": "size", "value": "20" }
+              ]
+            }
+          }
+        },
+        {
+          "name": "GET List Invoices (filter by customerId)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200 OK', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "const body = pm.response.json();",
+                  "",
+                  "pm.test('Response has paginated structure', function () {",
+                  "    pm.expect(body).to.have.property('content');",
+                  "    pm.expect(body).to.have.property('page');",
+                  "    pm.expect(body).to.have.property('size');",
+                  "    pm.expect(body).to.have.property('totalElements');",
+                  "    pm.expect(body).to.have.property('totalPages');",
+                  "});",
+                  "",
+                  "pm.test('At least one invoice for this customer', function () {",
+                  "    pm.expect(body.totalElements).to.be.at.least(1);",
+                  "});",
+                  "",
+                  "pm.test('Invoice in list has expected fields', function () {",
+                  "    if (body.content.length > 0) {",
+                  "        const inv = body.content[0];",
+                  "        pm.expect(inv).to.have.property('invoiceId');",
+                  "        pm.expect(inv).to.have.property('status');",
+                  "        pm.expect(inv).to.have.property('totalAmount');",
+                  "        pm.expect(inv).to.have.property('currency');",
+                  "    }",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{billing_url}}/api/v1/invoices?customerId={{customerId}}&page=0&size=20",
+              "host": ["{{billing_url}}"],
+              "path": ["api", "v1", "invoices"],
+              "query": [
+                { "key": "customerId", "value": "{{customerId}}" },
+                { "key": "page", "value": "0" },
+                { "key": "size", "value": "20" }
+              ]
+            }
+          }
+        },
+        {
+          "name": "GET List Incidents (filter by customerId)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200 OK', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "const body = pm.response.json();",
+                  "",
+                  "pm.test('Response has paginated structure', function () {",
+                  "    pm.expect(body).to.have.property('content');",
+                  "    pm.expect(body).to.have.property('page');",
+                  "    pm.expect(body).to.have.property('size');",
+                  "    pm.expect(body).to.have.property('totalElements');",
+                  "    pm.expect(body).to.have.property('totalPages');",
+                  "});",
+                  "",
+                  "pm.test('At least one incident for this customer', function () {",
+                  "    pm.expect(body.totalElements).to.be.at.least(1);",
+                  "});",
+                  "",
+                  "pm.test('Incident in list has expected fields', function () {",
+                  "    if (body.content.length > 0) {",
+                  "        const inc = body.content[0];",
+                  "        pm.expect(inc).to.have.property('incidentId');",
+                  "        pm.expect(inc).to.have.property('status');",
+                  "        pm.expect(inc).to.have.property('priority');",
+                  "        pm.expect(inc).to.have.property('title');",
+                  "    }",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{incidents_url}}/api/v1/incidents?customerId={{customerId}}&page=0&size=20",
+              "host": ["{{incidents_url}}"],
+              "path": ["api", "v1", "incidents"],
+              "query": [
+                { "key": "customerId", "value": "{{customerId}}" },
+                { "key": "page", "value": "0" },
+                { "key": "size", "value": "20" }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "7 - Verify Kafka Messages via Kafdrop",
+      "description": "Use Kafdrop REST API to verify that Kafka topics contain messages from the E2E flows.",
+      "item": [
+        {
+          "name": "GET Kafdrop - List Topics",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200 OK', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Response is an array of topics', function () {",
+                  "    const body = pm.response.json();",
+                  "    pm.expect(body).to.be.an('array');",
+                  "});",
+                  "",
+                  "pm.test('Expected Kafka topics exist', function () {",
+                  "    const body = pm.response.json();",
+                  "    const topicNames = body.map(t => t.name);",
+                  "    const expectedTopics = [",
+                  "        'billing.invoice-created',",
+                  "        'billing.invoice-status-changed',",
+                  "        'incidents.incident-created',",
+                  "        'incidents.incident-status-changed',",
+                  "        'customers.customer-registered',",
+                  "        'customers.customer-status-changed',",
+                  "        'dlq.errors'",
+                  "    ];",
+                  "    expectedTopics.forEach(function(topic) {",
+                  "        pm.expect(topicNames, 'Missing topic: ' + topic).to.include(topic);",
+                  "    });",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Accept", "value": "application/json" }
+            ],
+            "url": {
+              "raw": "{{kafdrop_url}}/topic",
+              "host": ["{{kafdrop_url}}"],
+              "path": ["topic"]
+            }
+          }
+        },
+        {
+          "name": "GET Kafdrop - customers.customer-registered topic",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200 OK', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Topic info is returned', function () {",
+                  "    const body = pm.response.json();",
+                  "    pm.expect(body).to.have.property('name');",
+                  "    pm.expect(body.name).to.eql('customers.customer-registered');",
+                  "});",
+                  "",
+                  "pm.test('Topic has partitions', function () {",
+                  "    const body = pm.response.json();",
+                  "    pm.expect(body.partitions).to.be.an('array');",
+                  "    pm.expect(body.partitions.length).to.be.at.least(1);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Accept", "value": "application/json" }
+            ],
+            "url": {
+              "raw": "{{kafdrop_url}}/topic/customers.customer-registered",
+              "host": ["{{kafdrop_url}}"],
+              "path": ["topic", "customers.customer-registered"]
+            }
+          }
+        },
+        {
+          "name": "GET Kafdrop - billing.invoice-created topic",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200 OK', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Topic info is returned', function () {",
+                  "    const body = pm.response.json();",
+                  "    pm.expect(body).to.have.property('name');",
+                  "    pm.expect(body.name).to.eql('billing.invoice-created');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Accept", "value": "application/json" }
+            ],
+            "url": {
+              "raw": "{{kafdrop_url}}/topic/billing.invoice-created",
+              "host": ["{{kafdrop_url}}"],
+              "path": ["topic", "billing.invoice-created"]
+            }
+          }
+        },
+        {
+          "name": "GET Kafdrop - incidents.incident-created topic",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200 OK', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Topic info is returned', function () {",
+                  "    const body = pm.response.json();",
+                  "    pm.expect(body).to.have.property('name');",
+                  "    pm.expect(body.name).to.eql('incidents.incident-created');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Accept", "value": "application/json" }
+            ],
+            "url": {
+              "raw": "{{kafdrop_url}}/topic/incidents.incident-created",
+              "host": ["{{kafdrop_url}}"],
+              "path": ["topic", "incidents.incident-created"]
+            }
+          }
+        },
+        {
+          "name": "GET Kafdrop - dlq.errors topic",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200 OK', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('DLQ topic exists', function () {",
+                  "    const body = pm.response.json();",
+                  "    pm.expect(body).to.have.property('name');",
+                  "    pm.expect(body.name).to.eql('dlq.errors');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Accept", "value": "application/json" }
+            ],
+            "url": {
+              "raw": "{{kafdrop_url}}/topic/dlq.errors",
+              "host": ["{{kafdrop_url}}"],
+              "path": ["topic", "dlq.errors"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "8 - Negative Tests",
+      "description": "Verify error handling: invalid requests, not found, invalid state transitions.",
+      "item": [
+        {
+          "name": "POST Create Customer - Missing required field",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 400 Bad Request', function () {",
+                  "    pm.response.to.have.status(400);",
+                  "});",
+                  "",
+                  "const body = pm.response.json();",
+                  "",
+                  "pm.test('Error response has correct structure', function () {",
+                  "    pm.expect(body).to.have.property('error');",
+                  "    pm.expect(body).to.have.property('message');",
+                  "    pm.expect(body).to.have.property('timestamp');",
+                  "    pm.expect(body).to.have.property('path');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"firstName\": \"Incompleto\"\n}"
+            },
+            "url": {
+              "raw": "{{customers_url}}/api/v1/customers",
+              "host": ["{{customers_url}}"],
+              "path": ["api", "v1", "customers"]
+            }
+          }
+        },
+        {
+          "name": "GET Customer - Not Found",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 404 Not Found', function () {",
+                  "    pm.response.to.have.status(404);",
+                  "});",
+                  "",
+                  "const body = pm.response.json();",
+                  "",
+                  "pm.test('Error response structure is correct', function () {",
+                  "    pm.expect(body).to.have.property('error');",
+                  "    pm.expect(body).to.have.property('message');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{customers_url}}/api/v1/customers/00000000-0000-0000-0000-000000000000",
+              "host": ["{{customers_url}}"],
+              "path": ["api", "v1", "customers", "00000000-0000-0000-0000-000000000000"]
+            }
+          }
+        },
+        {
+          "name": "GET Invoice - Not Found",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 404 Not Found', function () {",
+                  "    pm.response.to.have.status(404);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{billing_url}}/api/v1/invoices/00000000-0000-0000-0000-000000000000",
+              "host": ["{{billing_url}}"],
+              "path": ["api", "v1", "invoices", "00000000-0000-0000-0000-000000000000"]
+            }
+          }
+        },
+        {
+          "name": "PATCH Invoice - Invalid State Transition (COMPLETED to PROCESSING)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 409 Conflict', function () {",
+                  "    pm.response.to.have.status(409);",
+                  "});",
+                  "",
+                  "const body = pm.response.json();",
+                  "",
+                  "pm.test('Error indicates invalid state transition', function () {",
+                  "    pm.expect(body.error).to.include('INVALID_STATE_TRANSITION');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "PATCH",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"PROCESSING\"\n}"
+            },
+            "url": {
+              "raw": "{{billing_url}}/api/v1/invoices/{{invoiceId}}",
+              "host": ["{{billing_url}}"],
+              "path": ["api", "v1", "invoices", "{{invoiceId}}"]
+            }
+          }
+        },
+        {
+          "name": "PATCH Incident - Invalid State Transition (CLOSED to IN_PROGRESS)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 409 Conflict', function () {",
+                  "    pm.response.to.have.status(409);",
+                  "});",
+                  "",
+                  "const body = pm.response.json();",
+                  "",
+                  "pm.test('Error indicates invalid state transition', function () {",
+                  "    pm.expect(body.error).to.include('INVALID_STATE_TRANSITION');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "PATCH",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"IN_PROGRESS\"\n}"
+            },
+            "url": {
+              "raw": "{{incidents_url}}/api/v1/incidents/{{incidentId}}",
+              "host": ["{{incidents_url}}"],
+              "path": ["api", "v1", "incidents", "{{incidentId}}"]
+            }
+          }
+        }
+      ]
+    }
+  ]
+}

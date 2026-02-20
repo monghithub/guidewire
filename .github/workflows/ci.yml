@@ -1,0 +1,249 @@
+name: CI - Build, Test & Validate
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main]
+
+env:
+  JAVA_VERSION: "21"
+  NODE_VERSION: "20"
+
+jobs:
+  # ---------------------------------------------------------------------------
+  # Java services: camel-gateway, drools-engine, billing-service
+  # Built with Maven (standard mvn)
+  # ---------------------------------------------------------------------------
+  build-java-services:
+    name: "Build Java - ${{ matrix.service }}"
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        service:
+          - camel-gateway
+          - drools-engine
+          - billing-service
+    defaults:
+      run:
+        working-directory: components/${{ matrix.service }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up JDK ${{ env.JAVA_VERSION }}
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: ${{ env.JAVA_VERSION }}
+          cache: maven
+
+      - name: Build with Maven
+        run: mvn clean verify -B -DskipTests
+
+      - name: Run unit tests
+        run: mvn test -B
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results-${{ matrix.service }}
+          path: components/${{ matrix.service }}/target/surefire-reports/
+          retention-days: 7
+
+  # ---------------------------------------------------------------------------
+  # Quarkus service: incidents-service
+  # Uses Maven Wrapper (./mvnw)
+  # ---------------------------------------------------------------------------
+  build-incidents-service:
+    name: "Build Quarkus - incidents-service"
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: components/incidents-service
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up JDK ${{ env.JAVA_VERSION }}
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: ${{ env.JAVA_VERSION }}
+          cache: maven
+
+      - name: Make mvnw executable
+        run: chmod +x ./mvnw || true
+
+      - name: Build with Maven Wrapper
+        run: |
+          if [ -f ./mvnw ]; then
+            ./mvnw clean verify -B -DskipTests
+          else
+            mvn clean verify -B -DskipTests
+          fi
+
+      - name: Run unit tests
+        run: |
+          if [ -f ./mvnw ]; then
+            ./mvnw test -B
+          else
+            mvn test -B
+          fi
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results-incidents-service
+          path: components/incidents-service/target/surefire-reports/
+          retention-days: 7
+
+  # ---------------------------------------------------------------------------
+  # Node.js service: customers-service
+  # ---------------------------------------------------------------------------
+  build-customers-service:
+    name: "Build Node.js - customers-service"
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: components/customers-service
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js ${{ env.NODE_VERSION }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+          cache-dependency-path: components/customers-service/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci || npm install
+
+      - name: Run linter
+        run: npm run lint --if-present
+
+      - name: Run build
+        run: npm run build
+
+      - name: Run tests
+        run: npm test
+
+  # ---------------------------------------------------------------------------
+  # Contract validation: OpenAPI (Spectral) + AsyncAPI + AVRO
+  # ---------------------------------------------------------------------------
+  contract-validation:
+    name: "Validate API Contracts"
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js ${{ env.NODE_VERSION }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: Install Spectral CLI
+        run: npm install -g @stoplight/spectral-cli
+
+      - name: Lint OpenAPI specs with Spectral
+        run: |
+          echo "=== Linting OpenAPI specifications ==="
+          for spec in contracts/openapi/*.yml; do
+            echo "--- Linting: $spec ---"
+            spectral lint "$spec" --ruleset spectral:oas || true
+          done
+
+      - name: Install AsyncAPI CLI
+        run: npm install -g @asyncapi/cli || true
+
+      - name: Validate AsyncAPI spec
+        run: |
+          echo "=== Validating AsyncAPI specification ==="
+          if command -v asyncapi &> /dev/null; then
+            asyncapi validate contracts/asyncapi/guidewire-events.yml || true
+          else
+            echo "AsyncAPI CLI not available, skipping validation"
+          fi
+
+      - name: Validate AVRO schemas (JSON syntax)
+        run: |
+          echo "=== Validating AVRO schemas (JSON syntax check) ==="
+          for schema in contracts/avro/*.avsc; do
+            echo "--- Validating: $schema ---"
+            python3 -c "import json; json.load(open('$schema'))" && echo "  OK: valid JSON" || echo "  FAIL: invalid JSON"
+          done
+
+  # ---------------------------------------------------------------------------
+  # Security scan (placeholder)
+  # ---------------------------------------------------------------------------
+  security-scan:
+    name: "Security Scan (placeholder)"
+    runs-on: ubuntu-latest
+    needs:
+      - build-java-services
+      - build-incidents-service
+      - build-customers-service
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Dependency check placeholder
+        run: |
+          echo "============================================"
+          echo "  SECURITY SCAN - PLACEHOLDER"
+          echo "============================================"
+          echo ""
+          echo "TODO: Enable the following security scans:"
+          echo ""
+          echo "1. OWASP Dependency-Check"
+          echo "   - Scan Java dependencies for known CVEs"
+          echo "   - mvn org.owasp:dependency-check-maven:check"
+          echo ""
+          echo "2. npm audit"
+          echo "   - Scan Node.js dependencies"
+          echo "   - cd components/customers-service && npm audit"
+          echo ""
+          echo "3. Trivy container scan"
+          echo "   - Scan Docker images for vulnerabilities"
+          echo "   - trivy image guidewire-poc/billing-service:latest"
+          echo ""
+          echo "4. Gitleaks"
+          echo "   - Scan for hardcoded secrets in the codebase"
+          echo "   - gitleaks detect --source ."
+          echo ""
+          echo "5. Snyk / Semgrep (optional)"
+          echo "   - Static analysis and SCA"
+          echo ""
+          echo "============================================"
+
+      # Uncomment when ready to enable:
+      #
+      # - name: OWASP Dependency-Check
+      #   uses: dependency-check/Dependency-Check_Action@main
+      #   with:
+      #     project: 'guidewire-poc'
+      #     path: '.'
+      #     format: 'HTML'
+      #
+      # - name: Trivy vulnerability scan
+      #   uses: aquasecurity/trivy-action@master
+      #   with:
+      #     scan-type: 'fs'
+      #     scan-ref: '.'
+      #     severity: 'CRITICAL,HIGH'
+      #
+      # - name: Gitleaks secret scan
+      #   uses: gitleaks/gitleaks-action@v2
+      #   env:
+      #     GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

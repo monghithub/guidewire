@@ -56,6 +56,12 @@
             "delta": 1
           },
           {
+            "pattern": "/api/v1/policies/{id}",
+            "http_method": "PATCH",
+            "metric_system_name": "policies_patch",
+            "delta": 1
+          },
+          {
             "pattern": "/api/v1/claims",
             "http_method": "GET",
             "metric_system_name": "claims_get",
@@ -71,6 +77,12 @@
             "pattern": "/api/v1/claims/{id}",
             "http_method": "GET",
             "metric_system_name": "claims_get_by_id",
+            "delta": 1
+          },
+          {
+            "pattern": "/api/v1/claims/{id}",
+            "http_method": "PATCH",
+            "metric_system_name": "claims_patch",
             "delta": 1
           },
           {
@@ -145,8 +157,8 @@
           },
           {
             "pattern": "/api/v1/invoices/{id}",
-            "http_method": "PUT",
-            "metric_system_name": "invoices_put",
+            "http_method": "PATCH",
+            "metric_system_name": "invoices_patch",
             "delta": 1
           }
         ]
@@ -209,8 +221,8 @@
           },
           {
             "pattern": "/api/v1/incidents/{id}",
-            "http_method": "PUT",
-            "metric_system_name": "incidents_put",
+            "http_method": "PATCH",
+            "metric_system_name": "incidents_patch",
             "delta": 1
           }
         ]
@@ -273,8 +285,72 @@
           },
           {
             "pattern": "/api/v1/customers/{id}",
-            "http_method": "PUT",
-            "metric_system_name": "customers_put",
+            "http_method": "PATCH",
+            "metric_system_name": "customers_patch",
+            "delta": 1
+          }
+        ]
+      }
+    },
+    {
+      "id": 5,
+      "backend_version": 1,
+      "proxy": {
+        "api_backend": "http://drools-engine:8086",
+        "hosts": ["localhost", "192.168.56.10"],
+        "backend": {
+          "endpoint": "http://localhost:8080",
+          "host": "localhost"
+        },
+        "policy_chain": [
+          {
+            "name": "apicast.policy.cors",
+            "configuration": {
+              "allow_headers": ["Content-Type", "X-API-Key", "Authorization", "Accept"],
+              "allow_methods": ["GET", "POST", "OPTIONS"],
+              "allow_origin": "*",
+              "allow_credentials": false
+            }
+          },
+          {
+            "name": "apicast.policy.rate_limit",
+            "configuration": {
+              "fixed_window_limiters": [
+                {
+                  "key": { "name": "drools-limiter" },
+                  "count": 300,
+                  "window": 60
+                }
+              ]
+            }
+          },
+          {
+            "name": "apicast.policy.apicast"
+          }
+        ],
+        "proxy_rules": [
+          {
+            "pattern": "/api/v1/rules/fraud-check",
+            "http_method": "POST",
+            "metric_system_name": "rules_fraud_check",
+            "delta": 1
+          },
+          {
+            "pattern": "/api/v1/rules/validate-policy",
+            "http_method": "POST",
+            "metric_system_name": "rules_validate_policy",
+            "delta": 1
+          },
+          {
+            "pattern": "/api/v1/rules/calculate-commission",
+            "http_method": "POST",
+            "metric_system_name": "rules_calculate_commission",
+            "delta": 1
+          },
+          {
+            "pattern": "/api/v1/rules/route-incident",
+            "http_method": "POST",
+            "metric_system_name": "rules_route_incident",
             "delta": 1
           }
         ]

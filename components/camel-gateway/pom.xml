@@ -85,6 +85,18 @@
             <artifactId>camel-platform-http-starter</artifactId>
         </dependency>
 
+        <!-- SOAP/CXF Support (Issue #46) -->
+        <dependency>
+            <groupId>org.apache.camel.springboot</groupId>
+            <artifactId>camel-cxf-soap-starter</artifactId>
+        </dependency>
+
+        <!-- XSLT Transformations (Issue #48) -->
+        <dependency>
+            <groupId>org.apache.camel.springboot</groupId>
+            <artifactId>camel-xslt-starter</artifactId>
+        </dependency>
+
         <!-- Avro + Apicurio -->
         <dependency>
             <groupId>org.apache.avro</groupId>

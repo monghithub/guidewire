@@ -1,0 +1,58 @@
+{
+  "type": "record",
+  "name": "InvoiceStatusChanged",
+  "namespace": "com.guidewire.events.billing",
+  "doc": "Evento emitido cuando cambia el estado de una factura en BillingCenter. Publicado en el topic billing.invoice-status-changed.",
+  "fields": [
+    {
+      "name": "eventId",
+      "type": "string",
+      "doc": "UUID unico del evento"
+    },
+    {
+      "name": "eventTimestamp",
+      "type": {
+        "type": "long",
+        "logicalType": "timestamp-millis"
+      },
+      "doc": "Momento de emision del evento (milisegundos desde epoch)"
+    },
+    {
+      "name": "invoiceId",
+      "type": "string",
+      "doc": "UUID de la factura"
+    },
+    {
+      "name": "invoiceNumber",
+      "type": "string",
+      "doc": "Numero de factura legible"
+    },
+    {
+      "name": "previousStatus",
+      "type": {
+        "type": "enum",
+        "name": "InvoiceStatus",
+        "namespace": "com.guidewire.events.billing",
+        "doc": "Estados posibles de una factura en BillingCenter",
+        "symbols": ["DRAFT", "ISSUED", "SENT", "PAID", "OVERDUE", "CANCELLED", "CREDITED"]
+      },
+      "doc": "Estado anterior de la factura"
+    },
+    {
+      "name": "newStatus",
+      "type": "InvoiceStatus",
+      "doc": "Nuevo estado de la factura"
+    },
+    {
+      "name": "changedBy",
+      "type": "string",
+      "doc": "Usuario o sistema que realizo el cambio"
+    },
+    {
+      "name": "reason",
+      "type": ["null", "string"],
+      "default": null,
+      "doc": "Motivo del cambio de estado"
+    }
+  ]
+}

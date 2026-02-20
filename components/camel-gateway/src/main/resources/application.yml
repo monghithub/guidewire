@@ -43,6 +43,18 @@ activemq:
 guidewire:
   mock:
     base-url: ${GUIDEWIRE_MOCK_URL:http://mock-guidewire:8082}
+  soap:
+    policycenter:
+      wsdl: classpath:wsdl/PolicyCenter.wsdl
+      address: /ws/policycenter
+    claimcenter:
+      address: /ws/claimcenter
+    billingcenter:
+      address: /ws/billingcenter
+
+# CXF SOAP configuration
+cxf:
+  path: /ws
 
 management:
   endpoints:
@@ -67,3 +79,4 @@ logging:
     com.guidewire.integration: DEBUG
     org.apache.camel: INFO
     org.apache.kafka: WARN
+    org.apache.cxf: INFO

@@ -3,6 +3,124 @@ package com.guidewire.rules.policy;
 import com.guidewire.rules.model.PolicyFact;
 import java.math.BigDecimal;
 
+// =============================================================================
+// POLICY VALIDATION RULES
+// Validates policy creation requests: required fields, coverage limits,
+// age restrictions, and customer status
+// =============================================================================
+
+// --- Required field validations (highest priority) ---
+
+rule "RequiredField_PolicyId"
+    salience 300
+    when
+        $policy : PolicyFact(policyId == null || policyId == "")
+    then
+        $policy.setEligible(false);
+        $policy.addValidationError("Policy ID is required");
+        update($policy);
+end
+
+rule "RequiredField_CustomerId"
+    salience 300
+    when
+        $policy : PolicyFact(customerId == null || customerId == "")
+    then
+        $policy.setEligible(false);
+        $policy.addValidationError("Customer ID is required");
+        update($policy);
+end
+
+rule "RequiredField_ProductType"
+    salience 300
+    when
+        $policy : PolicyFact(productType == null || productType == "")
+    then
+        $policy.setEligible(false);
+        $policy.addValidationError("Product type is required");
+        update($policy);
+end
+
+rule "RequiredField_PremiumAmount"
+    salience 300
+    when
+        $policy : PolicyFact(premiumAmount == null)
+    then
+        $policy.setEligible(false);
+        $policy.addValidationError("Premium amount is required");
+        update($policy);
+end
+
+rule "RequiredField_CustomerName"
+    salience 300
+    when
+        $policy : PolicyFact(customerName == null || customerName == "")
+    then
+        $policy.addValidationError("Customer name is required (warning)");
+        update($policy);
+end
+
+// --- Customer status validation ---
+
+rule "CustomerNotActive"
+    salience 200
+    when
+        $policy : PolicyFact(customerStatus != null, customerStatus != "ACTIVE", eligible == true)
+    then
+        $policy.setEligible(false);
+        $policy.setRejectionReason("Customer status is not ACTIVE. Current status: " + $policy.getCustomerStatus());
+        $policy.addValidationError("Customer must have ACTIVE status. Current: " + $policy.getCustomerStatus());
+        update($policy);
+end
+
+// --- Age restriction rules ---
+
+rule "MinimumAge_Auto"
+    salience 150
+    when
+        $policy : PolicyFact(productType == "AUTO", customerAge > 0, customerAge < 18, eligible == true)
+    then
+        $policy.setEligible(false);
+        $policy.setRejectionReason("Customer must be at least 18 years old for AUTO policies");
+        $policy.addValidationError("Minimum age for AUTO policy is 18. Customer age: " + $policy.getCustomerAge());
+        update($policy);
+end
+
+rule "MinimumAge_Life"
+    salience 150
+    when
+        $policy : PolicyFact(productType == "LIFE", customerAge > 0, customerAge < 18, eligible == true)
+    then
+        $policy.setEligible(false);
+        $policy.setRejectionReason("Customer must be at least 18 years old for LIFE policies");
+        $policy.addValidationError("Minimum age for LIFE policy is 18. Customer age: " + $policy.getCustomerAge());
+        update($policy);
+end
+
+rule "MaximumAge_Life"
+    salience 150
+    when
+        $policy : PolicyFact(productType == "LIFE", customerAge > 75, eligible == true)
+    then
+        $policy.setEligible(false);
+        $policy.setRejectionReason("Customer exceeds maximum age of 75 for LIFE policies");
+        $policy.addValidationError("Maximum age for LIFE policy is 75. Customer age: " + $policy.getCustomerAge());
+        update($policy);
+end
+
+rule "MaximumAge_Health"
+    salience 150
+    when
+        $policy : PolicyFact(productType == "HEALTH", customerAge > 80, eligible == true)
+    then
+        $policy.setEligible(false);
+        $policy.setRejectionReason("Customer exceeds maximum age of 80 for HEALTH policies");
+        $policy.addValidationError("Maximum age for HEALTH policy is 80. Customer age: " + $policy.getCustomerAge());
+        update($policy);
+end
+
+// --- Coverage limit rules ---
+
 rule "MaxAutoLimit"
     salience 100
     when
@@ -10,6 +128,7 @@ rule "MaxAutoLimit"
     then
         $policy.setEligible(false);
         $policy.setRejectionReason("Premium amount exceeds maximum limit of 100,000 MXN for AUTO policies");
+        $policy.addValidationError("AUTO premium limit is 100,000 MXN. Requested: " + $policy.getPremiumAmount());
         update($policy);
 end
 
@@ -20,6 +139,7 @@ rule "MaxHomeLimit"
     then
         $policy.setEligible(false);
         $policy.setRejectionReason("Premium amount exceeds maximum limit of 500,000 MXN for HOME policies");
+        $policy.addValidationError("HOME premium limit is 500,000 MXN. Requested: " + $policy.getPremiumAmount());
         update($policy);
 end
 
@@ -30,15 +150,53 @@ rule "MaxLifeLimit"
     then
         $policy.setEligible(false);
         $policy.setRejectionReason("Premium amount exceeds maximum limit of 1,000,000 MXN for LIFE policies");
+        $policy.addValidationError("LIFE premium limit is 1,000,000 MXN. Requested: " + $policy.getPremiumAmount());
         update($policy);
 end
 
-rule "CustomerNotActive"
-    salience 200
+rule "MaxHealthLimit"
+    salience 100
     when
-        $policy : PolicyFact(customerStatus != "ACTIVE", eligible == true)
+        $policy : PolicyFact(productType == "HEALTH", premiumAmount > 300000, eligible == true)
     then
         $policy.setEligible(false);
-        $policy.setRejectionReason("Customer status is not ACTIVE. Current status: " + $policy.getCustomerStatus());
+        $policy.setRejectionReason("Premium amount exceeds maximum limit of 300,000 MXN for HEALTH policies");
+        $policy.addValidationError("HEALTH premium limit is 300,000 MXN. Requested: " + $policy.getPremiumAmount());
+        update($policy);
+end
+
+rule "MaxCommercialLimit"
+    salience 100
+    when
+        $policy : PolicyFact(productType == "COMMERCIAL", premiumAmount > 5000000, eligible == true)
+    then
+        $policy.setEligible(false);
+        $policy.setRejectionReason("Premium amount exceeds maximum limit of 5,000,000 MXN for COMMERCIAL policies");
+        $policy.addValidationError("COMMERCIAL premium limit is 5,000,000 MXN. Requested: " + $policy.getPremiumAmount());
+        update($policy);
+end
+
+// --- Minimum premium rules ---
+
+rule "MinimumPremium"
+    salience 100
+    when
+        $policy : PolicyFact(premiumAmount != null, premiumAmount < 1000, eligible == true)
+    then
+        $policy.setEligible(false);
+        $policy.setRejectionReason("Premium amount is below minimum of 1,000 MXN");
+        $policy.addValidationError("Minimum premium is 1,000 MXN. Requested: " + $policy.getPremiumAmount());
+        update($policy);
+end
+
+// --- Set rejection reason from validation errors if not already set ---
+
+rule "SetRejectionFromValidationErrors"
+    salience 1
+    when
+        $policy : PolicyFact(eligible == false, rejectionReason == null,
+                             validationErrors != null, validationErrors.size() > 0)
+    then
+        $policy.setRejectionReason($policy.getValidationErrors().get(0));
         update($policy);
 end

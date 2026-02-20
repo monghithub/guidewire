@@ -10,6 +10,6 @@ class DroolsEngineApplicationTests {
 
     @Test
     void contextLoads() {
-        // Verifies the Spring context loads successfully
+        // Verifies the Spring context loads successfully with all DRL rules compiled
     }
 }
