@@ -53,6 +53,40 @@ pg_isready -U postgres   # Retorna 0 si acepta conexiones
 
 Los datos se almacenan en el volumen nombrado `pgdata`. Sobreviven `podman-compose down` pero se eliminan con `podman-compose down -v`.
 
+## Diagrama de Bases de Datos
+
+```mermaid
+erDiagram
+    POSTGRESQL_INSTANCE ||--o{ APICURIO_DB : contains
+    POSTGRESQL_INSTANCE ||--o{ BILLING_DB : contains
+    POSTGRESQL_INSTANCE ||--o{ INCIDENTS_DB : contains
+    POSTGRESQL_INSTANCE ||--o{ CUSTOMERS_DB : contains
+
+    APICURIO_DB {
+        string user "apicurio"
+        string password "apicurio123"
+        string service "Apicurio Service Registry"
+    }
+
+    BILLING_DB {
+        string user "billing_user"
+        string password "billing123"
+        string service "Billing Service (Spring Boot)"
+    }
+
+    INCIDENTS_DB {
+        string user "incidents_user"
+        string password "incidents123"
+        string service "Incidents Service (Quarkus)"
+    }
+
+    CUSTOMERS_DB {
+        string user "customers_user"
+        string password "customers123"
+        string service "Customers Service (Node.js)"
+    }
+```
+
 ## Spec de referencia
 
 - [spec.yml](../../../infra/postgres/spec.yml)

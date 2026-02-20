@@ -34,6 +34,37 @@ Broker de mensajería JMS/AMQP para patrones request/reply, transacciones y cola
 | `claims.fraud-alerts` | anycast | Alertas de fraude generadas por Drools |
 | `notifications.outbound` | anycast | Notificaciones salientes (email, SMS) |
 
+## Diagrama de Colas y Flujo JMS
+
+```mermaid
+graph LR
+    subgraph Producers
+        CC["ClaimCenter<br/>(via Camel)"]
+        DR["Drools Engine"]
+        SVC["Microservicios"]
+    end
+
+    subgraph ActiveMQ Artemis
+        Q1["claims.invoice-requests<br/>(anycast)"]
+        Q2["claims.fraud-alerts<br/>(anycast)"]
+        Q3["notifications.outbound<br/>(anycast)"]
+    end
+
+    subgraph Consumers
+        BILLING["Billing Service"]
+        ALERT["Alert Handler"]
+        NOTIF["Notification Service<br/>(email, SMS)"]
+    end
+
+    CC -->|"JMS send"| Q1
+    DR -->|"JMS send"| Q2
+    SVC -->|"JMS send"| Q3
+
+    Q1 -->|"JMS receive"| BILLING
+    Q2 -->|"JMS receive"| ALERT
+    Q3 -->|"JMS receive"| NOTIF
+```
+
 ## Consola Web (Hawtio)
 
 - URL: http://localhost:8161/console

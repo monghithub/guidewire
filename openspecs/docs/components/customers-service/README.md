@@ -55,6 +55,26 @@ model Customer {
 }
 ```
 
+## Arquitectura de Capas
+
+```mermaid
+graph LR
+    CLIENT[Cliente HTTP] --> ROUTES[Express Routes]
+    ROUTES --> CTRL[Controller<br/>Validación Zod]
+    CTRL --> SVC[Service<br/>Lógica de negocio]
+    SVC --> PRISMA[Prisma Client<br/>ORM]
+    PRISMA --> DB[(PostgreSQL<br/>customers)]
+    KAFKA[KafkaJS<br/>Consumer] --> SVC
+
+    style CLIENT fill:#f9d,stroke:#333
+    style ROUTES fill:#ff9,stroke:#333
+    style CTRL fill:#fc9,stroke:#333
+    style SVC fill:#9cf,stroke:#333
+    style PRISMA fill:#9f9,stroke:#333
+    style DB fill:#ccc,stroke:#333
+    style KAFKA fill:#fc9,stroke:#333
+```
+
 ## Estados y Transiciones
 
 ```
@@ -62,6 +82,18 @@ ACTIVE → INACTIVE, SUSPENDED, BLOCKED
 INACTIVE → ACTIVE
 SUSPENDED → ACTIVE, BLOCKED
 BLOCKED → (requiere intervención manual)
+```
+
+```mermaid
+stateDiagram-v2
+    [*] --> ACTIVE
+    ACTIVE --> INACTIVE
+    ACTIVE --> SUSPENDED
+    ACTIVE --> BLOCKED
+    INACTIVE --> ACTIVE
+    SUSPENDED --> ACTIVE
+    SUSPENDED --> BLOCKED
+    BLOCKED --> [*] : intervención manual
 ```
 
 ## Kafka Consumers (KafkaJS)

@@ -29,10 +29,42 @@ Broker de eventos en modo **KRaft** (sin ZooKeeper). Actúa como backbone de la 
 
 ## Flujo de eventos
 
-```
-Guidewire → Camel Gateway → Kafka Topics → Microservicios
-                                 ↓
-                          Drools (fraude)
+```mermaid
+graph LR
+    GW["Guidewire"]
+    CAMEL["Camel Gateway"]
+    GW --> CAMEL
+
+    subgraph Kafka Topics
+        BIC["billing.invoice-created"]
+        BIS["billing.invoice-status-changed"]
+        IIC["incidents.incident-created"]
+        IIS["incidents.incident-status-changed"]
+        CCR["customers.customer-registered"]
+        CCS["customers.customer-status-changed"]
+        DLQ["dlq.errors"]
+    end
+
+    CAMEL --> BIC
+    CAMEL --> BIS
+    CAMEL --> IIC
+    CAMEL --> IIS
+    CAMEL --> CCR
+    CAMEL --> CCS
+
+    BIC --> BILLING["Billing Service"]
+    BIS --> BILLING
+    IIC --> INCIDENTS["Incidents Service"]
+    IIS --> INCIDENTS
+    CCR --> CUSTOMERS["Customers Service"]
+    CCS --> CUSTOMERS
+
+    BIC --> DROOLS["Drools (fraude)"]
+    IIC --> DROOLS
+
+    BILLING -.-> DLQ
+    INCIDENTS -.-> DLQ
+    CUSTOMERS -.-> DLQ
 ```
 
 ## Monitoreo — Kafdrop

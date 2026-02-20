@@ -48,6 +48,24 @@ Microservicio de incidencias implementado con Quarkus 3.8. Gestiona incidencias 
 | created_at | TIMESTAMP | Creación |
 | updated_at | TIMESTAMP | Actualización |
 
+## Arquitectura de Capas
+
+```mermaid
+graph LR
+    CLIENT[Cliente HTTP] --> RES[JAX-RS Resource<br/>REST API]
+    RES --> SVC[Service<br/>Lógica de negocio]
+    SVC --> REPO[Panache Repository<br/>Hibernate ORM]
+    REPO --> DB[(PostgreSQL<br/>incidents)]
+    KAFKA[SmallRye<br/>Reactive Messaging] --> SVC
+
+    style CLIENT fill:#f9d,stroke:#333
+    style RES fill:#ff9,stroke:#333
+    style SVC fill:#9cf,stroke:#333
+    style REPO fill:#9f9,stroke:#333
+    style DB fill:#ccc,stroke:#333
+    style KAFKA fill:#fc9,stroke:#333
+```
+
 ## Estados y Transiciones
 
 ```
@@ -56,6 +74,18 @@ OPEN → IN_PROGRESS → RESOLVED → CLOSED
   ↓    ESCALATED ↔ IN_PROGRESS
   ↓                    ↓
 CLOSED              RESOLVED → CLOSED
+```
+
+```mermaid
+stateDiagram-v2
+    [*] --> OPEN
+    OPEN --> IN_PROGRESS
+    OPEN --> CLOSED
+    IN_PROGRESS --> RESOLVED
+    IN_PROGRESS --> ESCALATED
+    ESCALATED --> IN_PROGRESS
+    RESOLVED --> CLOSED
+    CLOSED --> [*]
 ```
 
 ## Kafka Consumers (SmallRye Reactive Messaging)

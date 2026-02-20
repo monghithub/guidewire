@@ -60,6 +60,29 @@ Regla global en Apicurio: **FULL** (FORWARD + BACKWARD). Al evolucionar un schem
 - No se pueden eliminar campos requeridos
 - No se pueden cambiar tipos de campos existentes
 
+## Flujo de Evolución de Schemas
+
+```mermaid
+graph LR
+    DEV[Developer<br>modifica .avsc] --> VAL{Validación<br>FULL compatibility}
+    VAL -->|compatible| REG[Apicurio Registry<br>nueva versión]
+    VAL -->|incompatible| FAIL[Rechazado:<br>rompe contrato]
+    FAIL --> DEV
+
+    REG --> PROD[Producers<br>serializan con<br>nuevo schema]
+    REG --> CONS[Consumers<br>deserializan con<br>schema resuelto]
+
+    subgraph Reglas de Compatibilidad
+        R1[Agregar campos<br>opcionales con default]
+        R2[No eliminar<br>campos requeridos]
+        R3[No cambiar tipos<br>de campos existentes]
+    end
+
+    VAL -.->|aplica| R1
+    VAL -.->|aplica| R2
+    VAL -.->|aplica| R3
+```
+
 ## Specs de referencia
 
 - [Billing Events spec.yml](../../../design/avro/billing-events/spec.yml)

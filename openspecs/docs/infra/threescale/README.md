@@ -56,8 +56,30 @@ Retry-After: 60
 
 ## Flujo de Request
 
-```
-Cliente → 3Scale (8000) → Validar API Key → Check Rate Limit → Upstream → Respuesta
+```mermaid
+graph LR
+    CLIENT["Cliente"] --> GW["3Scale APIcast<br/>:8000"]
+
+    GW -->|"Validar API Key<br/>+ Rate Limit"| GW
+
+    subgraph "APIs Guidewire (via Camel)"
+        GW -->|"/api/v1/policies"| CAMEL["Camel Gateway<br/>:8083"]
+        GW -->|"/api/v1/claims"| CAMEL
+        GW -->|"/api/v1/gw-invoices"| CAMEL
+    end
+
+    subgraph "APIs Microservicios (directos)"
+        GW -->|"/api/v1/invoices"| BILLING["Billing Service<br/>:8082"]
+        GW -->|"/api/v1/incidents"| INCIDENTS["Incidents Service<br/>:8084"]
+        GW -->|"/api/v1/customers"| CUSTOMERS["Customers Service<br/>:8085"]
+    end
+
+    CAMEL --> PC["PolicyCenter"]
+    CAMEL --> CC["ClaimCenter"]
+    CAMEL --> BC["BillingCenter"]
+
+    style GW fill:#f96,stroke:#333
+    style CAMEL fill:#6bf,stroke:#333
 ```
 
 ## Spec de referencia

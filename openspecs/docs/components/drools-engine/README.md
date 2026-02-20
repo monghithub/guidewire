@@ -59,6 +59,40 @@ Motor de reglas de negocio basado en Drools 8.x. Evalúa reglas de fraude, valid
 | Monto > 1,000,000 MXN | specialist |
 | Default | standard-adjusters |
 
+## Flujo de Evaluación de Reglas
+
+```mermaid
+flowchart TD
+    REQ[Request desde Camel Gateway] --> API[REST API :8086]
+    API --> ROUTE{Endpoint}
+    ROUTE -->|/fraud-check| FC[fraud-detection.drl]
+    ROUTE -->|/policy-validation| PV[policy-validation.drl]
+    ROUTE -->|/commission| CC[commission-calculation.drl]
+    ROUTE -->|/incident-routing| IR[incident-routing.drl]
+
+    FC --> FC1{claimedAmount<br/>> 1,000,000?}
+    FC1 -->|Si| CRIT[CRITICAL_RISK]
+    FC1 -->|No| FC2{claimedAmount<br/>> 500,000?}
+    FC2 -->|Si| HIGH[HIGH_RISK]
+    FC2 -->|No| FC3{> 3 claims<br/>en 12 meses?}
+    FC3 -->|Si| MED[MEDIUM_RISK]
+    FC3 -->|No| FC4{Claim < 30 dias<br/>del registro?}
+    FC4 -->|Si| HIGH
+    FC4 -->|No| LOW[LOW_RISK]
+
+    IR --> IR1{Priority<br/>CRITICAL?}
+    IR1 -->|Si| SENIOR[senior-adjusters]
+    IR1 -->|No| IR2{Monto<br/>> 1,000,000?}
+    IR2 -->|Si| SPEC[specialist]
+    IR2 -->|No| STD[standard-adjusters]
+
+    style REQ fill:#ff9,stroke:#333
+    style CRIT fill:#f66,stroke:#333,color:#fff
+    style HIGH fill:#f96,stroke:#333
+    style MED fill:#fc9,stroke:#333
+    style LOW fill:#9f9,stroke:#333
+```
+
 ## Ejemplo de Invocación
 
 ```bash

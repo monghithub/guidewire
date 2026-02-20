@@ -6,35 +6,60 @@ POC de arquitectura de integración para **Guidewire InsuranceSuite**. Demuestra
 
 ## Arquitectura
 
+```mermaid
+graph TD
+    subgraph VM["VM Ubuntu 24.04 — Vagrant + libvirt/KVM · Podman + Podman Compose"]
+        threescale["3Scale API Gateway<br/>:8000"]
+        camel["Camel Gateway<br/>Apache Camel 4 + Spring Boot<br/>:8083"]
+        gw["Guidewire Mock APIs<br/>Policy / Claim / Billing"]
+        drools["Drools Rules Engine<br/>:8086"]
+        kafka["Apache Kafka — KRaft<br/>Event Backbone<br/>:9092"]
+        billing["Billing Service<br/>Spring Boot 3.3<br/>:8082"]
+        incidents["Incidents Service<br/>Quarkus 3.8<br/>:8084"]
+        customers["Customers Service<br/>Node.js 20 + TS<br/>:8085"]
+        pg["PostgreSQL :15432"]
+        support["Apicurio Registry :8081 · ActiveMQ Artemis :61616 · Kafdrop :9000"]
+
+        threescale -->|proxy| camel
+        camel -->|SOAP/REST| gw
+        camel -->|validate / route| drools
+        camel -->|produce events| kafka
+        kafka --> billing
+        kafka --> incidents
+        kafka --> customers
+        billing --> pg
+        incidents --> pg
+        customers --> pg
+    end
 ```
-┌──────────────────────────────────────────────────────────────────┐
-│  VM Ubuntu 24.04 (Vagrant + libvirt/KVM)                         │
-│  Podman + Podman Compose                                         │
-│                                                                   │
-│  ┌──────────┐    ┌──────────────┐    ┌─────────────────────┐     │
-│  │  3Scale   │───▶│ Camel Gateway │───▶│ Guidewire Mock      │     │
-│  │ (Gateway) │    │ (Integración)│    │ Policy/Claim/Billing│     │
-│  └─────┬────┘    └──────┬───────┘    └─────────────────────┘     │
-│        │                │                                         │
-│        │         ┌──────┴───────┐                                │
-│        │         │   Drools      │                                │
-│        │         │ (Reglas)      │                                │
-│        │         └──────┬───────┘                                │
-│        │                │                                         │
-│  ┌─────┴────────────────┴────────────────────────────────┐       │
-│  │                    Apache Kafka                         │       │
-│  │                 (Event Backbone)                        │       │
-│  └─────┬──────────────┬──────────────┬───────────────────┘       │
-│        │              │              │                            │
-│  ┌─────┴─────┐  ┌─────┴─────┐  ┌────┴──────┐                   │
-│  │  Billing   │  │ Incidents  │  │ Customers  │                   │
-│  │ Spring Boot│  │  Quarkus   │  │  Node.js   │                   │
-│  └─────┬─────┘  └─────┬─────┘  └────┬──────┘                   │
-│        └──────────────┴──────────────┘                            │
-│                    PostgreSQL                                     │
-│                                                                   │
-│  Apicurio (Registry) · ActiveMQ Artemis · Kafdrop                │
-└──────────────────────────────────────────────────────────────────┘
+
+### Flujo de datos entre componentes
+
+```mermaid
+sequenceDiagram
+    participant Client as External Consumer
+    participant GW as 3Scale Gateway
+    participant Camel as Camel Gateway
+    participant Drools as Drools Engine
+    participant GWire as Guidewire Mock
+    participant Kafka as Apache Kafka
+    participant Billing as Billing Service
+    participant Incidents as Incidents Service
+    participant Customers as Customers Service
+
+    Client->>GW: API Request
+    GW->>Camel: Proxy (rate-limited)
+    Camel->>GWire: SOAP/REST call
+    Camel->>Drools: Validate / evaluate rules
+    Drools-->>Camel: Validation result + flags
+    Camel->>Kafka: Produce AVRO event
+    par Fan-out to microservices
+        Kafka->>Billing: billing.invoice-created
+        Kafka->>Incidents: incidents.incident-created
+        Kafka->>Customers: customers.customer-registered
+    end
+    Camel-->>GW: HTTP response
+    GW-->>Client: API Response
 ```
 
 ---

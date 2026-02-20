@@ -61,6 +61,36 @@ spring.kafka.consumer.value-deserializer: io.apicurio.registry.serde.avro.AvroKa
 apicurio.registry.url: http://apicurio:8080/apis/registry/v2
 ```
 
+## Diagrama de Flujo del Schema Registry
+
+```mermaid
+graph LR
+    subgraph Registro
+        DEV["Developer"] -->|"POST schema"| API["Apicurio REST API<br/>:8081"]
+        API -->|"Validate compatibility<br/>(FULL)"| DB["PostgreSQL<br/>(apicurio DB)"]
+    end
+
+    subgraph Runtime
+        PRODUCER["Kafka Producer"] -->|"1. Lookup schema"| API
+        API -->|"2. Return schema"| PRODUCER
+        PRODUCER -->|"3. Serialize (AVRO)"| KAFKA["Kafka Broker"]
+        KAFKA -->|"4. Consume"| CONSUMER["Kafka Consumer"]
+        CONSUMER -->|"5. Lookup schema"| API
+        API -->|"6. Return schema"| CONSUMER
+        CONSUMER -->|"7. Deserialize (AVRO)"| CONSUMER
+    end
+
+    subgraph Artifact Groups
+        G1["guidewire<br/>6 AVRO schemas"]
+        G2["guidewire-openapi<br/>6 OpenAPI specs"]
+        G3["guidewire-asyncapi<br/>1 AsyncAPI spec"]
+    end
+
+    DB --- G1
+    DB --- G2
+    DB --- G3
+```
+
 ## Momentos de Validación
 
 1. **Registro** — Al subir un schema, se valida contra reglas de compatibilidad

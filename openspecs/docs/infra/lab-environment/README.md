@@ -6,22 +6,34 @@ Entorno de laboratorio completamente aislado. Nada se instala en el host excepto
 
 ## Arquitectura
 
-```
-HOST (tu máquina)
-  └── Vagrant + libvirt/KVM
-       └── VM Ubuntu 24.04 (20GB RAM / 8 CPUs / 80GB)
-            └── Podman + Podman Compose
-                 ├── PostgreSQL
-                 ├── Kafka (KRaft)
-                 ├── Kafdrop
-                 ├── ActiveMQ Artemis
-                 ├── Apicurio Registry
-                 ├── 3Scale (APIcast)
-                 ├── Camel Gateway
-                 ├── Drools Engine
-                 ├── Billing Service
-                 ├── Incidents Service
-                 └── Customers Service
+```mermaid
+graph TD
+    HOST["HOST (tu máquina)"]
+    HOST --> VAGRANT["Vagrant + libvirt/KVM"]
+    VAGRANT --> VM["VM Ubuntu 24.04<br/>20GB RAM / 8 CPUs / 80GB"]
+    VM --> PODMAN["Podman + Podman Compose"]
+
+    PODMAN --> INFRA_GROUP["Infraestructura"]
+    PODMAN --> APP_GROUP["Aplicaciones"]
+
+    INFRA_GROUP --> PG["PostgreSQL"]
+    INFRA_GROUP --> KAFKA["Kafka (KRaft)"]
+    INFRA_GROUP --> KAFDROP["Kafdrop"]
+    INFRA_GROUP --> AMQ["ActiveMQ Artemis"]
+    INFRA_GROUP --> APICURIO["Apicurio Registry"]
+    INFRA_GROUP --> THREESCALE["3Scale (APIcast)"]
+
+    APP_GROUP --> CAMEL["Camel Gateway"]
+    APP_GROUP --> DROOLS["Drools Engine"]
+    APP_GROUP --> BILLING["Billing Service"]
+    APP_GROUP --> INCIDENTS["Incidents Service"]
+    APP_GROUP --> CUSTOMERS["Customers Service"]
+
+    style HOST fill:#f9f,stroke:#333
+    style VM fill:#bbf,stroke:#333
+    style PODMAN fill:#bfb,stroke:#333
+    style INFRA_GROUP fill:#fdb,stroke:#333
+    style APP_GROUP fill:#bdf,stroke:#333
 ```
 
 ## Requisitos del Host

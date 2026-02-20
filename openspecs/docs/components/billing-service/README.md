@@ -56,12 +56,42 @@ Microservicio de facturación implementado con Spring Boot 3.3. Gestiona factura
 | unit_price | DECIMAL(10,2) | Precio unitario |
 | subtotal | DECIMAL(10,2) | Subtotal |
 
+## Arquitectura de Capas
+
+```mermaid
+graph LR
+    CLIENT[Cliente HTTP] --> CTRL[Controller<br/>REST API]
+    CTRL --> SVC[Service<br/>Lógica de negocio]
+    SVC --> REPO[Repository<br/>Spring Data JPA]
+    REPO --> DB[(PostgreSQL<br/>billing)]
+    KAFKA[Kafka Consumer] --> SVC
+
+    style CLIENT fill:#f9d,stroke:#333
+    style CTRL fill:#ff9,stroke:#333
+    style SVC fill:#9cf,stroke:#333
+    style REPO fill:#9f9,stroke:#333
+    style DB fill:#ccc,stroke:#333
+    style KAFKA fill:#fc9,stroke:#333
+```
+
 ## Estados y Transiciones
 
 ```
 PENDING → PROCESSING → COMPLETED
    ↓          ↓
 CANCELLED   FAILED → PENDING (retry)
+```
+
+```mermaid
+stateDiagram-v2
+    [*] --> PENDING
+    PENDING --> PROCESSING
+    PENDING --> CANCELLED
+    PROCESSING --> COMPLETED
+    PROCESSING --> FAILED
+    FAILED --> PENDING : retry
+    COMPLETED --> [*]
+    CANCELLED --> [*]
 ```
 
 ## Kafka Consumers

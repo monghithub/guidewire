@@ -16,6 +16,52 @@ Especificación AsyncAPI 3.0 que documenta todos los canales de eventos Kafka de
 | customers-customer-status-changed | `customers.customer-status-changed` | Camel Gateway | Customers Service |
 | dlq-errors | `dlq.errors` | Todos | Monitoring |
 
+## Diagrama de Canales
+
+```mermaid
+graph TD
+    CG[Camel Gateway]
+
+    subgraph Billing Channels
+        T1[billing.invoice-created]
+        T2[billing.invoice-status-changed]
+    end
+
+    subgraph Incidents Channels
+        T3[incidents.incident-created]
+        T4[incidents.incident-status-changed]
+    end
+
+    subgraph Customers Channels
+        T5[customers.customer-registered]
+        T6[customers.customer-status-changed]
+    end
+
+    T7[dlq.errors]
+
+    CG -->|publish| T1
+    CG -->|publish| T2
+    CG -->|publish| T3
+    CG -->|publish| T4
+    CG -->|publish| T5
+    CG -->|publish| T6
+
+    T1 -->|subscribe| BS[Billing Service]
+    T2 -->|subscribe| BS
+    T3 -->|subscribe| IS[Incidents Service]
+    T3 -->|subscribe| DR[Drools]
+    T4 -->|subscribe| IS
+    T5 -->|subscribe| CSvc[Customers Service]
+    T5 -->|subscribe| BS
+    T5 -->|subscribe| IS
+    T6 -->|subscribe| CSvc
+
+    BS -.->|errors| T7
+    IS -.->|errors| T7
+    CSvc -.->|errors| T7
+    T7 -->|subscribe| MON[Monitoring]
+```
+
 ## Serialización
 
 Todos los mensajes usan serialización **AVRO binaria** con schema ID resuelto desde Apicurio Service Registry.

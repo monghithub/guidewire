@@ -6,40 +6,44 @@ Especificaciones como fuente de verdad para el desarrollo Spec-Driven con IA del
 
 ## Arquitectura del Laboratorio
 
-```
-┌──────────────────────────────────────────────────────────────┐
-│  HOST (tu máquina)                                           │
-│  Solo: Vagrant + libvirt/KVM                                 │
-│                                                               │
-│  ┌────────────────────────────────────────────────────────┐  │
-│  │  VM Ubuntu 24.04 — 20GB RAM / 8 CPUs / 80GB disco     │  │
-│  │  Podman + Podman Compose                               │  │
-│  │                                                         │  │
-│  │  ┌─────────┐  ┌──────────┐  ┌───────────┐             │  │
-│  │  │ 3Scale  │→ │  Camel   │→ │ Guidewire │             │  │
-│  │  │ Gateway │  │ Gateway  │  │   Mock    │             │  │
-│  │  └────┬────┘  └────┬─────┘  └───────────┘             │  │
-│  │       │            │                                    │  │
-│  │       │     ┌──────┴──────┐                            │  │
-│  │       │     │   Drools    │                            │  │
-│  │       │     │  (Reglas)   │                            │  │
-│  │       │     └──────┬──────┘                            │  │
-│  │       │            │                                    │  │
-│  │  ┌────┴────────────┴──────────────────────┐            │  │
-│  │  │              Apache Kafka               │            │  │
-│  │  │          (Event Backbone)               │            │  │
-│  │  └────┬──────────┬──────────┬─────────────┘            │  │
-│  │       │          │          │                           │  │
-│  │  ┌────┴───┐ ┌────┴────┐ ┌──┴───────┐                 │  │
-│  │  │Billing │ │Incidents│ │Customers │                  │  │
-│  │  │ Spring │ │ Quarkus │ │ Node.js  │                  │  │
-│  │  └────┬───┘ └────┬────┘ └──┬───────┘                  │  │
-│  │       └──────────┴─────────┘                           │  │
-│  │              PostgreSQL                                │  │
-│  │                                                         │  │
-│  │  Apicurio (Registry) · ActiveMQ · Kafdrop              │  │
-│  └────────────────────────────────────────────────────────┘  │
-└──────────────────────────────────────────────────────────────┘
+```mermaid
+graph TD
+    subgraph HOST["HOST — Tu maquina"]
+        direction TB
+        vagrant["Vagrant + libvirt/KVM"]
+
+        subgraph VM["VM Ubuntu 24.04 — 20GB RAM / 8 CPUs / 80GB disco"]
+            direction TB
+            podman["Podman + Podman Compose"]
+
+            subgraph services["Servicios Containerizados"]
+                direction TB
+                threescale["3Scale Gateway<br/>:8000"]
+                camel["Camel Gateway<br/>:8083"]
+                gwmock["Guidewire Mock<br/>Policy/Claim/Billing"]
+                drools["Drools Engine<br/>:8086"]
+                kafka["Apache Kafka — KRaft<br/>:9092"]
+                billing["Billing Service<br/>Spring Boot :8082"]
+                incidents["Incidents Service<br/>Quarkus :8084"]
+                customers["Customers Service<br/>Node.js :8085"]
+                pg["PostgreSQL :15432"]
+                support["Apicurio :8081 · ActiveMQ :61616 · Kafdrop :9000"]
+
+                threescale --> camel
+                camel --> gwmock
+                camel --> drools
+                camel --> kafka
+                kafka --> billing
+                kafka --> incidents
+                kafka --> customers
+                billing --> pg
+                incidents --> pg
+                customers --> pg
+            end
+        end
+
+        vagrant --> VM
+    end
 ```
 
 ---

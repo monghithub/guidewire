@@ -22,6 +22,36 @@
 | Incidents | `incidents-service-api.yml` | `/api/v1/incidents` | Incident |
 | Customers | `customers-service-api.yml` | `/api/v1/customers` | Customer, Address |
 
+## Relaciones entre APIs
+
+```mermaid
+graph LR
+    subgraph Guidewire Mock APIs
+        PC[PolicyCenter<br>/api/v1/policies]
+        CC[ClaimCenter<br>/api/v1/claims]
+        BC[BillingCenter<br>/api/v1/gw-invoices]
+    end
+
+    subgraph Microservices APIs
+        BS[Billing Service<br>/api/v1/invoices]
+        IS[Incidents Service<br>/api/v1/incidents]
+        CS[Customers Service<br>/api/v1/customers]
+    end
+
+    CG[Camel Gateway]
+
+    PC -->|policy data| CG
+    CC -->|claim data| CG
+    BC -->|invoice data| CG
+
+    CG -->|transform & route| BS
+    CG -->|transform & route| IS
+    CG -->|transform & route| CS
+
+    BS -.->|references| CS
+    IS -.->|references| CS
+```
+
 ## Generación de Código
 
 ### Java (Spring Boot / Quarkus)

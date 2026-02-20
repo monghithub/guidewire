@@ -29,76 +29,41 @@ The system follows these architectural principles:
 
 ## Component Interaction Diagram
 
-```
-                          External Consumers
-                                 |
-                                 v
-                    +------------------------+
-                    |    3Scale API Gateway   |  :8000 (proxy) / :8001 (mgmt)
-                    |       (APIcast)         |
-                    +----------+-------------+
-                               |
-                               v
-                    +------------------------+
-                    |    Camel Gateway        |  :8083
-                    | (Apache Camel 4 + Boot) |
-                    |                        |
-                    | Routes:                |
-                    |  - PolicyCenter (SOAP) |
-                    |  - ClaimCenter  (REST) |
-                    |  - BillingCenter(REST) |
-                    +--+--------+--------+--+
-                       |        |        |
-                       v        |        v
-          +-----------+--+      |     +--+-----------+
-          | Guidewire    |      |     | Drools       |  :8086
-          | Mock APIs    |      |     | Rules Engine |
-          | (Policy/     |      |     | (Validation, |
-          |  Claim/      |      |     |  Fraud,      |
-          |  Billing)    |      |     |  Routing)    |
-          +--------------+      |     +--------------+
-                                |
-                                v
-     +----------------------------------------------------------+
-     |                   Apache Kafka (KRaft)                    |  :9092
-     |                                                          |
-     |  Topics:                                                 |
-     |    billing.invoice-created                               |
-     |    billing.invoice-status-changed                        |
-     |    incidents.incident-created                            |
-     |    incidents.incident-status-changed                     |
-     |    customers.customer-registered                         |
-     |    customers.customer-status-changed                     |
-     |    dlq.errors                                            |
-     +-----+------------------+-----------------+--------------+
-           |                  |                 |
-           v                  v                 v
-   +-------+------+  +-------+-------+  +------+--------+
-   | Billing      |  | Incidents     |  | Customers     |
-   | Service      |  | Service       |  | Service       |
-   | (Spring Boot)|  | (Quarkus)     |  | (Node.js/TS)  |
-   | :8082        |  | :8084         |  | :8085         |
-   +-------+------+  +-------+-------+  +------+--------+
-           |                  |                 |
-           +------------------+-----------------+
-                              |
-                              v
-                    +-------------------+
-                    |    PostgreSQL      |  :15432
-                    |                   |
-                    | Databases:        |
-                    |  - billing_db     |
-                    |  - incidents_db   |
-                    |  - customers_db   |
-                    |  - apicurio       |
-                    +-------------------+
+```mermaid
+graph TD
+    consumers["External Consumers"]
+    consumers --> threescale
 
-   Supporting Services:
-   +------------------+  +------------------+  +------------------+
-   | Apicurio         |  | ActiveMQ Artemis |  | Kafdrop          |
-   | Schema Registry  |  | (JMS Messaging)  |  | (Kafka UI)       |
-   | :8081            |  | :61616 / :8161   |  | :9000            |
-   +------------------+  +------------------+  +------------------+
+    threescale["3Scale API Gateway — APIcast<br/>:8000 / :8001"]
+    threescale --> camel
+
+    camel["Camel Gateway<br/>Apache Camel 4 + Spring Boot :8083<br/>Routes: PolicyCenter SOAP · ClaimCenter REST · BillingCenter REST"]
+    camel --> gwmock
+    camel --> drools
+    camel --> kafka
+
+    gwmock["Guidewire Mock APIs<br/>Policy / Claim / Billing"]
+    drools["Drools Rules Engine :8086<br/>Validation · Fraud · Routing"]
+
+    kafka["Apache Kafka — KRaft :9092<br/>Topics: billing.invoice-created · billing.invoice-status-changed<br/>incidents.incident-created · incidents.incident-status-changed<br/>customers.customer-registered · customers.customer-status-changed · dlq.errors"]
+
+    kafka --> billing
+    kafka --> incidents
+    kafka --> customers
+
+    billing["Billing Service<br/>Spring Boot :8082"]
+    incidents["Incidents Service<br/>Quarkus :8084"]
+    customers["Customers Service<br/>Node.js/TS :8085"]
+
+    billing --> pg
+    incidents --> pg
+    customers --> pg
+
+    pg["PostgreSQL :15432<br/>billing_db · incidents_db · customers_db · apicurio"]
+
+    apicurio["Apicurio Schema Registry :8081"]
+    activemq["ActiveMQ Artemis :61616 / :8161"]
+    kafdrop["Kafdrop — Kafka UI :9000"]
 ```
 
 ---
@@ -109,120 +74,116 @@ The system follows these architectural principles:
 
 This flow demonstrates how a policy created in PolicyCenter triggers invoice creation in the billing microservice.
 
-```
- PolicyCenter        Camel Gateway       Drools Engine       Kafka                Billing Service
-      |                    |                   |                |                       |
-      |  SOAP/REST req     |                   |                |                       |
-      |------------------->|                   |                |                       |
-      |                    |  validate policy  |                |                       |
-      |                    |------------------>|                |                       |
-      |                    |  validation result|                |                       |
-      |                    |<------------------|                |                       |
-      |                    |                   |                |                       |
-      |                    |  [if valid]       |                |                       |
-      |                    |  Transform SOAP   |                |                       |
-      |                    |  to AVRO          |                |                       |
-      |                    |                   |                |                       |
-      |                    |  Produce event    |                |                       |
-      |                    |---------------------------------->|                       |
-      |                    |   billing.invoice-created         |                       |
-      |                    |                   |                |                       |
-      |  HTTP 201          |                   |                |  Consume event        |
-      |<-------------------|                   |                |---------------------->|
-      |                    |                   |                |                       |
-      |                    |                   |                |  Create invoice       |
-      |                    |                   |                |  (status: PENDING)    |
-      |                    |                   |                |  Store in PostgreSQL  |
-      |                    |                   |                |                       |
+```mermaid
+sequenceDiagram
+    participant PC as PolicyCenter
+    participant CG as Camel Gateway
+    participant DR as Drools Engine
+    participant KF as Kafka
+    participant BS as Billing Service
 
-  State Machine (Invoice):
-  PENDING --> PROCESSING --> COMPLETED
-  PENDING --> CANCELLED
-  PROCESSING --> FAILED
-  FAILED --> PENDING (retry)
+    PC->>CG: SOAP/REST request
+    CG->>DR: Validate policy
+    DR-->>CG: Validation result
+    Note over CG: [if valid] Transform SOAP to AVRO
+    CG->>KF: Produce billing.invoice-created
+    CG-->>PC: HTTP 201
+    KF->>BS: Consume event
+    Note over BS: Create invoice (status: PENDING)<br/>Store in PostgreSQL
+```
+
+#### Invoice State Machine
+
+```mermaid
+stateDiagram-v2
+    [*] --> PENDING
+    PENDING --> PROCESSING
+    PENDING --> CANCELLED
+    PROCESSING --> COMPLETED
+    PROCESSING --> FAILED
+    FAILED --> PENDING : retry
+    COMPLETED --> [*]
+    CANCELLED --> [*]
 ```
 
 ### Flow 2: Claim Processing and Incident Management
 
 This flow shows how a claim from ClaimCenter creates an incident, goes through fraud detection rules, and progresses through the incident lifecycle.
 
-```
- ClaimCenter         Camel Gateway       Drools Engine       Kafka                Incidents Service
-      |                    |                   |                |                       |
-      |  REST POST claim   |                   |                |                       |
-      |------------------->|                   |                |                       |
-      |                    |  evaluate fraud   |                |                       |
-      |                    |  + routing rules  |                |                       |
-      |                    |------------------>|                |                       |
-      |                    |  priority + flags |                |                       |
-      |                    |<------------------|                |                       |
-      |                    |                   |                |                       |
-      |                    |  Transform to     |                |                       |
-      |                    |  AVRO + enrich    |                |                       |
-      |                    |  with priority    |                |                       |
-      |                    |                   |                |                       |
-      |                    |  Produce event    |                |                       |
-      |                    |---------------------------------->|                       |
-      |                    |   incidents.incident-created      |                       |
-      |                    |                   |                |                       |
-      |  HTTP 201          |                   |                |  Consume event        |
-      |<-------------------|                   |                |---------------------->|
-      |                    |                   |                |                       |
-      |                    |                   |                |  Create incident      |
-      |                    |                   |                |  (status: OPEN)       |
-      |                    |                   |                |  Store in PostgreSQL  |
-      |                    |                   |                |                       |
+```mermaid
+sequenceDiagram
+    participant CC as ClaimCenter
+    participant CG as Camel Gateway
+    participant DR as Drools Engine
+    participant KF as Kafka
+    participant IS as Incidents Service
 
-  State Machine (Incident):
-  OPEN --> IN_PROGRESS --> RESOLVED --> CLOSED
-  OPEN --> ESCALATED
-  IN_PROGRESS --> ESCALATED
-  ESCALATED --> IN_PROGRESS
-  ESCALATED --> RESOLVED
+    CC->>CG: REST POST claim
+    CG->>DR: Evaluate fraud + routing rules
+    DR-->>CG: Priority + flags
+    Note over CG: Transform to AVRO<br/>Enrich with priority
+    CG->>KF: Produce incidents.incident-created
+    CG-->>CC: HTTP 201
+    KF->>IS: Consume event
+    Note over IS: Create incident (status: OPEN)<br/>Store in PostgreSQL
+```
+
+#### Incident State Machine
+
+```mermaid
+stateDiagram-v2
+    [*] --> OPEN
+    OPEN --> IN_PROGRESS
+    OPEN --> ESCALATED
+    IN_PROGRESS --> RESOLVED
+    IN_PROGRESS --> ESCALATED
+    ESCALATED --> IN_PROGRESS
+    ESCALATED --> RESOLVED
+    RESOLVED --> CLOSED
+    CLOSED --> [*]
 ```
 
 ### Flow 3: Customer Registration (Cross-Domain)
 
 This flow illustrates customer registration and how the event is consumed by multiple services for cross-domain data synchronization.
 
-```
- API Client           Camel Gateway       Kafka                 Customers       Billing        Incidents
-      |                    |                |                    Service         Service        Service
-      |  POST customer     |                |                       |               |              |
-      |------------------->|                |                       |               |              |
-      |                    |  Produce event |                       |               |              |
-      |                    |--------------->|                       |               |              |
-      |                    | customers.     |                       |               |              |
-      |                    | customer-      |                       |               |              |
-      |                    | registered     |                       |               |              |
-      |                    |                |                       |               |              |
-      |  HTTP 201          |                |  Consume (group:      |               |              |
-      |<-------------------|                |  customers-svc-group) |               |              |
-      |                    |                |---------------------->|               |              |
-      |                    |                |                       |               |              |
-      |                    |                |  Register customer    |               |              |
-      |                    |                |  (status: ACTIVE)     |               |              |
-      |                    |                |  Store in PostgreSQL  |               |              |
-      |                    |                |                       |               |              |
-      |                    |                |  Consume (group:      |               |              |
-      |                    |                |  billing-svc-group)   |               |              |
-      |                    |                |-------------------------------------->|              |
-      |                    |                |                       |               |              |
-      |                    |                |  Cache customer ref   |               |              |
-      |                    |                |  for invoice linking  |               |              |
-      |                    |                |                       |               |              |
-      |                    |                |  Consume (group:      |               |              |
-      |                    |                |  incidents-svc-group) |               |              |
-      |                    |                |----------------------------------------------------->|
-      |                    |                |                       |               |              |
-      |                    |                |  Cache customer ref   |               |              |
-      |                    |                |  for incident linking |               |              |
+```mermaid
+sequenceDiagram
+    participant Client as API Client
+    participant CG as Camel Gateway
+    participant KF as Kafka
+    participant CS as Customers Service
+    participant BS as Billing Service
+    participant IS as Incidents Service
 
-  State Machine (Customer):
-  ACTIVE --> INACTIVE --> ACTIVE
-  ACTIVE --> SUSPENDED --> ACTIVE
-  ACTIVE --> SUSPENDED --> BLOCKED
-  ACTIVE --> BLOCKED
+    Client->>CG: POST customer
+    CG->>KF: Produce customers.customer-registered
+    CG-->>Client: HTTP 201
+
+    par customers-svc-group
+        KF->>CS: Consume event
+        Note over CS: Register customer (ACTIVE)<br/>Store in PostgreSQL
+    and billing-svc-group
+        KF->>BS: Consume event
+        Note over BS: Cache customer ref<br/>for invoice linking
+    and incidents-svc-group
+        KF->>IS: Consume event
+        Note over IS: Cache customer ref<br/>for incident linking
+    end
+```
+
+#### Customer State Machine
+
+```mermaid
+stateDiagram-v2
+    [*] --> ACTIVE
+    ACTIVE --> INACTIVE
+    INACTIVE --> ACTIVE
+    ACTIVE --> SUSPENDED
+    SUSPENDED --> ACTIVE
+    SUSPENDED --> BLOCKED
+    ACTIVE --> BLOCKED
+    BLOCKED --> [*]
 ```
 
 ---

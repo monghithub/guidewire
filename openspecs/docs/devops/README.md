@@ -9,29 +9,17 @@
 
 ### Jobs
 
-```
-┌─────────────────────┐     ┌────────────────────┐
-│ build-java-services │     │ build-node-service  │
-│ (matrix: 4 services)│     │ (customers-service) │
-└──────────┬──────────┘     └──────────┬──────────┘
-           │                           │
-           └────────────┬──────────────┘
-                        │
-              ┌─────────┴──────────┐
-              │ contract-validation │
-              │ security-scan       │
-              └─────────┬──────────┘
-                        │
-              ┌─────────┴──────────┐
-              │   docker-build     │
-              │ (matrix: 5 images) │
-              └─────────┬──────────┘
-                        │
-              ┌─────────┴──────────┐
-              │    e2e-tests       │
-              │ (docker compose +  │
-              │  newman)           │
-              └────────────────────┘
+```mermaid
+graph TD
+    BJ[build-java-services<br>matrix: 4 services] --> CV[contract-validation]
+    BN[build-node-service<br>customers-service] --> CV
+    BJ --> SS[security-scan]
+    BN --> SS
+
+    CV --> DB[docker-build<br>matrix: 5 images]
+    SS --> DB
+
+    DB --> E2E[e2e-tests<br>docker compose + newman]
 ```
 
 ### Validación de Contratos
