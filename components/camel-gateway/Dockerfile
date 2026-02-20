@@ -6,7 +6,8 @@ WORKDIR /app
 COPY pom.xml .
 COPY src ./src
 
-RUN apt-get update && apt-get install -y maven && \
+RUN mkdir -p src/main/resources/avro && \
+    apt-get update && apt-get install -y maven && \
     mvn clean package -DskipTests -Dopenapi.generator.maven.plugin.skip=true -B
 
 # Stage 2: Runtime
