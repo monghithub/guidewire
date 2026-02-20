@@ -7,7 +7,7 @@ COPY pom.xml .
 COPY src ./src
 
 RUN apt-get update && apt-get install -y maven && \
-    mvn clean package -DskipTests -Dopenapi.generator.maven.plugin.skip=true -B
+    mvn clean package -DskipTests -Dcodegen.skip=true -B
 
 # Stage 2: Runtime
 FROM eclipse-temurin:21-jre-alpine
