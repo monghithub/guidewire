@@ -1,0 +1,652 @@
+openapi: "3.1.0"
+info:
+  title: Camel Integration Gateway API
+  version: "1.0.0"
+  description: |
+    API REST del gateway de integracion basado en Apache Camel.
+
+    Este componente actua como proxy de integracion hacia los sistemas
+    Guidewire (PolicyCenter, ClaimCenter y BillingCenter), exponiendo
+    endpoints REST unificados que internamente enrutan las peticiones
+    a los servicios correspondientes mediante rutas Camel.
+
+    ## Sistemas integrados
+
+    - **PolicyCenter** - Gestion de polizas (`/api/v1/policies`)
+    - **ClaimCenter** - Gestion de reclamos (`/api/v1/claims`)
+    - **BillingCenter** - Gestion de facturas GW (`/api/v1/gw-invoices`)
+  contact:
+    name: Camel Integration Gateway Team
+  license:
+    name: Apache 2.0
+    url: https://www.apache.org/licenses/LICENSE-2.0
+
+servers:
+  - url: http://localhost:8083
+    description: Local development server
+
+paths:
+  # ── PolicyCenter Proxy ───────────────────────────────────────
+  /api/v1/policies:
+    get:
+      operationId: listPolicies
+      summary: Listar polizas
+      description: Retorna una lista de polizas desde Guidewire PolicyCenter.
+      tags:
+        - Policies
+      parameters:
+        - name: page
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 0
+            default: 0
+        - name: size
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+      responses:
+        "200":
+          description: Lista de polizas
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Policy"
+        "500":
+          description: Error interno del servidor
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+    post:
+      operationId: createPolicy
+      summary: Crear poliza
+      description: Crea una nueva poliza en Guidewire PolicyCenter.
+      tags:
+        - Policies
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreatePolicyRequest"
+      responses:
+        "201":
+          description: Poliza creada exitosamente
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Policy"
+        "400":
+          description: Solicitud invalida
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "500":
+          description: Error interno del servidor
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /api/v1/policies/{id}:
+    get:
+      operationId: getPolicyById
+      summary: Obtener poliza por ID
+      description: Retorna una poliza especifica desde Guidewire PolicyCenter.
+      tags:
+        - Policies
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Identificador de la poliza
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Poliza encontrada
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Policy"
+        "404":
+          description: Poliza no encontrada
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "500":
+          description: Error interno del servidor
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+    patch:
+      operationId: updatePolicy
+      summary: Actualizar poliza
+      description: Actualiza una poliza existente en Guidewire PolicyCenter.
+      tags:
+        - Policies
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Identificador de la poliza
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdatePolicyRequest"
+      responses:
+        "200":
+          description: Poliza actualizada exitosamente
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Policy"
+        "400":
+          description: Solicitud invalida
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Poliza no encontrada
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "500":
+          description: Error interno del servidor
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  # ── ClaimCenter Proxy ────────────────────────────────────────
+  /api/v1/claims:
+    get:
+      operationId: listClaims
+      summary: Listar reclamos
+      description: Retorna una lista de reclamos desde Guidewire ClaimCenter.
+      tags:
+        - Claims
+      parameters:
+        - name: page
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 0
+            default: 0
+        - name: size
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+      responses:
+        "200":
+          description: Lista de reclamos
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Claim"
+        "500":
+          description: Error interno del servidor
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+    post:
+      operationId: createClaim
+      summary: Crear reclamo
+      description: Crea un nuevo reclamo en Guidewire ClaimCenter.
+      tags:
+        - Claims
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateClaimRequest"
+      responses:
+        "201":
+          description: Reclamo creado exitosamente
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Claim"
+        "400":
+          description: Solicitud invalida
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "500":
+          description: Error interno del servidor
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /api/v1/claims/{id}:
+    get:
+      operationId: getClaimById
+      summary: Obtener reclamo por ID
+      description: Retorna un reclamo especifico desde Guidewire ClaimCenter.
+      tags:
+        - Claims
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Identificador del reclamo
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Reclamo encontrado
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Claim"
+        "404":
+          description: Reclamo no encontrado
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "500":
+          description: Error interno del servidor
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  # ── BillingCenter Proxy ──────────────────────────────────────
+  /api/v1/gw-invoices:
+    get:
+      operationId: listGwInvoices
+      summary: Listar facturas GW
+      description: Retorna una lista de facturas desde Guidewire BillingCenter.
+      tags:
+        - GW Invoices
+      parameters:
+        - name: page
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 0
+            default: 0
+        - name: size
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+      responses:
+        "200":
+          description: Lista de facturas GW
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/GwInvoice"
+        "500":
+          description: Error interno del servidor
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+    post:
+      operationId: createGwInvoice
+      summary: Crear factura GW
+      description: Crea una nueva factura en Guidewire BillingCenter.
+      tags:
+        - GW Invoices
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateGwInvoiceRequest"
+      responses:
+        "201":
+          description: Factura GW creada exitosamente
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GwInvoice"
+        "400":
+          description: Solicitud invalida
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "500":
+          description: Error interno del servidor
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /api/v1/gw-invoices/{id}:
+    get:
+      operationId: getGwInvoiceById
+      summary: Obtener factura GW por ID
+      description: Retorna una factura especifica desde Guidewire BillingCenter.
+      tags:
+        - GW Invoices
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Identificador de la factura GW
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Factura GW encontrada
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GwInvoice"
+        "404":
+          description: Factura GW no encontrada
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "500":
+          description: Error interno del servidor
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+components:
+  schemas:
+    # ── Policy schemas ───────────────────────────────────────────
+    Policy:
+      type: object
+      properties:
+        id:
+          type: string
+          description: Identificador de la poliza
+          example: "POL-2024-001"
+        policyNumber:
+          type: string
+          description: Numero de poliza
+          example: "GW-POL-00001"
+        customerId:
+          type: string
+          description: Identificador del cliente
+          example: "CUST-001"
+        productType:
+          type: string
+          description: Tipo de producto
+          example: "AUTO"
+        status:
+          type: string
+          description: Estado de la poliza
+          example: "ACTIVE"
+        premiumAmount:
+          type: number
+          format: double
+          description: Monto de la prima
+          example: 12000.00
+        coverageLimit:
+          type: number
+          format: double
+          description: Limite de cobertura
+          example: 500000.00
+        effectiveDate:
+          type: string
+          format: date
+          description: Fecha de inicio de vigencia
+          example: "2024-01-01"
+        expirationDate:
+          type: string
+          format: date
+          description: Fecha de fin de vigencia
+          example: "2025-01-01"
+
+    CreatePolicyRequest:
+      type: object
+      required:
+        - customerId
+        - productType
+        - premiumAmount
+        - coverageLimit
+      properties:
+        customerId:
+          type: string
+          description: Identificador del cliente
+        productType:
+          type: string
+          description: Tipo de producto
+        premiumAmount:
+          type: number
+          format: double
+          description: Monto de la prima
+        coverageLimit:
+          type: number
+          format: double
+          description: Limite de cobertura
+        effectiveDate:
+          type: string
+          format: date
+          description: Fecha de inicio de vigencia
+        expirationDate:
+          type: string
+          format: date
+          description: Fecha de fin de vigencia
+
+    UpdatePolicyRequest:
+      type: object
+      properties:
+        status:
+          type: string
+          description: Nuevo estado de la poliza
+        premiumAmount:
+          type: number
+          format: double
+          description: Nuevo monto de la prima
+        coverageLimit:
+          type: number
+          format: double
+          description: Nuevo limite de cobertura
+        expirationDate:
+          type: string
+          format: date
+          description: Nueva fecha de fin de vigencia
+
+    # ── Claim schemas ────────────────────────────────────────────
+    Claim:
+      type: object
+      properties:
+        id:
+          type: string
+          description: Identificador del reclamo
+          example: "CLM-2024-001"
+        claimNumber:
+          type: string
+          description: Numero de reclamo
+          example: "GW-CLM-00001"
+        policyId:
+          type: string
+          description: Identificador de la poliza asociada
+          example: "POL-2024-001"
+        customerId:
+          type: string
+          description: Identificador del cliente
+          example: "CUST-001"
+        claimType:
+          type: string
+          description: Tipo de reclamo
+          example: "COLLISION"
+        status:
+          type: string
+          description: Estado del reclamo
+          example: "OPEN"
+        claimedAmount:
+          type: number
+          format: double
+          description: Monto reclamado
+          example: 50000.00
+        incidentDate:
+          type: string
+          format: date
+          description: Fecha del incidente
+          example: "2024-03-01"
+        description:
+          type: string
+          description: Descripcion del reclamo
+          example: "Vehicle collision at intersection"
+
+    CreateClaimRequest:
+      type: object
+      required:
+        - policyId
+        - customerId
+        - claimType
+        - claimedAmount
+        - incidentDate
+      properties:
+        policyId:
+          type: string
+          description: Identificador de la poliza asociada
+        customerId:
+          type: string
+          description: Identificador del cliente
+        claimType:
+          type: string
+          description: Tipo de reclamo
+        claimedAmount:
+          type: number
+          format: double
+          description: Monto reclamado
+        incidentDate:
+          type: string
+          format: date
+          description: Fecha del incidente
+        description:
+          type: string
+          description: Descripcion del reclamo
+
+    # ── GW Invoice schemas ───────────────────────────────────────
+    GwInvoice:
+      type: object
+      properties:
+        id:
+          type: string
+          description: Identificador de la factura GW
+          example: "INV-2024-001"
+        invoiceNumber:
+          type: string
+          description: Numero de factura
+          example: "GW-INV-00001"
+        policyId:
+          type: string
+          description: Identificador de la poliza asociada
+          example: "POL-2024-001"
+        customerId:
+          type: string
+          description: Identificador del cliente
+          example: "CUST-001"
+        status:
+          type: string
+          description: Estado de la factura
+          example: "PENDING"
+        totalAmount:
+          type: number
+          format: double
+          description: Monto total de la factura
+          example: 15000.00
+        currency:
+          type: string
+          description: Codigo de moneda
+          example: "MXN"
+        dueDate:
+          type: string
+          format: date
+          description: Fecha de vencimiento
+          example: "2024-04-15"
+
+    CreateGwInvoiceRequest:
+      type: object
+      required:
+        - policyId
+        - customerId
+        - totalAmount
+      properties:
+        policyId:
+          type: string
+          description: Identificador de la poliza asociada
+        customerId:
+          type: string
+          description: Identificador del cliente
+        totalAmount:
+          type: number
+          format: double
+          description: Monto total de la factura
+        currency:
+          type: string
+          description: Codigo de moneda
+          default: "MXN"
+        dueDate:
+          type: string
+          format: date
+          description: Fecha de vencimiento
+
+    # ── Common ───────────────────────────────────────────────────
+    ErrorResponse:
+      type: object
+      required:
+        - error
+        - message
+        - timestamp
+        - path
+      properties:
+        error:
+          type: string
+          example: "VALIDATION_ERROR"
+        message:
+          type: string
+          example: "Invalid request"
+        timestamp:
+          type: string
+          format: date-time
+          example: "2024-03-15T10:00:00Z"
+        path:
+          type: string
+          example: "/api/v1/policies"
+        details:
+          type: array
+          items:
+            type: string

@@ -160,7 +160,7 @@ jobs:
           echo "=== Linting OpenAPI specifications ==="
           for spec in contracts/openapi/*.yml; do
             echo "--- Linting: $spec ---"
-            spectral lint "$spec" --ruleset spectral:oas || true
+            spectral lint "$spec" --fail-severity error
           done
 
       - name: Install AsyncAPI CLI
@@ -170,7 +170,7 @@ jobs:
         run: |
           echo "=== Validating AsyncAPI specification ==="
           if command -v asyncapi &> /dev/null; then
-            asyncapi validate contracts/asyncapi/guidewire-events.yml || true
+            asyncapi validate contracts/asyncapi/guidewire-events.yml
           else
             echo "AsyncAPI CLI not available, skipping validation"
           fi
@@ -181,6 +181,28 @@ jobs:
           for schema in contracts/avro/*.avsc; do
             echo "--- Validating: $schema ---"
             python3 -c "import json; json.load(open('$schema'))" && echo "  OK: valid JSON" || echo "  FAIL: invalid JSON"
+          done
+
+      - name: Verify OpenAPI spec references exist
+        run: |
+          echo "=== Verifying OpenAPI specs referenced by services ==="
+          specs=(
+            "contracts/openapi/billing-service-api.yml"
+            "contracts/openapi/incidents-service-api.yml"
+            "contracts/openapi/customers-service-api.yml"
+            "contracts/openapi/policycenter-api.yml"
+            "contracts/openapi/claimcenter-api.yml"
+            "contracts/openapi/billingcenter-api.yml"
+            "contracts/openapi/drools-engine-api.yml"
+            "contracts/openapi/camel-gateway-api.yml"
+          )
+          for spec in "${specs[@]}"; do
+            if [ -f "$spec" ]; then
+              echo "  OK: $spec"
+            else
+              echo "  FAIL: $spec not found"
+              exit 1
+            fi
           done
 
   # ---------------------------------------------------------------------------

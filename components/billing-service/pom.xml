@@ -160,7 +160,7 @@
                             <goal>generate</goal>
                         </goals>
                         <configuration>
-                            <inputSpec>${project.basedir}/../../contracts/openapi/billing-service.yml</inputSpec>
+                            <inputSpec>${project.basedir}/../../contracts/openapi/billing-service-api.yml</inputSpec>
                             <generatorName>spring</generatorName>
                             <apiPackage>com.guidewire.billing.api</apiPackage>
                             <modelPackage>com.guidewire.billing.model</modelPackage>

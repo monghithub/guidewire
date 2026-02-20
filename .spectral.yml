@@ -1,0 +1,24 @@
+extends: ["spectral:oas"]
+
+rules:
+  # --- Enforce documentation ---
+  info-description: error
+  info-contact: warn
+  operation-description: warn
+  operation-tag-defined: error
+  operation-operationId: error
+
+  # --- Naming conventions ---
+  path-keys-no-trailing-slash: error
+  no-eval-in-markdown: error
+  no-script-tags-in-markdown: error
+
+  # --- Schema validation ---
+  oas3-valid-media-example: warn
+  oas3-valid-schema-example: warn
+  oas3-schema: error
+  oas3-unused-component: warn
+
+  # --- Request/Response ---
+  operation-success-response: error
+  no-$ref-siblings: error

@@ -1,0 +1,517 @@
+openapi: "3.1.0"
+info:
+  title: Drools Rules Engine API
+  version: "1.0.0"
+  description: |
+    API REST del motor de reglas de negocio basado en Drools.
+
+    Expone endpoints para evaluar reglas de fraude, validacion de polizas,
+    calculo de comisiones y enrutamiento de incidentes. Cada endpoint recibe
+    un hecho (fact), lo evalua contra el conjunto de reglas Drools configurado
+    y retorna el resultado enriquecido con los campos de salida.
+  contact:
+    name: Drools Rules Engine Team
+  license:
+    name: Apache 2.0
+    url: https://www.apache.org/licenses/LICENSE-2.0
+
+servers:
+  - url: http://localhost:8085
+    description: Local development server
+
+paths:
+  /api/v1/rules/fraud-check:
+    post:
+      operationId: evaluateFraudCheck
+      summary: Evaluar reglas de deteccion de fraude
+      description: |
+        Recibe un ClaimFact y lo evalua contra las reglas de fraude configuradas
+        en Drools. Retorna el nivel de riesgo, puntaje de fraude y razones de alerta.
+      tags:
+        - Rules
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ClaimFactRequest"
+      responses:
+        "200":
+          description: Resultado de la evaluacion de fraude
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ClaimFactResponse"
+        "400":
+          description: Solicitud invalida
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "500":
+          description: Error interno del servidor
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /api/v1/rules/policy-validation:
+    post:
+      operationId: evaluatePolicyValidation
+      summary: Evaluar reglas de validacion de poliza
+      description: |
+        Recibe un PolicyFact y lo evalua contra las reglas de validacion
+        de polizas. Retorna si el cliente es elegible y posibles errores.
+      tags:
+        - Rules
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PolicyFactRequest"
+      responses:
+        "200":
+          description: Resultado de la validacion de poliza
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PolicyFactResponse"
+        "400":
+          description: Solicitud invalida
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "500":
+          description: Error interno del servidor
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /api/v1/rules/commission:
+    post:
+      operationId: evaluateCommission
+      summary: Evaluar reglas de calculo de comisiones
+      description: |
+        Recibe un CommissionFact y lo evalua contra las reglas de comisiones.
+        Retorna el porcentaje, monto y tier de comision calculados.
+      tags:
+        - Rules
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CommissionFactRequest"
+      responses:
+        "200":
+          description: Resultado del calculo de comision
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CommissionFactResponse"
+        "400":
+          description: Solicitud invalida
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "500":
+          description: Error interno del servidor
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /api/v1/rules/incident-routing:
+    post:
+      operationId: evaluateIncidentRouting
+      summary: Evaluar reglas de enrutamiento de incidentes
+      description: |
+        Recibe un IncidentRoutingFact y lo evalua contra las reglas de
+        enrutamiento. Retorna el equipo asignado, SLA y estado de escalamiento.
+      tags:
+        - Rules
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/IncidentRoutingFactRequest"
+      responses:
+        "200":
+          description: Resultado del enrutamiento de incidente
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/IncidentRoutingFactResponse"
+        "400":
+          description: Solicitud invalida
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "500":
+          description: Error interno del servidor
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+components:
+  schemas:
+    # ── Fraud Check ──────────────────────────────────────────────
+    ClaimType:
+      type: string
+      enum:
+        - COLLISION
+        - THEFT
+        - FIRE
+        - FLOOD
+        - LIABILITY
+
+    RiskLevel:
+      type: string
+      enum:
+        - CRITICAL_RISK
+        - HIGH_RISK
+        - MEDIUM_RISK
+        - LOW_RISK
+
+    ClaimFactRequest:
+      type: object
+      required:
+        - claimId
+        - customerId
+        - claimedAmount
+        - incidentDate
+        - customerRegistrationDate
+        - claimCount
+        - priority
+        - claimType
+        - hasPoliceReport
+        - hasWitnesses
+      properties:
+        claimId:
+          type: string
+          description: Identificador del reclamo
+          example: "CLM-2024-001"
+        customerId:
+          type: string
+          description: Identificador del cliente
+          example: "CUST-001"
+        claimedAmount:
+          type: number
+          format: double
+          description: Monto reclamado
+          example: 50000.00
+        incidentDate:
+          type: string
+          format: date
+          description: Fecha del incidente
+          example: "2024-03-01"
+        customerRegistrationDate:
+          type: string
+          format: date
+          description: Fecha de registro del cliente
+          example: "2020-01-15"
+        claimCount:
+          type: integer
+          description: Cantidad de reclamos previos del cliente
+          example: 3
+        priority:
+          type: string
+          description: Prioridad del reclamo
+          example: "HIGH"
+        claimType:
+          $ref: "#/components/schemas/ClaimType"
+        hasPoliceReport:
+          type: boolean
+          description: Indica si existe reporte policial
+          example: true
+        hasWitnesses:
+          type: boolean
+          description: Indica si existen testigos
+          example: false
+
+    ClaimFactResponse:
+      type: object
+      allOf:
+        - $ref: "#/components/schemas/ClaimFactRequest"
+        - type: object
+          properties:
+            riskLevel:
+              $ref: "#/components/schemas/RiskLevel"
+            fraudScore:
+              type: integer
+              minimum: 0
+              maximum: 100
+              description: Puntaje de fraude calculado (0-100)
+              example: 75
+            flaggedReasons:
+              type: array
+              items:
+                type: string
+              description: Razones por las que se alerto el reclamo
+              example:
+                - "High claimed amount"
+                - "Multiple recent claims"
+
+    # ── Policy Validation ────────────────────────────────────────
+    PolicyFactRequest:
+      type: object
+      required:
+        - policyId
+        - customerId
+        - productType
+        - premiumAmount
+        - coverageLimit
+        - customerStatus
+        - customerAge
+        - customerName
+        - customerEmail
+      properties:
+        policyId:
+          type: string
+          description: Identificador de la poliza
+          example: "POL-2024-001"
+        customerId:
+          type: string
+          description: Identificador del cliente
+          example: "CUST-001"
+        productType:
+          type: string
+          description: Tipo de producto
+          example: "AUTO"
+        premiumAmount:
+          type: number
+          format: double
+          description: Monto de la prima
+          example: 12000.00
+        coverageLimit:
+          type: number
+          format: double
+          description: Limite de cobertura
+          example: 500000.00
+        customerStatus:
+          type: string
+          description: Estado del cliente
+          example: "ACTIVE"
+        customerAge:
+          type: integer
+          description: Edad del cliente
+          example: 35
+        customerName:
+          type: string
+          description: Nombre del cliente
+          example: "Juan Perez"
+        customerEmail:
+          type: string
+          description: Email del cliente
+          example: "juan.perez@example.com"
+
+    PolicyFactResponse:
+      type: object
+      allOf:
+        - $ref: "#/components/schemas/PolicyFactRequest"
+        - type: object
+          properties:
+            eligible:
+              type: boolean
+              description: Indica si el cliente es elegible para la poliza
+              example: true
+            rejectionReason:
+              type:
+                - string
+                - "null"
+              description: Razon de rechazo (null si es elegible)
+              example: null
+            validationErrors:
+              type: array
+              items:
+                type: string
+              description: Lista de errores de validacion
+              example: []
+
+    # ── Commission ───────────────────────────────────────────────
+    AgentTier:
+      type: string
+      enum:
+        - JUNIOR
+        - SENIOR
+        - EXECUTIVE
+
+    CommissionTier:
+      type: string
+      enum:
+        - BASE
+        - SILVER
+        - GOLD
+        - PLATINUM
+
+    CommissionFactRequest:
+      type: object
+      required:
+        - productType
+        - premiumAmount
+        - salesChannel
+        - agentTier
+        - yearsOfExperience
+      properties:
+        productType:
+          type: string
+          description: Tipo de producto
+          example: "AUTO"
+        premiumAmount:
+          type: number
+          format: double
+          description: Monto de la prima
+          example: 25000.00
+        salesChannel:
+          type: string
+          description: Canal de venta
+          example: "DIRECT"
+        agentTier:
+          $ref: "#/components/schemas/AgentTier"
+        yearsOfExperience:
+          type: integer
+          description: Anios de experiencia del agente
+          example: 5
+
+    CommissionFactResponse:
+      type: object
+      allOf:
+        - $ref: "#/components/schemas/CommissionFactRequest"
+        - type: object
+          properties:
+            commissionPercentage:
+              type: number
+              format: double
+              description: Porcentaje de comision calculado
+              example: 12.5
+            commissionAmount:
+              type: number
+              format: double
+              description: Monto de comision calculado
+              example: 3125.00
+            commissionTier:
+              $ref: "#/components/schemas/CommissionTier"
+            appliedRules:
+              type: array
+              items:
+                type: string
+              description: Lista de reglas aplicadas
+              example:
+                - "Senior agent bonus"
+                - "Direct channel premium"
+
+    # ── Incident Routing ─────────────────────────────────────────
+    Priority:
+      type: string
+      enum:
+        - LOW
+        - MEDIUM
+        - HIGH
+        - CRITICAL
+
+    Severity:
+      type: string
+      enum:
+        - MINOR
+        - MODERATE
+        - MAJOR
+        - CATASTROPHIC
+
+    CustomerTier:
+      type: string
+      enum:
+        - STANDARD
+        - PREMIUM
+        - VIP
+
+    IncidentRoutingFactRequest:
+      type: object
+      required:
+        - priority
+        - severity
+        - claimedAmount
+        - productType
+        - customerTier
+      properties:
+        priority:
+          $ref: "#/components/schemas/Priority"
+        severity:
+          $ref: "#/components/schemas/Severity"
+        claimedAmount:
+          type: number
+          format: double
+          description: Monto reclamado
+          example: 100000.00
+        productType:
+          type: string
+          description: Tipo de producto
+          example: "AUTO"
+        customerTier:
+          $ref: "#/components/schemas/CustomerTier"
+
+    IncidentRoutingFactResponse:
+      type: object
+      allOf:
+        - $ref: "#/components/schemas/IncidentRoutingFactRequest"
+        - type: object
+          properties:
+            assignedTeam:
+              type: string
+              description: Equipo asignado para atender el incidente
+              example: "CLAIMS_SENIOR"
+            slaHours:
+              type: integer
+              description: Horas de SLA para atencion
+              example: 24
+            escalated:
+              type: boolean
+              description: Indica si el incidente fue escalado
+              example: false
+            escalationReason:
+              type:
+                - string
+                - "null"
+              description: Razon del escalamiento (null si no fue escalado)
+              example: null
+            routingNotes:
+              type: array
+              items:
+                type: string
+              description: Notas del enrutamiento
+              example:
+                - "Standard routing for AUTO product"
+                - "VIP customer priority applied"
+
+    # ── Common ───────────────────────────────────────────────────
+    ErrorResponse:
+      type: object
+      required:
+        - error
+        - message
+        - timestamp
+        - path
+      properties:
+        error:
+          type: string
+          example: "VALIDATION_ERROR"
+        message:
+          type: string
+          example: "Invalid request body"
+        timestamp:
+          type: string
+          format: date-time
+          example: "2024-03-15T10:00:00Z"
+        path:
+          type: string
+          example: "/api/v1/rules/fraud-check"
+        details:
+          type: array
+          items:
+            type: string

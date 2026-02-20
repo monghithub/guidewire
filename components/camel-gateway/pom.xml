@@ -177,13 +177,14 @@
                             <goal>generate</goal>
                         </goals>
                         <configuration>
-                            <skip>true</skip>
-                            <inputSpec>${project.basedir}/src/main/resources/openapi/guidewire-api.yml</inputSpec>
-                            <generatorName>java</generatorName>
-                            <library>resttemplate</library>
+                            <skip>false</skip>
+                            <inputSpec>${project.basedir}/../../contracts/openapi/camel-gateway-api.yml</inputSpec>
+                            <generatorName>spring</generatorName>
                             <apiPackage>com.guidewire.integration.gateway.api</apiPackage>
                             <modelPackage>com.guidewire.integration.gateway.model</modelPackage>
                             <configOptions>
+                                <interfaceOnly>true</interfaceOnly>
+                                <useSpringBoot3>true</useSpringBoot3>
                                 <useJakartaEe>true</useJakartaEe>
                             </configOptions>
                         </configuration>
