@@ -184,10 +184,10 @@ jobs:
           done
 
   # ---------------------------------------------------------------------------
-  # Security scan (placeholder)
+  # Security scans
   # ---------------------------------------------------------------------------
   security-scan:
-    name: "Security Scan (placeholder)"
+    name: "Security Scan"
     runs-on: ubuntu-latest
     needs:
       - build-java-services
@@ -198,52 +198,69 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Dependency check placeholder
-        run: |
-          echo "============================================"
-          echo "  SECURITY SCAN - PLACEHOLDER"
-          echo "============================================"
-          echo ""
-          echo "TODO: Enable the following security scans:"
-          echo ""
-          echo "1. OWASP Dependency-Check"
-          echo "   - Scan Java dependencies for known CVEs"
-          echo "   - mvn org.owasp:dependency-check-maven:check"
-          echo ""
-          echo "2. npm audit"
-          echo "   - Scan Node.js dependencies"
-          echo "   - cd components/customers-service && npm audit"
-          echo ""
-          echo "3. Trivy container scan"
-          echo "   - Scan Docker images for vulnerabilities"
-          echo "   - trivy image guidewire-poc/billing-service:latest"
-          echo ""
-          echo "4. Gitleaks"
-          echo "   - Scan for hardcoded secrets in the codebase"
-          echo "   - gitleaks detect --source ."
-          echo ""
-          echo "5. Snyk / Semgrep (optional)"
-          echo "   - Static analysis and SCA"
-          echo ""
-          echo "============================================"
+      - name: Set up Node.js ${{ env.NODE_VERSION }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
 
-      # Uncomment when ready to enable:
-      #
-      # - name: OWASP Dependency-Check
-      #   uses: dependency-check/Dependency-Check_Action@main
-      #   with:
-      #     project: 'guidewire-poc'
-      #     path: '.'
-      #     format: 'HTML'
-      #
-      # - name: Trivy vulnerability scan
-      #   uses: aquasecurity/trivy-action@master
-      #   with:
-      #     scan-type: 'fs'
-      #     scan-ref: '.'
-      #     severity: 'CRITICAL,HIGH'
-      #
-      # - name: Gitleaks secret scan
-      #   uses: gitleaks/gitleaks-action@v2
-      #   env:
-      #     GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: npm audit (Node.js dependencies)
+        continue-on-error: true
+        run: cd components/customers-service && npm audit --audit-level=high
+
+      - name: Trivy vulnerability scan (filesystem)
+        uses: aquasecurity/trivy-action@master
+        continue-on-error: true
+        with:
+          scan-type: 'fs'
+          scan-ref: '.'
+          severity: 'CRITICAL,HIGH'
+          format: 'table'
+
+      - name: Gitleaks secret scan
+        uses: gitleaks/gitleaks-action@v2
+        continue-on-error: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  # ---------------------------------------------------------------------------
+  # E2E tests with Newman
+  # ---------------------------------------------------------------------------
+  e2e-tests:
+    name: "E2E Tests (Newman)"
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push'
+    needs:
+      - build-java-services
+      - build-incidents-service
+      - build-customers-service
+      - contract-validation
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js ${{ env.NODE_VERSION }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: Install Newman
+        run: npm install -g newman newman-reporter-htmlextra
+
+      - name: Run E2E tests
+        continue-on-error: true
+        run: |
+          newman run contracts/postman/guidewire-e2e.postman_collection.json \
+            -e contracts/postman/local.postman_environment.json \
+            --reporters cli,htmlextra \
+            --reporter-htmlextra-export results/e2e-report.html \
+            --delay-request 500 \
+            --timeout-request 10000
+
+      - name: Upload E2E test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: e2e-test-results
+          path: results/
+          retention-days: 14
