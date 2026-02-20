@@ -1,6 +1,6 @@
 #!/bin/bash
 ###############################################################################
-# setup.sh — Base provisioning for the Guidewire POC lab VM
+# setup.sh — Base provisioning for the Guidewire POC lab VM (Fedora 41)
 #
 # This script runs once during 'vagrant up' (first time) or when explicitly
 # re-provisioned with 'vagrant provision'. It installs Podman, podman-compose,
@@ -9,44 +9,35 @@
 
 set -euo pipefail
 
-export DEBIAN_FRONTEND=noninteractive
-
 echo "============================================================"
-echo " Guidewire POC Lab — Base Provisioning"
+echo " Guidewire POC Lab — Base Provisioning (Fedora 41)"
 echo "============================================================"
 
 # ---------------------------------------------------------------------------
 # 1. System update
 # ---------------------------------------------------------------------------
 echo "[1/6] Updating system packages..."
-apt-get update -qq
-apt-get upgrade -y -qq
+dnf update -y -q
 
 # ---------------------------------------------------------------------------
 # 2. Install basic tools
 # ---------------------------------------------------------------------------
 echo "[2/6] Installing basic tools..."
-apt-get install -y -qq \
+dnf install -y -q \
   curl \
   wget \
   jq \
   git \
   unzip \
   ca-certificates \
-  gnupg \
-  lsb-release \
-  python3-pip \
-  python3-venv \
-  software-properties-common \
-  apt-transport-https
+  python3-pip
 
 # ---------------------------------------------------------------------------
-# 3. Install Podman 4.9+
+# 3. Install Podman (comes pre-installed on Fedora, ensure latest)
 # ---------------------------------------------------------------------------
 echo "[3/6] Installing Podman..."
-apt-get install -y -qq podman
+dnf install -y -q podman podman-plugins
 
-# Verify Podman version
 PODMAN_VERSION=$(podman --version | awk '{print $3}')
 echo "    Podman version: ${PODMAN_VERSION}"
 
@@ -59,10 +50,8 @@ su - vagrant -c "systemctl --user start podman.socket || true"
 # 4. Install podman-compose
 # ---------------------------------------------------------------------------
 echo "[4/6] Installing podman-compose..."
-# Use pipx or pip to install podman-compose to get a recent version
-python3 -m pip install --break-system-packages podman-compose 2>/dev/null \
-  || pip3 install podman-compose 2>/dev/null \
-  || apt-get install -y -qq podman-compose
+dnf install -y -q podman-compose 2>/dev/null \
+  || pip3 install podman-compose
 
 COMPOSE_VERSION=$(podman-compose --version 2>/dev/null | head -1 || echo "installed")
 echo "    podman-compose: ${COMPOSE_VERSION}"

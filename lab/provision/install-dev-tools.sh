@@ -1,6 +1,6 @@
 #!/bin/bash
 ###############################################################################
-# install-dev-tools.sh — Optional development tools for the lab VM
+# install-dev-tools.sh — Optional development tools for the lab VM (Fedora 41)
 #
 # Run manually inside the VM when you need to build/compile services locally:
 #   sudo bash ~/lab-guidewire/provision/install-dev-tools.sh
@@ -10,10 +10,8 @@
 
 set -euo pipefail
 
-export DEBIAN_FRONTEND=noninteractive
-
 echo "============================================================"
-echo " Guidewire POC Lab — Installing Development Tools"
+echo " Guidewire POC Lab — Installing Development Tools (Fedora)"
 echo "============================================================"
 
 # ---------------------------------------------------------------------------
@@ -21,15 +19,17 @@ echo "============================================================"
 # ---------------------------------------------------------------------------
 echo "[1/6] Installing JDK 21 (Eclipse Temurin)..."
 
-# Add Adoptium GPG key and repository
-wget -qO- https://packages.adoptium.net/artifactory/api/gpg/key/public | \
-  gpg --dearmor -o /usr/share/keyrings/adoptium.gpg
+# Add Adoptium repo for Fedora
+cat > /etc/yum.repos.d/adoptium.repo <<'EOF'
+[Adoptium]
+name=Adoptium
+baseurl=https://packages.adoptium.net/artifactory/rpm/fedora/$releasever/$basearch
+enabled=1
+gpgcheck=1
+gpgkey=https://packages.adoptium.net/artifactory/api/gpg/key/public
+EOF
 
-echo "deb [signed-by=/usr/share/keyrings/adoptium.gpg] https://packages.adoptium.net/artifactory/deb $(lsb_release -cs) main" \
-  > /etc/apt/sources.list.d/adoptium.list
-
-apt-get update -qq
-apt-get install -y -qq temurin-21-jdk
+dnf install -y -q temurin-21-jdk
 
 echo "    Java: $(java -version 2>&1 | head -1)"
 
@@ -60,8 +60,8 @@ echo "    Maven: $(mvn --version 2>&1 | head -1)"
 # ---------------------------------------------------------------------------
 echo "[3/6] Installing Node.js 20 LTS..."
 
-curl -fsSL https://deb.nodesource.com/setup_20.x | bash -
-apt-get install -y -qq nodejs
+dnf module install -y -q nodejs:20/default 2>/dev/null \
+  || dnf install -y -q nodejs
 
 echo "    Node.js: $(node --version)"
 echo "    npm: $(npm --version)"
@@ -71,29 +71,26 @@ echo "    npm: $(npm --version)"
 # ---------------------------------------------------------------------------
 echo "[4/6] Installing kcat (kafkacat)..."
 
-apt-get install -y -qq kafkacat 2>/dev/null \
-  || apt-get install -y -qq kcat 2>/dev/null \
+dnf install -y -q kcat 2>/dev/null \
+  || dnf install -y -q kafkacat 2>/dev/null \
   || echo "    WARNING: kcat not available in repos, skipping."
 
 if command -v kcat &>/dev/null; then
   echo "    kcat: $(kcat -V 2>&1 | head -1)"
-elif command -v kafkacat &>/dev/null; then
-  echo "    kafkacat: $(kafkacat -V 2>&1 | head -1)"
 fi
 
 # ---------------------------------------------------------------------------
 # 5. jq — JSON processor
 # ---------------------------------------------------------------------------
 echo "[5/6] Installing jq..."
-apt-get install -y -qq jq
+dnf install -y -q jq
 echo "    jq: $(jq --version)"
 
 # ---------------------------------------------------------------------------
 # 6. HTTPie — Human-friendly HTTP client
 # ---------------------------------------------------------------------------
 echo "[6/6] Installing HTTPie..."
-apt-get install -y -qq httpie 2>/dev/null \
-  || pip3 install --break-system-packages httpie 2>/dev/null \
+dnf install -y -q httpie 2>/dev/null \
   || pip3 install httpie
 
 echo "    HTTPie: $(http --version 2>&1 | head -1)"

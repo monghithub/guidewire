@@ -36,7 +36,7 @@ services:
       - "${POSTGRES_PORT}:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
-      - ./config/init-db.sql:/docker-entrypoint-initdb.d/init-db.sql:ro
+      - ./config/init-db.sql:/docker-entrypoint-initdb.d/init-db.sql:ro,Z
     networks:
       - guidewire-net
     healthcheck:
@@ -157,7 +157,7 @@ services:
       - "${APICAST_PROXY_PORT}:8080"
       - "${APICAST_MGMT_PORT}:8090"
     volumes:
-      - ./config/apicast-config.json:/config/apicast-config.json:ro
+      - ./config/apicast-config.json:/config/apicast-config.json:ro,Z
     networks:
       - guidewire-net
     restart: unless-stopped

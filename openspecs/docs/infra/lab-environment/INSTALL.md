@@ -127,7 +127,9 @@ vagrant plugin list
 
 ### Troubleshooting del plugin
 
-Si falla la instalación del plugin con errores de compilación:
+#### Error: dependencias de compilación
+
+Si falla con errores de compilación tipo "missing headers":
 
 ```bash
 # Ubuntu/Debian: instalar dependencias de build
@@ -136,11 +138,50 @@ sudo apt install -y \
   libxml2-dev \
   zlib1g-dev \
   ruby-dev \
-  libvirt-dev
+  libvirt-dev \
+  pkg-config \
+  build-essential
 
 # Reintentar
 vagrant plugin install vagrant-libvirt
 ```
+
+#### Error: `libssh2_session_callback_set2` sin definir (Ubuntu 25.04+)
+
+En Ubuntu 25.04+ (Questing), el plugin falla con este error de linking:
+
+```
+/lib/x86_64-linux-gnu/libcurl-gnutls.so.4: referencia a 'libssh2_session_callback_set2' sin definir
+```
+
+**Causa raíz**: Vagrant 2.4.3 trae una libssh2 embebida antigua (v1.0.1 en `/opt/vagrant/embedded/lib/`) que no tiene el símbolo `libssh2_session_callback_set2`. Sin embargo, la libcurl-gnutls del sistema (v8.14+) sí lo requiere. Al compilar el plugin, el linker mezcla la libssh2 vieja de Vagrant con la libcurl nueva del sistema y falla.
+
+**Solución**: Reemplazar la libssh2 de Vagrant con la del sistema (que sí tiene el símbolo):
+
+```bash
+# 1. Instalar libssh2 y libcurl del sistema
+sudo apt install -y libssh2-1-dev libcurl4-gnutls-dev
+
+# 2. Backup de la libssh2 vieja de Vagrant
+sudo cp /opt/vagrant/embedded/lib/libssh2.so.1.0.1 \
+        /opt/vagrant/embedded/lib/libssh2.so.1.0.1.bak
+
+# 3. Reemplazar con symlinks a la versión del sistema
+sudo ln -sf /lib/x86_64-linux-gnu/libssh2.so.1 /opt/vagrant/embedded/lib/libssh2.so.1
+sudo ln -sf /lib/x86_64-linux-gnu/libssh2.so.1 /opt/vagrant/embedded/lib/libssh2.so
+
+# 4. Asegurar que Vagrant use pkg-config del sistema
+sudo ln -sf /usr/bin/pkg-config /opt/vagrant/embedded/bin/pkg-config 2>/dev/null || true
+
+# 5. Instalar el plugin
+vagrant plugin install vagrant-libvirt
+```
+
+> **Verificación**: `nm -D /lib/x86_64-linux-gnu/libssh2.so.1 | grep libssh2_session_callback_set2` debe mostrar el símbolo. Si no aparece, tu versión de libssh2 es demasiado vieja.
+
+#### Error: "libvirt not found" (pese a tener libvirt-dev)
+
+Si `pkg-config --libs libvirt` funciona en tu shell pero Vagrant no lo encuentra, el problema es que Vagrant usa su propio `pkg-config` embebido. La solución está incluida en el paso 3 del fix anterior (symlink de pkg-config).
 
 ---
 
@@ -216,7 +257,7 @@ vagrant status
 ```
 
 La primera vez:
-1. Descarga la box `generic/ubuntu2404` (~800MB)
+1. Descarga la box `fedora/41-cloud-base` (~800MB)
 2. Crea la VM con 20GB RAM, 8 CPUs, 80GB disco
 3. Ejecuta `provision/setup.sh` (instala Podman, crea dirs)
 4. Sincroniza la carpeta del proyecto a `/home/vagrant/lab-guidewire`
@@ -368,7 +409,7 @@ Error: The box could not be found
 **Solución**: Descargar manualmente:
 
 ```bash
-vagrant box add generic/ubuntu2404 --provider libvirt
+vagrant box add fedora/41-cloud-base --provider libvirt
 ```
 
 ### Kafka no arranca
@@ -425,7 +466,7 @@ vagrant status           # ¿VM está running?
 cd lab && vagrant destroy -f
 
 # 2. Eliminar box descargada
-vagrant box remove generic/ubuntu2404
+vagrant box remove fedora/41-cloud-base
 
 # 3. Desinstalar plugin
 vagrant plugin uninstall vagrant-libvirt
