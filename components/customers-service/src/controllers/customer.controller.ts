@@ -17,7 +17,7 @@ export class CustomerController {
 
   findById = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
-      const customer = await this.service.findById(req.params.id);
+      const customer = await this.service.findById(req.params.id as string);
       res.status(200).json(customer);
     } catch (error) {
       next(error);
@@ -26,7 +26,7 @@ export class CustomerController {
 
   findAll = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
-      const query = (req as Record<string, unknown>).validatedQuery as CustomerQuery;
+      const query = (req as unknown as Record<string, unknown>).validatedQuery as CustomerQuery;
       const result = await this.service.findAll(query);
       res.status(200).json(result);
     } catch (error) {
@@ -36,7 +36,7 @@ export class CustomerController {
 
   update = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
-      const customer = await this.service.update(req.params.id, req.body);
+      const customer = await this.service.update(req.params.id as string, req.body);
       res.status(200).json(customer);
     } catch (error) {
       next(error);

@@ -1,5 +1,5 @@
 import { Kafka, Producer, logLevel } from 'kafkajs';
-import { SchemaRegistry } from '@kafkajs/confluent-schema-registry';
+import { SchemaRegistry, SchemaType } from '@kafkajs/confluent-schema-registry';
 import { config } from '../config';
 import { getSchemaRegistry } from './registry';
 import logger from '../utils/logger';
@@ -52,7 +52,7 @@ async function getOrRegisterSchemaId(): Promise<number> {
     const avroSchema = JSON.parse(schemaStr);
 
     const { id } = await registry.register({
-      type: 'AVRO',
+      type: SchemaType.AVRO,
       schema: JSON.stringify(avroSchema),
     });
 

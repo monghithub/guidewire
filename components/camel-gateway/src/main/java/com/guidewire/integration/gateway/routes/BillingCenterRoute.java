@@ -71,8 +71,8 @@ public class BillingCenterRoute extends RouteBuilder {
                 .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
                 .toD(mockBaseUrl + "/api/v1/gw-invoices?bridgeEndpoint=true&throwExceptionOnFailure=false")
                 .log("Invoice created, publishing event")
+                .setHeader("eventType", constant("invoice.created"))
                 .wireTap("direct:publish-event")
-                    .newExchangeHeader("eventType", constant("invoice.created"))
                 .end();
 
         from("direct:update-invoice")
@@ -82,8 +82,8 @@ public class BillingCenterRoute extends RouteBuilder {
                 .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
                 .toD(mockBaseUrl + "/api/v1/gw-invoices/${header.invoiceId}?bridgeEndpoint=true&throwExceptionOnFailure=false")
                 .log("Invoice ${header.invoiceId} updated, publishing event")
+                .setHeader("eventType", constant("invoice.updated"))
                 .wireTap("direct:publish-event")
-                    .newExchangeHeader("eventType", constant("invoice.updated"))
                 .end();
     }
 }

@@ -71,8 +71,8 @@ public class PolicyCenterRoute extends RouteBuilder {
                 .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
                 .toD(mockBaseUrl + "/api/v1/policies?bridgeEndpoint=true&throwExceptionOnFailure=false")
                 .log("Policy created, publishing event")
+                .setHeader("eventType", constant("policy.created"))
                 .wireTap("direct:publish-event")
-                    .newExchangeHeader("eventType", constant("policy.created"))
                 .end();
 
         from("direct:update-policy")
@@ -82,8 +82,8 @@ public class PolicyCenterRoute extends RouteBuilder {
                 .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
                 .toD(mockBaseUrl + "/api/v1/policies/${header.policyId}?bridgeEndpoint=true&throwExceptionOnFailure=false")
                 .log("Policy ${header.policyId} updated, publishing event")
+                .setHeader("eventType", constant("policy.updated"))
                 .wireTap("direct:publish-event")
-                    .newExchangeHeader("eventType", constant("policy.updated"))
                 .end();
     }
 }

@@ -11,7 +11,7 @@ export function validate(schema: ZodSchema, property: RequestProperty = 'body') 
       if (property === 'body') {
         req.body = parsed;
       } else if (property === 'query') {
-        (req as Record<string, unknown>).validatedQuery = parsed;
+        (req as unknown as Record<string, unknown>).validatedQuery = parsed;
       }
       next();
     } catch (error) {

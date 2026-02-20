@@ -71,8 +71,8 @@ public class ClaimCenterRoute extends RouteBuilder {
                 .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
                 .toD(mockBaseUrl + "/api/v1/claims?bridgeEndpoint=true&throwExceptionOnFailure=false")
                 .log("Claim created, invoking fraud detection rules")
+                .setHeader("eventType", constant("incident.created"))
                 .wireTap("direct:publish-event")
-                    .newExchangeHeader("eventType", constant("incident.created"))
                 .end();
 
         from("direct:update-claim")
@@ -82,8 +82,8 @@ public class ClaimCenterRoute extends RouteBuilder {
                 .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
                 .toD(mockBaseUrl + "/api/v1/claims/${header.claimId}?bridgeEndpoint=true&throwExceptionOnFailure=false")
                 .log("Claim ${header.claimId} updated, publishing event")
+                .setHeader("eventType", constant("incident.updated"))
                 .wireTap("direct:publish-event")
-                    .newExchangeHeader("eventType", constant("incident.updated"))
                 .end();
     }
 }
