@@ -6,8 +6,9 @@ WORKDIR /app
 COPY pom.xml .
 COPY src ./src
 
-RUN apk add --no-cache maven && \
-    mvn clean package -DskipTests -q
+RUN mkdir -p /contracts/avro /contracts/openapi && \
+    apk add --no-cache maven && \
+    mvn clean package -DskipTests -Dopenapi.generator.maven.plugin.skip=true -q
 
 # Stage 2: Runtime
 FROM eclipse-temurin:21-jre-alpine
