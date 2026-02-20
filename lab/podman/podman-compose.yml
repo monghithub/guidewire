@@ -168,7 +168,7 @@ services:
 
   # --- Drools KIE Engine ----------------------------------------------------
   drools-engine:
-    image: guidewire-poc/drools-engine:latest
+    image: localhost/guidewire-poc/drools-engine:latest
     build:
       context: ../../components/drools-engine
     container_name: gw-drools-engine
@@ -183,7 +183,7 @@ services:
 
   # --- Apache Camel Gateway --------------------------------------------------
   camel-gateway:
-    image: guidewire-poc/camel-gateway:latest
+    image: localhost/guidewire-poc/camel-gateway:latest
     build:
       context: ../../components/camel-gateway
     container_name: gw-camel-gateway
@@ -212,7 +212,7 @@ services:
 
   # --- Billing Service -------------------------------------------------------
   billing-service:
-    image: guidewire-poc/billing-service:latest
+    image: localhost/guidewire-poc/billing-service:latest
     build:
       context: ../../components/billing-service
     container_name: gw-billing-service
@@ -235,7 +235,7 @@ services:
 
   # --- Incidents Service -----------------------------------------------------
   incidents-service:
-    image: guidewire-poc/incidents-service:latest
+    image: localhost/guidewire-poc/incidents-service:latest
     build:
       context: ../../components/incidents-service
     container_name: gw-incidents-service
@@ -258,7 +258,7 @@ services:
 
   # --- Customers Service -----------------------------------------------------
   customers-service:
-    image: guidewire-poc/customers-service:latest
+    image: localhost/guidewire-poc/customers-service:latest
     build:
       context: ../../components/customers-service
     container_name: gw-customers-service
