@@ -12,11 +12,6 @@ RUN apk add --no-cache maven && \
 # Stage 2: Runtime
 FROM eclipse-temurin:21-jre-alpine
 
-ARG JAVA_PACKAGE=java-21-openjdk-headless
-ARG RUN_JAVA_VERSION=1.3.8
-
-ENV LANGUAGE='en_US:en'
-
 RUN addgroup -S appgroup && adduser -S appuser -G appgroup
 
 WORKDIR /app
