@@ -1,0 +1,18 @@
+---
+apiVersion: route.openshift.io/v1
+kind: Route
+metadata:
+  name: apicast
+  namespace: guidewire-infra
+  labels:
+    app: apicast
+    app.kubernetes.io/part-of: guidewire-poc
+spec:
+  host: apicast-guidewire-infra.apps-crc.testing
+  to:
+    kind: Service
+    name: apicast
+    weight: 100
+  port:
+    targetPort: proxy
+  wildcardPolicy: None

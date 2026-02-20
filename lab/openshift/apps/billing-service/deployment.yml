@@ -1,0 +1,55 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: billing-service
+  namespace: guidewire-apps
+  labels:
+    app: billing-service
+    app.kubernetes.io/part-of: guidewire-poc
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: billing-service
+  template:
+    metadata:
+      labels:
+        app: billing-service
+        app.kubernetes.io/part-of: guidewire-poc
+    spec:
+      containers:
+        - name: billing-service
+          image: image-registry.openshift-image-registry.svc:5000/guidewire-apps/billing-service:latest
+          ports:
+            - containerPort: 8082
+              protocol: TCP
+          env:
+            - name: SPRING_DATASOURCE_URL
+              value: "jdbc:postgresql://postgres.guidewire-infra.svc.cluster.local:5432/billing"
+            - name: SPRING_DATASOURCE_USERNAME
+              value: "billing_user"
+            - name: SPRING_DATASOURCE_PASSWORD
+              value: "billing123"
+            - name: KAFKA_BOOTSTRAP_SERVERS
+              value: "kafka-cluster-kafka-bootstrap.guidewire-infra.svc.cluster.local:9092"
+            - name: APICURIO_URL
+              value: "http://apicurio-registry.guidewire-infra.svc.cluster.local:8080/apis/registry/v2"
+          resources:
+            requests:
+              cpu: 100m
+              memory: 256Mi
+            limits:
+              cpu: 500m
+              memory: 512Mi
+          readinessProbe:
+            httpGet:
+              path: /q/health/ready
+              port: 8082
+            initialDelaySeconds: 30
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /q/health/live
+              port: 8082
+            initialDelaySeconds: 60
+            periodSeconds: 15

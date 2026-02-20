@@ -27,7 +27,7 @@ tech_stack:
   rules_engine: Drools 8.x (KIE Server)
   schema_registry: Apicurio Service Registry
   database: PostgreSQL 16
-  containerization: Docker Compose
+  containerization: Red Hat OpenShift Local (CRC) / Kubernetes
   specifications:
     - OpenAPI 3.1
     - AsyncAPI 3.0

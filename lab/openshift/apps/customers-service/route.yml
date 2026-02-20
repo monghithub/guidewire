@@ -1,0 +1,17 @@
+apiVersion: route.openshift.io/v1
+kind: Route
+metadata:
+  name: customers-service
+  namespace: guidewire-apps
+  labels:
+    app: customers-service
+    app.kubernetes.io/part-of: guidewire-poc
+spec:
+  host: customers-service-guidewire-apps.apps-crc.testing
+  to:
+    kind: Service
+    name: customers-service
+    weight: 100
+  port:
+    targetPort: http
+  wildcardPolicy: None

@@ -1,5 +1,5 @@
 ##############################################################################
-# SPEC: Laboratorio Completo — Vagrant + Podman + Podman Compose
+# SPEC: Laboratorio Completo — CRC (OpenShift Local) + Manifiestos K8s
 # Issue: #34
 ##############################################################################
 
@@ -7,7 +7,7 @@ metadata:
   name: lab-environment
   type: infra
   issue: 34
-  labels: [infra, vagrant, podman, devops]
+  labels: [infra, openshift, crc, kubernetes, devops]
   status: pending
   priority: critical
   depends_on:
@@ -18,461 +18,377 @@ metadata:
     - infra/postgres
 
 description: >
-  Entorno de laboratorio completamente aislado. Nada se instala
-  en el host excepto Vagrant + libvirt/KVM. Dentro de la VM
-  corre todo con Podman + Podman Compose (stack Red Hat nativo).
-  Un solo "vagrant up" levanta todo. Un "vagrant halt" lo apaga.
+  Entorno de laboratorio sobre CRC (OpenShift Local). El cluster
+  corre localmente con dos namespaces: guidewire-infra para
+  infraestructura y guidewire-apps para microservicios. Todo se
+  despliega con manifiestos Kubernetes nativos via oc apply.
+  Un solo "./deploy-all.sh" levanta todo. "crc stop" lo apaga.
 
 ##############################################################################
-# CAPA 1: HOST (tu máquina física)
+# CAPA 1: HOST (tu maquina fisica)
 ##############################################################################
 
 host:
   requirements:
-    description: Lo ÚNICO que necesitas instalar en tu máquina
+    description: Lo UNICO que necesitas instalar en tu maquina
     packages:
-      - name: vagrant
-        version: "2.4+"
-        install: sudo apt install vagrant  # o brew install vagrant
-      - name: libvirt + KVM
-        install: sudo apt install qemu-kvm libvirt-daemon-system virt-manager
-      - name: vagrant-libvirt plugin
-        install: vagrant plugin install vagrant-libvirt
+      - name: CRC (OpenShift Local)
+        version: "2.x+"
+        install: "Descargar desde https://console.redhat.com/openshift/create/local"
+      - name: oc CLI
+        version: "4.x+"
+        install: "eval $(crc oc-env)  # viene incluido con CRC"
+    accounts:
+      - name: Red Hat Account
+        url: https://console.redhat.com
+        description: Cuenta gratuita para descargar CRC y el pull secret
+
+  host_resources:
+    minimum:
+      memory: 16GB
+      cpus: 4
+      disk: 60GB
+    recommended:
+      memory: 32GB
+      cpus: 8
+      disk: 100GB
+    description: >
+      CRC necesita minimo 9GB RAM para OpenShift base.
+      Con el stack Guidewire completo se recomiendan 14GB para CRC
+      (--memory 14336), lo cual requiere ~16GB en el host como minimo.
 
   project_layout:
-    description: Estructura en tu máquina local (fuera de la VM)
+    description: Estructura de manifiestos en el repositorio
     tree: |
-      ~/lab-guidewire/
-      ├── Vagrantfile                    # Define la VM
-      ├── provision/
-      │   ├── setup.sh                   # Script de provisioning
-      │   └── install-dev-tools.sh       # JDK, Maven, Node.js (opcionales, para dev)
-      ├── podman/
-      │   ├── podman-compose.yml         # Stack completo de servicios
-      │   ├── .env                       # Variables de entorno
-      │   └── config/
-      │       ├── init-db.sql            # Inicialización PostgreSQL
-      │       ├── create-topics.sh       # Creación de topics Kafka
-      │       └── kong.yml               # Config declarativa 3Scale/APIcast
-      └── openspecs/                     # Synced desde el repo git
-          └── (specs YAML)
-
-  sync_folder:
-    host_path: ~/lab-guidewire
-    vm_path: /home/vagrant/lab-guidewire
-    type: rsync
-    description: >
-      Bidireccional. Editas en tu host con tu IDE favorito,
-      los cambios se sincronizan a la VM automáticamente.
+      lab/openshift/
+      ├── deploy-all.sh                  # Script de despliegue completo
+      ├── namespaces.yml                 # guidewire-infra + guidewire-apps
+      ├── operators/
+      │   ├── strimzi-subscription.yml   # Operador Strimzi (Kafka)
+      │   ├── amq-broker-subscription.yml# Operador AMQ Broker (ActiveMQ)
+      │   └── apicurio-subscription.yml  # Operador Apicurio Registry
+      ├── infra/
+      │   ├── postgres/
+      │   │   ├── secret.yml
+      │   │   ├── configmap-init-db.yml
+      │   │   ├── pvc.yml
+      │   │   ├── deployment.yml
+      │   │   └── service.yml
+      │   ├── kafka/
+      │   │   ├── kafka-cluster.yml      # Strimzi Kafka CR
+      │   │   └── kafka-topics.yml       # KafkaTopic CRs
+      │   ├── activemq/
+      │   │   ├── activemq-broker.yml    # ActiveMQArtemis CR
+      │   │   └── activemq-addresses.yml # ActiveMQArtemisAddress CRs
+      │   ├── apicurio/
+      │   │   └── apicurio-registry.yml  # ApicurioRegistry CR
+      │   ├── kafdrop/
+      │   │   ├── deployment.yml
+      │   │   ├── service.yml
+      │   │   └── route.yml
+      │   └── threescale/
+      │       ├── configmap-apicast.yml
+      │       ├── deployment.yml
+      │       ├── service.yml
+      │       └── route.yml
+      └── apps/
+          ├── billing-service/
+          │   ├── buildconfig.yml
+          │   ├── deployment.yml
+          │   ├── service.yml
+          │   └── route.yml
+          ├── camel-gateway/
+          │   └── ...
+          ├── incidents-service/
+          │   └── ...
+          ├── customers-service/
+          │   └── ...
+          └── drools-engine/
+              └── ...
 
 ##############################################################################
-# CAPA 2: VAGRANTFILE
+# CAPA 2: CRC (OpenShift Local)
 ##############################################################################
 
-vagrant:
-  box: generic/ubuntu2404    # Ubuntu 24.04 LTS
-  provider: libvirt
+crc:
+  version: "2.x+"
+  openshift_version: "4.x"
 
   vm_resources:
-    memory: 20480            # 20GB RAM
-    cpus: 8
-    disk: 80GB
+    memory: 14336            # 14GB RAM
+    cpus: 6
+    disk: 60GB
     description: >
-      Suficiente para todo el stack (~5.5GB en contenedores)
-      + herramientas de desarrollo + margen.
-      En un M5 de 128GB/16 cores, usa <16% de recursos.
+      Suficiente para OpenShift base (~4GB) + todo el stack (~6GB)
+      + margen para builds y operaciones.
 
-  network:
-    type: private_network
-    ip: 192.168.56.10
-    description: IP fija para acceder a servicios desde el host
+  namespaces:
+    - name: guidewire-infra
+      description: Infraestructura (PostgreSQL, Kafka, ActiveMQ, Apicurio, Kafdrop, 3Scale)
+    - name: guidewire-apps
+      description: Microservicios de negocio (Billing, Incidents, Customers, Camel, Drools)
 
-  port_forwarding:
-    - { guest: 8000, host: 8000, description: "3Scale API Gateway (proxy)" }
-    - { guest: 8001, host: 8001, description: "3Scale Management API" }
-    - { guest: 8081, host: 8081, description: "Apicurio UI" }
-    - { guest: 8082, host: 8082, description: "Billing Service" }
-    - { guest: 8083, host: 8083, description: "Camel Gateway" }
-    - { guest: 8084, host: 8084, description: "Incidents Service" }
-    - { guest: 8085, host: 8085, description: "Customers Service" }
-    - { guest: 8086, host: 8086, description: "Drools KIE Server" }
-    - { guest: 8161, host: 8161, description: "ActiveMQ Console (Hawtio)" }
-    - { guest: 9000, host: 9000, description: "Kafdrop UI" }
-    - { guest: 9092, host: 9092, description: "Kafka Broker" }
-    - { guest: 15432, host: 15432, description: "PostgreSQL" }
-    - { guest: 61616, host: 61616, description: "ActiveMQ AMQP/JMS" }
+  operators:
+    - name: Strimzi
+      description: Operador de Kafka para Kubernetes
+      channel: strimzi-0.40.x
+    - name: AMQ Broker
+      description: Operador de ActiveMQ Artemis para OpenShift
+      channel: 7.11.x
+    - name: Apicurio Registry
+      description: Operador de Apicurio Schema Registry
+      channel: 2.x
 
-  provisioning:
+  routes:
     description: >
-      Script que se ejecuta automáticamente la primera vez
-      que haces "vagrant up". Instala Podman y herramientas.
+      OpenShift expone servicios como Routes con TLS automatico.
+      Accesibles desde el host via *.apps-crc.testing.
+    endpoints:
+      - { host: "console-openshift-console.apps-crc.testing", description: "OpenShift Console" }
+      - { host: "apicast-guidewire-infra.apps-crc.testing", description: "3Scale API Gateway" }
+      - { host: "apicurio-guidewire-infra.apps-crc.testing", description: "Apicurio UI" }
+      - { host: "kafdrop-guidewire-infra.apps-crc.testing", description: "Kafdrop UI" }
+      - { host: "billing-service-guidewire-apps.apps-crc.testing", description: "Billing Service" }
+      - { host: "incidents-service-guidewire-apps.apps-crc.testing", description: "Incidents Service" }
+      - { host: "customers-service-guidewire-apps.apps-crc.testing", description: "Customers Service" }
+      - { host: "camel-gateway-guidewire-apps.apps-crc.testing", description: "Camel Gateway" }
+      - { host: "drools-engine-guidewire-apps.apps-crc.testing", description: "Drools Engine" }
 
 ##############################################################################
-# CAPA 3: PROVISIONING (dentro de la VM)
+# CAPA 3: SERVICIOS DESPLEGADOS
 ##############################################################################
 
-provisioning:
-  setup_script:
-    file: provision/setup.sh
-    description: Instalación base (se ejecuta solo la primera vez)
-    steps:
-      - name: Actualizar sistema
-        command: apt-get update && apt-get upgrade -y
+services:
+  infrastructure:
+    namespace: guidewire-infra
+    components:
+      postgres:
+        type: Deployment
+        image: docker.io/postgres:16-alpine
+        resources:
+          requests: { cpu: 250m, memory: 256Mi }
+          limits: { cpu: 500m, memory: 512Mi }
+        storage: PVC 5Gi
 
-      - name: Instalar Podman
-        commands:
-          - apt-get install -y podman podman-compose
-          - systemctl --user enable podman.socket
-        version: "4.9+"
+      kafka:
+        type: Strimzi Kafka CR
+        replicas: 1
+        resources:
+          requests: { cpu: 500m, memory: 1Gi }
+          limits: { cpu: "1", memory: 2Gi }
 
-      - name: Instalar Podman Compose
-        commands:
-          - pip3 install podman-compose
-        version: "1.2+"
-        note: >
-          podman-compose es compatible con docker-compose.yml.
-          Lee el mismo formato de archivo, usa Podman como backend.
+      activemq:
+        type: ActiveMQArtemis CR
+        replicas: 1
+        resources:
+          requests: { cpu: 250m, memory: 512Mi }
+          limits: { cpu: 500m, memory: 1Gi }
 
-      - name: Configurar registries
-        file: /etc/containers/registries.conf
-        content: |
-          unqualified-search-registries = ["docker.io", "quay.io", "ghcr.io"]
+      apicurio:
+        type: ApicurioRegistry CR
+        replicas: 1
+        persistence: sql (PostgreSQL)
 
-      - name: Crear estructura de volúmenes
-        commands:
-          - mkdir -p /home/vagrant/volumes/{pgdata,kafka-data,artemis-data}
+      kafdrop:
+        type: Deployment
+        image: docker.io/obsidiandynamics/kafdrop:4.0.1
+        resources:
+          requests: { cpu: 100m, memory: 256Mi }
+          limits: { cpu: 250m, memory: 512Mi }
 
-  dev_tools_script:
-    file: provision/install-dev-tools.sh
-    description: Herramientas de desarrollo (opcional, para compilar dentro de la VM)
-    optional: true
-    tools:
-      - name: JDK 21 (Temurin)
-        command: apt-get install -y temurin-21-jdk
-      - name: Maven 3.9
-        command: apt-get install -y maven
-      - name: Node.js 20 LTS
-        command: curl -fsSL https://deb.nodesource.com/setup_20.x | bash && apt-get install -y nodejs
-      - name: kafkacat (kcat)
-        command: apt-get install -y kafkacat
-      - name: jq
-        command: apt-get install -y jq
+      threescale:
+        type: Deployment
+        image: quay.io/3scale/apicast:v3.11
+        resources:
+          requests: { cpu: 100m, memory: 128Mi }
+          limits: { cpu: 250m, memory: 256Mi }
 
-##############################################################################
-# CAPA 4: PODMAN COMPOSE (servicios containerizados)
-##############################################################################
+  applications:
+    namespace: guidewire-apps
+    build_strategy: Binary (oc start-build --from-dir)
+    components:
+      billing-service:
+        build: Source-to-Image (S2I) / Binary
+        source: components/billing-service
 
-podman_compose:
-  file: podman/podman-compose.yml
-  env_file: podman/.env
+      camel-gateway:
+        build: Source-to-Image (S2I) / Binary
+        source: components/camel-gateway
 
-  networks:
-    - name: guidewire-net
-      driver: bridge
-      description: Red compartida entre todos los contenedores
+      incidents-service:
+        build: Source-to-Image (S2I) / Binary
+        source: components/incidents-service
 
-  pods:
-    description: >
-      Podman soporta pods nativos (como Kubernetes).
-      Agrupamos contenedores relacionados en pods para compartir
-      namespace de red (se ven como localhost entre sí).
-      Para el POC usamos podman-compose con red compartida
-      por simplicidad, pero la estructura está preparada para
-      migrar a pods Podman o manifiestos Kubernetes.
+      customers-service:
+        build: Source-to-Image (S2I) / Binary
+        source: components/customers-service
 
-  services_startup_order:
-    phase_1_data:
-      description: Almacenamiento y mensajería
-      services:
+      drools-engine:
+        build: Source-to-Image (S2I) / Binary
+        source: components/drools-engine
+
+  startup_order:
+    phase_1_operators:
+      description: Instalar operadores desde OperatorHub
+      components:
+        - Strimzi
+        - AMQ Broker
+        - Apicurio Registry
+      wait: CSV status Succeeded
+
+    phase_2_data:
+      description: Almacenamiento
+      depends_on: phase_1_operators
+      components:
         - postgres
-        - kafka
-        - activemq
-      wait: healthchecks pass
+      wait: Deployment Available
 
-    phase_2_platform:
+    phase_3_messaging:
+      description: Mensajeria
+      depends_on: phase_1_operators
+      components:
+        - kafka (Strimzi CR)
+        - activemq (AMQ Broker CR)
+      wait: CR status Ready
+
+    phase_4_platform:
       description: Plataforma y herramientas
-      depends_on: phase_1_data
-      services:
-        - apicurio        # necesita postgres
-        - kafdrop         # necesita kafka
-        - threescale       # independiente
-      wait: healthchecks pass
+      depends_on: [phase_2_data, phase_3_messaging]
+      components:
+        - apicurio (ApicurioRegistry CR)
+        - kafdrop
+        - threescale
+      wait: pods Ready
 
-    phase_3_engines:
-      description: Motores de integración y reglas
-      depends_on: phase_2_platform
-      services:
-        - drools-engine
-        - camel-gateway    # necesita kafka, apicurio, activemq
-      wait: healthchecks pass
-
-    phase_4_apps:
+    phase_5_apps:
       description: Microservicios de negocio
-      depends_on: phase_3_engines
-      services:
+      depends_on: phase_4_platform
+      components:
         - billing-service
+        - camel-gateway
         - incidents-service
         - customers-service
-
-  services:
-    postgres:
-      image: docker.io/postgres:16-alpine
-      port: "15432:5432"
-      environment:
-        POSTGRES_PASSWORD: postgres123
-      volumes:
-        - pgdata:/var/lib/postgresql/data
-        - ./config/init-db.sql:/docker-entrypoint-initdb.d/init-db.sql
-      healthcheck:
-        test: pg_isready -U postgres
-        interval: 10s
-        retries: 5
-
-    kafka:
-      image: docker.io/apache/kafka:3.7.0
-      port: "9092:9092"
-      environment:
-        KAFKA_NODE_ID: 1
-        KAFKA_PROCESS_ROLES: broker,controller
-        KAFKA_LISTENERS: PLAINTEXT://0.0.0.0:9092,CONTROLLER://0.0.0.0:9093
-        KAFKA_CONTROLLER_QUORUM_VOTERS: 1@localhost:9093
-        KAFKA_AUTO_CREATE_TOPICS_ENABLE: "false"
-        KAFKA_NUM_PARTITIONS: 3
-        KAFKA_LOG_RETENTION_HOURS: 168
-      volumes:
-        - kafka-data:/var/lib/kafka/data
-      healthcheck:
-        test: kafka-broker-api-versions --bootstrap-server localhost:9092
-        interval: 30s
-        retries: 5
-
-    kafdrop:
-      image: docker.io/obsidiandynamics/kafdrop:4.0.1
-      port: "9000:9000"
-      environment:
-        KAFKA_BROKERCONNECT: kafka:9092
-      depends_on:
-        kafka:
-          condition: service_healthy
-
-    activemq:
-      image: docker.io/apache/activemq-artemis:2.33.0
-      ports:
-        - "61616:61616"
-        - "8161:8161"
-      environment:
-        ARTEMIS_USER: admin
-        ARTEMIS_PASSWORD: admin123
-      volumes:
-        - artemis-data:/var/lib/artemis-instance/data
-      healthcheck:
-        test: /var/lib/artemis-instance/bin/artemis check node
-        interval: 30s
-        retries: 3
-
-    apicurio:
-      image: docker.io/apicurio/apicurio-registry-sql:2.5.11.Final
-      port: "8081:8080"
-      environment:
-        REGISTRY_DATASOURCE_URL: jdbc:postgresql://postgres:5432/apicurio
-        REGISTRY_DATASOURCE_USERNAME: apicurio
-        REGISTRY_DATASOURCE_PASSWORD: apicurio123
-      depends_on:
-        postgres:
-          condition: service_healthy
-      healthcheck:
-        test: curl -f http://localhost:8080/health/ready
-        interval: 15s
-        retries: 3
-
-    threescale:
-      image: quay.io/3scale/apicast:v3.11
-      ports:
-        - "8000:8080"
-        - "8001:8090"
-      environment:
-        THREESCALE_CONFIG_FILE: /config/kong.yml
-      volumes:
-        - ./config/kong.yml:/config/kong.yml:ro
-
-    drools-engine:
-      image: guidewire-poc/drools-engine:latest
-      build: ../../components/drools-engine
-      port: "8086:8086"
-      depends_on:
-        postgres:
-          condition: service_healthy
-
-    camel-gateway:
-      image: guidewire-poc/camel-gateway:latest
-      build: ../../components/camel-gateway
-      port: "8083:8083"
-      environment:
-        KAFKA_BOOTSTRAP_SERVERS: kafka:9092
-        APICURIO_URL: http://apicurio:8080/apis/registry/v2
-        ACTIVEMQ_URL: tcp://activemq:61616
-      depends_on:
-        kafka:
-          condition: service_healthy
-        apicurio:
-          condition: service_healthy
-        activemq:
-          condition: service_healthy
-
-    billing-service:
-      image: guidewire-poc/billing-service:latest
-      build: ../../components/billing-service
-      port: "8082:8082"
-      environment:
-        SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/billing
-        KAFKA_BOOTSTRAP_SERVERS: kafka:9092
-        APICURIO_URL: http://apicurio:8080/apis/registry/v2
-      depends_on:
-        postgres:
-          condition: service_healthy
-        kafka:
-          condition: service_healthy
-
-    incidents-service:
-      image: guidewire-poc/incidents-service:latest
-      build: ../../components/incidents-service
-      port: "8084:8084"
-      environment:
-        QUARKUS_DATASOURCE_URL: jdbc:postgresql://postgres:5432/incidents
-        KAFKA_BOOTSTRAP_SERVERS: kafka:9092
-        APICURIO_URL: http://apicurio:8080/apis/registry/v2
-      depends_on:
-        postgres:
-          condition: service_healthy
-        kafka:
-          condition: service_healthy
-
-    customers-service:
-      image: guidewire-poc/customers-service:latest
-      build: ../../components/customers-service
-      port: "8085:8085"
-      environment:
-        DATABASE_URL: postgresql://customers_user:customers123@postgres:5432/customers
-        KAFKA_BROKERS: kafka:9092
-        APICURIO_URL: http://apicurio:8080/apis/registry/v2
-      depends_on:
-        postgres:
-          condition: service_healthy
-        kafka:
-          condition: service_healthy
-
-  volumes:
-    - pgdata
-    - kafka-data
-    - artemis-data
+        - drools-engine
+      wait: pods Ready
 
   total_resources:
-    estimated_memory: 5.5GB
+    estimated_memory: 6GB
     estimated_cpu: 4 cores
     description: >
-      ~28% de los 20GB asignados a la VM.
-      Deja ~14.5GB libres para compilación y dev tools.
+      ~43% de los 14GB asignados a CRC.
+      OpenShift base consume ~4GB adicionales.
+      Deja ~4GB libres para builds y operaciones.
 
 ##############################################################################
-# CAPA 5: OPERACIONES DÍA A DÍA
+# CAPA 4: OPERACIONES DIA A DIA
 ##############################################################################
 
 operations:
-  lab_lifecycle:
-    description: Comandos desde tu HOST (fuera de la VM)
+  cluster_lifecycle:
+    description: Comandos desde tu HOST
 
-    encender_todo:
-      command: vagrant up
+    encender_cluster:
+      command: crc start
       description: >
-        Primera vez: crea la VM, provisiona, baja imágenes.
+        Primera vez: configura el cluster, instala OpenShift.
         Siguientes veces: enciende la VM donde la dejaste.
 
-    apagar_todo:
-      command: vagrant halt
+    apagar_cluster:
+      command: crc stop
       description: >
-        Apaga la VM limpiamente. Los datos persisten.
+        Detiene la VM del cluster. Los datos persisten.
         Equivale a apagar un servidor.
 
-    suspender:
-      command: vagrant suspend
+    estado:
+      command: crc status
       description: >
-        Congela la VM en memoria. vagrant resume la retoma
-        instantáneamente donde la dejaste.
+        Muestra estado del cluster, uso de RAM y disco.
 
-    destruir_todo:
-      command: vagrant destroy -f
+    consola_web:
+      command: crc console
       description: >
-        Elimina la VM por completo. Borra todo.
-        Puedes recrearla con "vagrant up".
+        Abre la consola web de OpenShift en el navegador.
 
-    ssh:
-      command: vagrant ssh
-      description: Entrar a la VM por SSH
+    destruir_cluster:
+      command: crc delete
+      description: >
+        Elimina la VM del cluster por completo. Borra todo.
+        Puedes recrearlo con "crc start".
 
-  inside_vm:
-    description: Comandos dentro de la VM (después de vagrant ssh)
+    limpiar_config:
+      command: crc cleanup
+      description: >
+        Elimina la configuracion de CRC (DNS, libvirt, etc.).
+        Ejecutar despues de crc delete para limpieza total.
 
-    levantar_stack:
-      command: cd ~/lab-guidewire/podman && podman-compose up -d
-      description: Levanta todos los contenedores
+  stack_operations:
+    description: Comandos para gestionar el stack desplegado
 
-    detener_stack:
-      command: cd ~/lab-guidewire/podman && podman-compose down
-      description: Detiene todos los contenedores (datos persisten)
+    desplegar_todo:
+      command: cd lab/openshift && ./deploy-all.sh
+      description: Despliega infraestructura + aplicaciones
+
+    desplegar_infra:
+      command: ./deploy-all.sh --infra
+      description: Solo infraestructura
+
+    desplegar_apps:
+      command: ./deploy-all.sh --apps
+      description: Solo aplicaciones
+
+    ver_pods:
+      command: oc get pods -n guidewire-infra && oc get pods -n guidewire-apps
+      description: Ver estado de todos los pods
 
     ver_logs:
-      command: podman-compose logs -f [servicio]
-      description: Ver logs (todos o de un servicio específico)
+      command: oc logs -f deploy/[servicio] -n [namespace]
+      description: Ver logs de un servicio especifico
 
-    estado:
-      command: podman-compose ps
-      description: Ver estado de todos los contenedores
+    shell_en_pod:
+      command: oc exec -it deploy/[servicio] -n [namespace] -- bash
+      description: Abrir shell interactiva en un pod
 
-    reconstruir:
-      command: podman-compose up -d --build [servicio]
-      description: Reconstruir imagen de un servicio
+    reconstruir_imagen:
+      command: oc start-build [servicio] -n guidewire-apps --from-dir=../../components/[servicio] --follow
+      description: Reconstruir la imagen de un servicio
 
-    limpiar_todo:
-      command: podman-compose down -v && podman system prune -af
-      description: Eliminar contenedores, volúmenes e imágenes
+    escalar:
+      command: oc scale deploy/[servicio] --replicas=N -n [namespace]
+      description: Escalar un servicio
 
-  snapshots:
-    description: Guardar/restaurar estados de la VM desde el HOST
-    save:
-      command: virsh snapshot-create-as lab-guidewire_default snap-nombre
-      description: Guardar punto de restauración
-    restore:
-      command: virsh snapshot-revert lab-guidewire_default snap-nombre
-      description: Volver a un punto de restauración
-    list:
-      command: virsh snapshot-list lab-guidewire_default
-      description: Listar snapshots disponibles
+    borrar_todo:
+      command: oc delete project guidewire-infra guidewire-apps
+      description: Eliminar todos los recursos del proyecto
 
 ##############################################################################
-# RESUMEN: ¿QUÉ INSTALAS EN TU MÁQUINA?
+# RESUMEN: QUE INSTALAS EN TU MAQUINA?
 ##############################################################################
 
 host_footprint:
   installed:
-    - vagrant
-    - libvirt + KVM (virtualización nativa del kernel)
-    - vagrant-libvirt plugin
+    - CRC (OpenShift Local)
+    - oc CLI (incluido con CRC)
+  accounts:
+    - Red Hat Account (gratuita, para pull secret)
   NOT_installed:
     - Docker
+    - Podman
     - Java / JDK
     - Node.js
     - Maven
     - Kafka tools
     - Bases de datos
-    - "Nada más"
+    - Vagrant (ya no se usa, migrado a CRC)
+    - libvirt / KVM (CRC lo gestiona internamente)
+    - "Nada mas"
 
 acceptance_criteria:
-  - "vagrant up" desde cero crea la VM e instala todo automáticamente
-  - "vagrant halt" apaga todo y los datos persisten
-  - "vagrant suspend / resume" congela y retoma instantáneamente
-  - Todos los puertos son accesibles desde el host (localhost:8081, etc.)
-  - podman-compose up -d levanta los 12 servicios sin errores
-  - Todos los healthchecks pasan en menos de 3 minutos
-  - Los servicios se comunican entre sí por la red guidewire-net
-  - "vagrant destroy && vagrant up" recrea todo desde cero
-  - Snapshots permiten guardar/restaurar estados de la VM
+  - "crc start" desde cero crea el cluster OpenShift local
+  - "./deploy-all.sh" despliega los 12 servicios en dos namespaces
+  - Todos los pods pasan a estado Ready en menos de 5 minutos (post-build)
+  - Los operadores (Strimzi, AMQ Broker, Apicurio) se instalan automaticamente
+  - Todas las Routes son accesibles desde el host via *.apps-crc.testing
+  - "oc start-build" reconstruye imagenes desde el codigo fuente local
+  - "crc stop && crc start" reinicia el cluster y los servicios se recuperan
+  - "oc delete project" + "./deploy-all.sh" recrea todo desde cero
+  - La consola web de OpenShift es accesible y muestra todos los recursos

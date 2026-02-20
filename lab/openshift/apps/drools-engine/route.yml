@@ -1,0 +1,17 @@
+apiVersion: route.openshift.io/v1
+kind: Route
+metadata:
+  name: drools-engine
+  namespace: guidewire-apps
+  labels:
+    app: drools-engine
+    app.kubernetes.io/part-of: guidewire-poc
+spec:
+  host: drools-engine-guidewire-apps.apps-crc.testing
+  to:
+    kind: Service
+    name: drools-engine
+    weight: 100
+  port:
+    targetPort: http
+  wildcardPolicy: None

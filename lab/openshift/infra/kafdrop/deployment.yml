@@ -1,0 +1,52 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: kafdrop
+  namespace: guidewire-infra
+  labels:
+    app: kafdrop
+    app.kubernetes.io/part-of: guidewire-poc
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: kafdrop
+  template:
+    metadata:
+      labels:
+        app: kafdrop
+        app.kubernetes.io/part-of: guidewire-poc
+    spec:
+      containers:
+        - name: kafdrop
+          image: obsidiandynamics/kafdrop:4.0.1
+          ports:
+            - containerPort: 9000
+              protocol: TCP
+          env:
+            - name: KAFKA_BROKERCONNECT
+              value: kafka-cluster-kafka-bootstrap:9092
+            - name: JVM_OPTS
+              value: "-Xms128m -Xmx256m"
+            - name: SERVER_SERVLET_CONTEXTPATH
+              value: "/"
+          readinessProbe:
+            httpGet:
+              path: /
+              port: 9000
+            initialDelaySeconds: 20
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /
+              port: 9000
+            initialDelaySeconds: 30
+            periodSeconds: 15
+          resources:
+            requests:
+              memory: 128Mi
+              cpu: 100m
+            limits:
+              memory: 384Mi
+              cpu: 250m

@@ -23,7 +23,7 @@ The system follows these architectural principles:
 - **API-First / Contract-Driven**: All interfaces defined via OpenAPI 3.1, AsyncAPI 3.0, and AVRO schemas before implementation
 - **Event-Driven Architecture (EDA)**: Apache Kafka as the event backbone for asynchronous, decoupled communication
 - **Polyglot Microservices**: Each service chooses the best technology for its domain
-- **Infrastructure as Code**: Reproducible lab environment via Vagrant + Podman Compose
+- **Infrastructure as Code**: Reproducible lab environment via Red Hat OpenShift Local (CRC) + Kubernetes manifests
 
 ---
 
@@ -208,23 +208,23 @@ stateDiagram-v2
 
 ---
 
-### ADR-002: Podman over Docker
+### ADR-002: Red Hat OpenShift Local (CRC) over Vagrant + Podman Compose
 
-**Status**: Accepted
+**Status**: Accepted (supersedes original ADR-002: Podman over Docker)
 
-**Context**: The POC needs a containerized local development environment. The target production platform is Red Hat OpenShift / Kubernetes. Docker Desktop licensing changed in 2022 for enterprise use.
+**Context**: The POC needs a local development environment that closely mirrors production OpenShift. The original approach used Vagrant + libvirt/KVM to create a VM running Podman Compose. While functional, this added an extra virtualization layer and didn't exercise Kubernetes/OpenShift primitives (Operators, Routes, Services, BuildConfigs).
 
-**Decision**: Use Podman + Podman Compose instead of Docker + Docker Compose for all container orchestration in the local lab environment.
+**Decision**: Use Red Hat OpenShift Local (CRC) as the local development platform. CRC runs a single-node OpenShift 4.x cluster with full Kubernetes API, Operator Lifecycle Manager, and enterprise features. Podman Compose is retained as a legacy alternative.
 
 **Consequences**:
-- Positive: Podman is daemonless and rootless by default, improving security posture
-- Positive: OCI-compliant -- images and containers are portable to any OCI runtime
-- Positive: Native alignment with Red Hat ecosystem (OpenShift, RHEL)
-- Positive: No licensing cost for enterprise use
-- Positive: CLI is Docker-compatible (`alias docker=podman` works for most cases)
-- Negative: Some Docker Compose features have slight behavioral differences in Podman Compose
-- Negative: Ecosystem tooling (Docker Desktop UI, extensions) is not available
-- Negative: Networking model differs slightly (pod-based vs bridge-based)
+- Positive: Real OpenShift environment matches production (Operators, Routes, RBAC, SCC)
+- Positive: Strimzi, AMQ Broker, and Apicurio operators manage infrastructure lifecycle
+- Positive: Cross-namespace service discovery via Kubernetes DNS
+- Positive: BuildConfig + ImageStream provide native container build pipeline
+- Positive: No extra VM layer -- CRC manages its own lightweight VM
+- Negative: CRC requires a free Red Hat account for pull secret
+- Negative: Higher resource baseline (~9GB RAM minimum for CRC itself)
+- Negative: Operator startup can be slow on first deployment
 
 ---
 
@@ -339,8 +339,8 @@ stateDiagram-v2
 
 | Layer               | Technology                  | Version | Purpose                                      |
 |---------------------|-----------------------------|---------|----------------------------------------------|
-| Virtualization      | Vagrant + libvirt/KVM       | 2.4+    | Isolated, reproducible lab environment        |
-| Containers          | Podman + Podman Compose     | 4.9+    | OCI container runtime (daemonless, rootless)  |
+| Platform            | Red Hat OpenShift Local (CRC) | 4.x   | Single-node OpenShift cluster                 |
+| Orchestration       | Kubernetes / OpenShift      | 4.x     | Pod scheduling, service discovery, routes     |
 | API Gateway         | Red Hat 3Scale (APIcast)    | 3.11    | Rate limiting, auth, API management           |
 | Integration         | Apache Camel 4              | 4.x     | EIP, protocol mediation, routing              |
 | Event Streaming     | Apache Kafka (KRaft)        | 3.7     | Event backbone, durable log                   |

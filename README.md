@@ -1,6 +1,6 @@
 # Guidewire Integration POC
 
-POC de arquitectura de integración para **Guidewire InsuranceSuite**. Demuestra patrones SOA/MSA/EDA con API-First, contract-driven development y stack enterprise Red Hat sobre un laboratorio aislado con Vagrant + Podman.
+POC de arquitectura de integración para **Guidewire InsuranceSuite**. Demuestra patrones SOA/MSA/EDA con API-First, contract-driven development y stack enterprise Red Hat sobre un laboratorio aislado con Red Hat OpenShift Local (CRC).
 
 ---
 
@@ -8,17 +8,22 @@ POC de arquitectura de integración para **Guidewire InsuranceSuite**. Demuestra
 
 ```mermaid
 graph TD
-    subgraph VM["VM Ubuntu 24.04 — Vagrant + libvirt/KVM · Podman + Podman Compose"]
-        threescale["3Scale API Gateway<br/>:8000"]
-        camel["Camel Gateway<br/>Apache Camel 4 + Spring Boot<br/>:8083"]
-        gw["Guidewire Mock APIs<br/>Policy / Claim / Billing"]
-        drools["Drools Rules Engine<br/>:8086"]
-        kafka["Apache Kafka — KRaft<br/>Event Backbone<br/>:9092"]
-        billing["Billing Service<br/>Spring Boot 3.3<br/>:8082"]
-        incidents["Incidents Service<br/>Quarkus 3.8<br/>:8084"]
-        customers["Customers Service<br/>Node.js 20 + TS<br/>:8085"]
-        pg["PostgreSQL :15432"]
-        support["Apicurio Registry :8081 · ActiveMQ Artemis :61616 · Kafdrop :9000"]
+    subgraph CRC["Red Hat OpenShift Local (CRC) — Single-node cluster"]
+        subgraph infra["Namespace: guidewire-infra"]
+            threescale["3Scale APIcast<br/>Route: apicast"]
+            kafka["Strimzi Kafka — KRaft<br/>Event Backbone"]
+            pg["PostgreSQL 16"]
+            support["Apicurio Registry · AMQ Broker · Kafdrop"]
+        end
+
+        subgraph apps["Namespace: guidewire-apps"]
+            camel["Camel Gateway<br/>Apache Camel 4 + Spring Boot"]
+            gw["Guidewire Mock APIs<br/>Policy / Claim / Billing"]
+            drools["Drools Rules Engine"]
+            billing["Billing Service<br/>Spring Boot 3.3"]
+            incidents["Incidents Service<br/>Quarkus 3.8"]
+            customers["Customers Service<br/>Node.js 20 + TS"]
+        end
 
         threescale -->|proxy| camel
         camel -->|SOAP/REST| gw
@@ -86,10 +91,17 @@ guidewire/
 │   ├── asyncapi/                      ← 1 spec AsyncAPI 3.0
 │   └── avro/                          ← 6 schemas AVRO
 │
-├── lab/                               ← Laboratorio (Vagrant + Podman)
-│   ├── Vagrantfile
-│   ├── provision/                     ← Scripts de provisioning
-│   └── podman/                        ← Compose + configs
+├── lab/                               ← Laboratorio
+│   ├── openshift/                     ← Manifiestos OpenShift/CRC
+│   │   ├── namespaces.yml
+│   │   ├── operators/
+│   │   ├── infra/
+│   │   ├── apps/
+│   │   └── deploy-all.sh
+│   └── podman/                        ← Alternativa legacy (Podman Compose)
+│       ├── podman-compose.yml
+│       ├── .env
+│       └── config/
 │
 └── components/                        ← Código fuente
     ├── camel-gateway/                 ← Java 21 + Spring Boot + Camel 4
@@ -167,73 +179,55 @@ guidewire/
 
 | Archivo | Descripción |
 |---------|-------------|
-| [Vagrantfile](lab/Vagrantfile) | VM Ubuntu 24.04 — 20GB RAM, 8 CPUs, 80GB disco |
-| [setup.sh](lab/provision/setup.sh) | Provisioning: instala Podman + Podman Compose |
-| [install-dev-tools.sh](lab/provision/install-dev-tools.sh) | Opcional: JDK 21, Maven, Node.js 20, kcat |
-| [podman-compose.yml](lab/podman/podman-compose.yml) | Stack completo: 12 servicios con healthchecks |
-| [.env](lab/podman/.env) | Variables de entorno (versiones, credenciales, puertos) |
-| [init-db.sql](lab/podman/config/init-db.sql) | Inicialización PostgreSQL (4 bases de datos) |
-| [create-topics.sh](lab/podman/config/create-topics.sh) | Creación de 7 topics Kafka |
-| [apicast-config.json](lab/podman/config/apicast-config.json) | Configuración declarativa de 3Scale |
+| [deploy-all.sh](lab/openshift/deploy-all.sh) | Script de despliegue completo en CRC |
+| [namespaces.yml](lab/openshift/namespaces.yml) | Namespaces: guidewire-infra, guidewire-apps |
+| [operators/](lab/openshift/operators/) | Subscriptions: Strimzi, AMQ Broker, Apicurio |
+| [infra/](lab/openshift/infra/) | Manifiestos de infraestructura |
+| [apps/](lab/openshift/apps/) | Manifiestos de aplicaciones (BuildConfig + Deployment) |
+| [podman-compose.yml](lab/podman/podman-compose.yml) | Alternativa legacy con Podman Compose |
 
 ---
 
 ## Quick Start
 
-> **Primera vez?** Sigue la [guía de instalación completa](openspecs/docs/infra/lab-environment/INSTALL.md) con troubleshooting y solución de problemas.
-
 ```bash
-# 1. Instalar en tu máquina (lo único necesario)
-# Ver guía completa: openspecs/docs/infra/lab-environment/INSTALL.md
-wget https://releases.hashicorp.com/vagrant/2.4.3/vagrant_2.4.3-1_amd64.deb
-sudo dpkg -i vagrant_2.4.3-1_amd64.deb && rm vagrant_2.4.3-1_amd64.deb
-sudo apt install -y qemu-system-x86 libvirt-daemon-system virt-manager bridge-utils
-vagrant plugin install vagrant-libvirt
-sudo usermod -aG libvirt,kvm $(whoami) && newgrp libvirt
+# 1. Instalar CRC (Red Hat OpenShift Local)
+# Descargar desde: https://console.redhat.com/openshift/create/local
+crc setup
+crc start --cpus 8 --memory 20480 --disk-size 80
 
-# 2. Levantar la VM
-cd lab
-vagrant up
+# 2. Configurar oc CLI
+eval $(crc oc-env)
+oc login -u developer -p developer https://api.crc.testing:6443
 
-# 3. Entrar a la VM y levantar servicios
-vagrant ssh
-cd ~/lab-guidewire/podman
-podman-compose up -d
+# 3. Desplegar el stack completo
+cd lab/openshift
+./deploy-all.sh
 
 # 4. Verificar
-podman-compose ps
+oc get pods -n guidewire-infra
+oc get pods -n guidewire-apps
 
 # 5. Acceder desde tu navegador
-#    http://localhost:8081  → Apicurio Registry
-#    http://localhost:9000  → Kafdrop (Kafka UI)
-#    http://localhost:8161  → ActiveMQ Console
-#    http://localhost:8000  → 3Scale Gateway
-
-# 6. Apagar todo
-podman-compose down
-exit
-vagrant halt
+#    oc get routes -n guidewire-infra
+#    oc get routes -n guidewire-apps
 ```
 
 ---
 
-## Puertos
+## Routes (OpenShift)
 
-| Puerto | Servicio | URL |
-|--------|----------|-----|
-| 8000 | 3Scale API Gateway | http://localhost:8000 |
-| 8001 | 3Scale Management | http://localhost:8001 |
-| 8081 | Apicurio Registry | http://localhost:8081 |
-| 8082 | Billing Service | http://localhost:8082/api/v1/invoices |
-| 8083 | Camel Gateway | http://localhost:8083/api/v1 |
-| 8084 | Incidents Service | http://localhost:8084/api/v1/incidents |
-| 8085 | Customers Service | http://localhost:8085/api/v1/customers |
-| 8086 | Drools KIE Server | http://localhost:8086/api/v1/rules |
-| 8161 | ActiveMQ Console | http://localhost:8161/console |
-| 9000 | Kafdrop | http://localhost:9000 |
-| 9092 | Kafka Broker | localhost:9092 |
-| 15432 | PostgreSQL | localhost:15432 |
-| 61616 | ActiveMQ AMQP/JMS | localhost:61616 |
+| Servicio | Route | URL |
+|----------|-------|-----|
+| 3Scale API Gateway | apicast | https://apicast-guidewire-infra.apps-crc.testing |
+| Apicurio Registry | apicurio | https://apicurio-guidewire-infra.apps-crc.testing |
+| Kafdrop | kafdrop | https://kafdrop-guidewire-infra.apps-crc.testing |
+| ActiveMQ Console | activemq-console | https://activemq-console-guidewire-infra.apps-crc.testing |
+| Billing Service | billing-service | https://billing-service-guidewire-apps.apps-crc.testing |
+| Camel Gateway | camel-gateway | https://camel-gateway-guidewire-apps.apps-crc.testing |
+| Incidents Service | incidents-service | https://incidents-service-guidewire-apps.apps-crc.testing |
+| Customers Service | customers-service | https://customers-service-guidewire-apps.apps-crc.testing |
+| Drools KIE Server | drools-engine | https://drools-engine-guidewire-apps.apps-crc.testing |
 
 ---
 
@@ -241,8 +235,8 @@ vagrant halt
 
 | Capa | Tecnología | Versión |
 |------|-----------|---------|
-| Virtualización | Vagrant + libvirt/KVM | 2.4+ |
-| Contenedores | Podman + Podman Compose | 4.9+ |
+| Plataforma | Red Hat OpenShift Local (CRC) | 4.x |
+| Orquestación | Kubernetes / OpenShift | 4.x |
 | API Gateway | Red Hat 3Scale (APIcast) | 3.11 |
 | Integración | Apache Camel | 4.x |
 | Event Streaming | Apache Kafka (KRaft) | 3.7 |

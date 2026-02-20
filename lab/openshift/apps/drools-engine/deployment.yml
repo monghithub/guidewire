@@ -1,0 +1,44 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: drools-engine
+  namespace: guidewire-apps
+  labels:
+    app: drools-engine
+    app.kubernetes.io/part-of: guidewire-poc
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: drools-engine
+  template:
+    metadata:
+      labels:
+        app: drools-engine
+        app.kubernetes.io/part-of: guidewire-poc
+    spec:
+      containers:
+        - name: drools-engine
+          image: image-registry.openshift-image-registry.svc:5000/guidewire-apps/drools-engine:latest
+          ports:
+            - containerPort: 8086
+              protocol: TCP
+          resources:
+            requests:
+              cpu: 100m
+              memory: 256Mi
+            limits:
+              cpu: 500m
+              memory: 512Mi
+          readinessProbe:
+            httpGet:
+              path: /q/health/ready
+              port: 8086
+            initialDelaySeconds: 30
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /q/health/live
+              port: 8086
+            initialDelaySeconds: 60
+            periodSeconds: 15

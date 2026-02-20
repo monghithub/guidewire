@@ -1,0 +1,30 @@
+---
+apiVersion: broker.amq.io/v1beta1
+kind: ActiveMQArtemis
+metadata:
+  name: activemq-broker
+  namespace: guidewire-infra
+  labels:
+    app.kubernetes.io/part-of: guidewire-poc
+spec:
+  deploymentPlan:
+    size: 1
+    image: placeholder
+    requireLogin: true
+    persistenceEnabled: false
+    messageMigration: false
+    resources:
+      requests:
+        memory: 256Mi
+        cpu: 250m
+      limits:
+        memory: 512Mi
+        cpu: 500m
+  adminUser: admin
+  adminPassword: admin123
+  console:
+    expose: true
+  acceptors:
+    - name: amqp
+      protocols: amqp
+      port: 61616

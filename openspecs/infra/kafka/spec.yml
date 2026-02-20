@@ -93,9 +93,9 @@ resources:
   cpu: 1
 
 runtime:
-  engine: Podman
-  orchestration: Podman Compose
-  vm: Vagrant + libvirt/KVM
+  platform: Red Hat OpenShift Local (CRC)
+  orchestration: Kubernetes / OpenShift (Strimzi Operator)
+  namespace: guidewire-infra
 
 healthcheck:
   command: kafka-broker-api-versions --bootstrap-server localhost:9092

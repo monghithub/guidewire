@@ -58,9 +58,9 @@ deliverables:
 
   - name: Guía de Desarrollo
     sections:
-      - Requisitos previos (Docker, Java 21, Node.js 20, Maven)
+      - Requisitos previos (CRC / OpenShift Local, Java 21, Node.js 20, Maven, oc CLI)
       - Clonar y configurar
-      - Levantar infraestructura (docker compose up)
+      - Levantar infraestructura (CRC + oc apply / deploy-all.sh)
       - Desarrollo local de cada servicio
       - Registrar schemas en Apicurio
       - Ejecutar tests E2E

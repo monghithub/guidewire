@@ -15,6 +15,13 @@ Broker de eventos en modo **KRaft** (sin ZooKeeper). Actúa como backbone de la 
 | Particiones por defecto | 3 |
 | Auto-create topics | **Deshabilitado** |
 
+## DNS (OpenShift)
+
+| Contexto | Dirección |
+|----------|-----------|
+| Mismo namespace | `kafka-cluster-kafka-bootstrap:9092` |
+| Cross-namespace | `kafka-cluster-kafka-bootstrap.guidewire-infra.svc.cluster.local:9092` |
+
 ## Topics
 
 | Topic | Particiones | Retención | Descripción |
@@ -73,27 +80,27 @@ graph LR
 |-----------|-------|
 | Imagen | `obsidiandynamics/kafdrop:4.0.1` |
 | Puerto | **9000** |
-| URL | http://localhost:9000 |
+| URL | https://kafdrop-guidewire-infra.apps-crc.testing |
 
 Kafdrop permite inspeccionar topics, particiones, consumer groups y mensajes individuales.
 
-## Comandos útiles (dentro de la VM)
+## Comandos útiles (oc CLI)
 
 ```bash
 # Listar topics
-podman exec kafka kafka-topics.sh --bootstrap-server localhost:9092 --list
+oc exec -n guidewire-infra kafka-cluster-kafka-0 -- bin/kafka-topics.sh --bootstrap-server localhost:9092 --list
 
 # Describir un topic
-podman exec kafka kafka-topics.sh --bootstrap-server localhost:9092 --describe --topic billing.invoice-created
+oc exec -n guidewire-infra kafka-cluster-kafka-0 -- bin/kafka-topics.sh --bootstrap-server localhost:9092 --describe --topic billing.invoice-created
 
 # Producir mensaje de prueba
-echo '{"test": true}' | podman exec -i kafka kafka-console-producer.sh --bootstrap-server localhost:9092 --topic billing.invoice-created
+echo '{"test": true}' | oc exec -i -n guidewire-infra kafka-cluster-kafka-0 -- bin/kafka-console-producer.sh --bootstrap-server localhost:9092 --topic billing.invoice-created
 
 # Consumir mensajes
-podman exec kafka kafka-console-consumer.sh --bootstrap-server localhost:9092 --topic billing.invoice-created --from-beginning
+oc exec -n guidewire-infra kafka-cluster-kafka-0 -- bin/kafka-console-consumer.sh --bootstrap-server localhost:9092 --topic billing.invoice-created --from-beginning
 
 # Ver consumer groups
-podman exec kafka kafka-consumer-groups.sh --bootstrap-server localhost:9092 --list
+oc exec -n guidewire-infra kafka-cluster-kafka-0 -- bin/kafka-consumer-groups.sh --bootstrap-server localhost:9092 --list
 ```
 
 ## Garantías de entrega

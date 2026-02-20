@@ -1,0 +1,36 @@
+---
+apiVersion: broker.amq.io/v1beta1
+kind: ActiveMQArtemisAddress
+metadata:
+  name: claims-invoice-requests
+  namespace: guidewire-infra
+  labels:
+    app.kubernetes.io/part-of: guidewire-poc
+spec:
+  addressName: claims.invoice-requests
+  queueName: claims.invoice-requests
+  routingType: anycast
+---
+apiVersion: broker.amq.io/v1beta1
+kind: ActiveMQArtemisAddress
+metadata:
+  name: claims-fraud-alerts
+  namespace: guidewire-infra
+  labels:
+    app.kubernetes.io/part-of: guidewire-poc
+spec:
+  addressName: claims.fraud-alerts
+  queueName: claims.fraud-alerts
+  routingType: anycast
+---
+apiVersion: broker.amq.io/v1beta1
+kind: ActiveMQArtemisAddress
+metadata:
+  name: notifications-outbound
+  namespace: guidewire-infra
+  labels:
+    app.kubernetes.io/part-of: guidewire-poc
+spec:
+  addressName: notifications.outbound
+  queueName: notifications.outbound
+  routingType: anycast

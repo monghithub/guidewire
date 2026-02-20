@@ -96,7 +96,7 @@ flowchart TD
 ## Ejemplo de Invocación
 
 ```bash
-curl -X POST http://localhost:8086/api/v1/rules/fraud-check \
+curl -sk -X POST https://drools-engine-guidewire-apps.apps-crc.testing/api/v1/rules/fraud-check \
   -H "Content-Type: application/json" \
   -d '{
     "claimId": "uuid-here",

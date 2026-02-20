@@ -1,0 +1,51 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: customers-service
+  namespace: guidewire-apps
+  labels:
+    app: customers-service
+    app.kubernetes.io/part-of: guidewire-poc
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: customers-service
+  template:
+    metadata:
+      labels:
+        app: customers-service
+        app.kubernetes.io/part-of: guidewire-poc
+    spec:
+      containers:
+        - name: customers-service
+          image: image-registry.openshift-image-registry.svc:5000/guidewire-apps/customers-service:latest
+          ports:
+            - containerPort: 8085
+              protocol: TCP
+          env:
+            - name: DATABASE_URL
+              value: "postgresql://customers_user:customers123@postgres.guidewire-infra.svc.cluster.local:5432/customers"
+            - name: KAFKA_BROKERS
+              value: "kafka-cluster-kafka-bootstrap.guidewire-infra.svc.cluster.local:9092"
+            - name: APICURIO_URL
+              value: "http://apicurio-registry.guidewire-infra.svc.cluster.local:8080/apis/registry/v2"
+          resources:
+            requests:
+              cpu: 100m
+              memory: 128Mi
+            limits:
+              cpu: 500m
+              memory: 256Mi
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 8085
+            initialDelaySeconds: 15
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 8085
+            initialDelaySeconds: 30
+            periodSeconds: 15

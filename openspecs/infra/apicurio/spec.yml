@@ -78,9 +78,9 @@ networking:
       description: Interfaz web de administración
 
 runtime:
-  engine: Podman
-  orchestration: Podman Compose
-  vm: Vagrant + libvirt/KVM
+  platform: Red Hat OpenShift Local (CRC)
+  orchestration: Kubernetes / OpenShift (Apicurio Operator)
+  namespace: guidewire-infra
 
 resources:
   memory: 512MB

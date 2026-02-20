@@ -26,6 +26,14 @@ Broker de mensajería JMS/AMQP para patrones request/reply, transacciones y cola
 | Usuario | `admin` / `admin123` |
 | Protocolos | AMQP 1.0, JMS, STOMP, MQTT, OpenWire |
 
+## DNS (OpenShift)
+
+| Contexto | Dirección |
+|----------|-----------|
+| Mismo namespace (AMQP) | `activemq-broker-hdls-svc:61616` |
+| Cross-namespace (AMQP) | `activemq-broker-hdls-svc.guidewire-infra.svc.cluster.local:61616` |
+| Consola (Route) | `https://activemq-console-guidewire-infra.apps-crc.testing` |
+
 ## Colas
 
 | Cola | Tipo | Descripción |
@@ -67,7 +75,7 @@ graph LR
 
 ## Consola Web (Hawtio)
 
-- URL: http://localhost:8161/console
+- URL: https://activemq-console-guidewire-infra.apps-crc.testing/console
 - Credenciales: `admin` / `admin123`
 - Permite: ver colas, enviar mensajes de prueba, inspeccionar consumers
 
@@ -76,7 +84,7 @@ graph LR
 ```yaml
 # application.yml del Camel Gateway
 activemq:
-  broker-url: tcp://activemq:61616
+  broker-url: tcp://activemq-broker-hdls-svc.guidewire-infra.svc.cluster.local:61616
   user: admin
   password: admin123
 ```

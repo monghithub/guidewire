@@ -1,0 +1,14 @@
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: guidewire-infra
+  labels:
+    app.kubernetes.io/part-of: guidewire-poc
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: guidewire-apps
+  labels:
+    app.kubernetes.io/part-of: guidewire-poc

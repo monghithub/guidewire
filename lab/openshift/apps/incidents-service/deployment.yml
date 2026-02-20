@@ -1,0 +1,55 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: incidents-service
+  namespace: guidewire-apps
+  labels:
+    app: incidents-service
+    app.kubernetes.io/part-of: guidewire-poc
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: incidents-service
+  template:
+    metadata:
+      labels:
+        app: incidents-service
+        app.kubernetes.io/part-of: guidewire-poc
+    spec:
+      containers:
+        - name: incidents-service
+          image: image-registry.openshift-image-registry.svc:5000/guidewire-apps/incidents-service:latest
+          ports:
+            - containerPort: 8084
+              protocol: TCP
+          env:
+            - name: QUARKUS_DATASOURCE_JDBC_URL
+              value: "jdbc:postgresql://postgres.guidewire-infra.svc.cluster.local:5432/incidents"
+            - name: QUARKUS_DATASOURCE_USERNAME
+              value: "incidents_user"
+            - name: QUARKUS_DATASOURCE_PASSWORD
+              value: "incidents123"
+            - name: KAFKA_BOOTSTRAP_SERVERS
+              value: "kafka-cluster-kafka-bootstrap.guidewire-infra.svc.cluster.local:9092"
+            - name: APICURIO_URL
+              value: "http://apicurio-registry.guidewire-infra.svc.cluster.local:8080/apis/registry/v2"
+          resources:
+            requests:
+              cpu: 100m
+              memory: 256Mi
+            limits:
+              cpu: 500m
+              memory: 512Mi
+          readinessProbe:
+            httpGet:
+              path: /q/health/ready
+              port: 8084
+            initialDelaySeconds: 30
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /q/health/live
+              port: 8084
+            initialDelaySeconds: 60
+            periodSeconds: 15

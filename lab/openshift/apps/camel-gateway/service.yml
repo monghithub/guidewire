@@ -1,0 +1,17 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: camel-gateway
+  namespace: guidewire-apps
+  labels:
+    app: camel-gateway
+    app.kubernetes.io/part-of: guidewire-poc
+spec:
+  selector:
+    app: camel-gateway
+  ports:
+    - name: http
+      port: 8083
+      targetPort: 8083
+      protocol: TCP
+  type: ClusterIP

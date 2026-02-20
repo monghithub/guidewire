@@ -11,8 +11,16 @@ Registro centralizado de contratos y esquemas. Almacena OpenAPI, AsyncAPI y AVRO
 | Imagen | `apicurio/apicurio-registry-sql:2.5.11.Final` |
 | Puerto | **8081** |
 | Storage | PostgreSQL (base de datos `apicurio`) |
-| UI | http://localhost:8081 |
-| API REST | http://localhost:8081/apis/registry/v2 |
+| UI | https://apicurio-guidewire-infra.apps-crc.testing |
+| API REST | https://apicurio-guidewire-infra.apps-crc.testing/apis/registry/v2 |
+
+## DNS (OpenShift)
+
+| Contexto | Dirección |
+|----------|-----------|
+| Mismo namespace | `apicurio-registry:8080` |
+| Cross-namespace | `apicurio-registry.guidewire-infra.svc.cluster.local:8080` |
+| UI (Route) | `https://apicurio-guidewire-infra.apps-crc.testing` |
 
 ## Grupos de Artefactos
 
@@ -33,14 +41,17 @@ Esto garantiza que producers y consumers antiguos y nuevos puedan coexistir dura
 ## Registrar un Schema
 
 ```bash
+# Via Route
+APICURIO_URL=https://apicurio-guidewire-infra.apps-crc.testing
+
 # Registrar schema AVRO
-curl -X POST http://localhost:8081/apis/registry/v2/groups/guidewire/artifacts \
+curl -X POST $APICURIO_URL/apis/registry/v2/groups/guidewire/artifacts \
   -H "Content-Type: application/json; artifactType=AVRO" \
   -H "X-Registry-ArtifactId: InvoiceCreated" \
   -d @contracts/avro/InvoiceCreated.avsc
 
 # Registrar spec OpenAPI
-curl -X POST http://localhost:8081/apis/registry/v2/groups/guidewire-openapi/artifacts \
+curl -X POST $APICURIO_URL/apis/registry/v2/groups/guidewire-openapi/artifacts \
   -H "Content-Type: application/json; artifactType=OPENAPI" \
   -H "X-Registry-ArtifactId: policycenter-api" \
   -d @contracts/openapi/policycenter-api.yml
@@ -58,7 +69,7 @@ spring.kafka.producer.value-serializer: io.apicurio.registry.serde.avro.AvroKafk
 spring.kafka.consumer.value-deserializer: io.apicurio.registry.serde.avro.AvroKafkaDeserializer
 
 # Registry URL
-apicurio.registry.url: http://apicurio:8080/apis/registry/v2
+apicurio.registry.url: http://apicurio-registry.guidewire-infra.svc.cluster.local:8080/apis/registry/v2
 ```
 
 ## Diagrama de Flujo del Schema Registry
@@ -100,14 +111,16 @@ graph LR
 ## API REST útil
 
 ```bash
+APICURIO_URL=https://apicurio-guidewire-infra.apps-crc.testing
+
 # Listar artefactos de un grupo
-curl http://localhost:8081/apis/registry/v2/groups/guidewire/artifacts
+curl $APICURIO_URL/apis/registry/v2/groups/guidewire/artifacts
 
 # Obtener schema por ID
-curl http://localhost:8081/apis/registry/v2/groups/guidewire/artifacts/InvoiceCreated
+curl $APICURIO_URL/apis/registry/v2/groups/guidewire/artifacts/InvoiceCreated
 
 # Listar versiones
-curl http://localhost:8081/apis/registry/v2/groups/guidewire/artifacts/InvoiceCreated/versions
+curl $APICURIO_URL/apis/registry/v2/groups/guidewire/artifacts/InvoiceCreated/versions
 ```
 
 ## Spec de referencia

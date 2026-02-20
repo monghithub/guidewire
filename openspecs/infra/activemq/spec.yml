@@ -77,9 +77,9 @@ networking:
       password: admin123
 
 runtime:
-  engine: Podman
-  orchestration: Podman Compose
-  vm: Vagrant + libvirt/KVM
+  platform: Red Hat OpenShift Local (CRC)
+  orchestration: Kubernetes / OpenShift (AMQ Broker Operator)
+  namespace: guidewire-infra
 
 resources:
   memory: 512MB

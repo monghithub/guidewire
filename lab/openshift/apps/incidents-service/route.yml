@@ -1,0 +1,17 @@
+apiVersion: route.openshift.io/v1
+kind: Route
+metadata:
+  name: incidents-service
+  namespace: guidewire-apps
+  labels:
+    app: incidents-service
+    app.kubernetes.io/part-of: guidewire-poc
+spec:
+  host: incidents-service-guidewire-apps.apps-crc.testing
+  to:
+    kind: Service
+    name: incidents-service
+    weight: 100
+  port:
+    targetPort: http
+  wildcardPolicy: None

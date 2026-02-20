@@ -143,26 +143,24 @@ podman images | grep incidents-service-test
 ### Test en la VM
 
 ```bash
-# Dentro de la VM (vagrant ssh)
-cd /vagrant/lab/podman
-
-# Rebuild solo incidents-service
-podman-compose build incidents-service
+# Rebuild y desplegar en CRC
+oc start-build incidents-service -n guidewire-apps \
+  --from-dir=components/incidents-service --follow
 
 # Verificar que levanta
-podman-compose up -d incidents-service
-podman-compose logs -f incidents-service
+oc get pods -n guidewire-apps -l app=incidents-service
+oc logs -f deploy/incidents-service -n guidewire-apps
 
 # Verificar healthcheck
-curl http://localhost:8084/q/health
+curl -sk https://incidents-service-guidewire-apps.apps-crc.testing/q/health
 ```
 
 ### Checklist de validacion
 
 - [ ] `Dockerfile.jvm` renombrado a `Dockerfile`
-- [ ] `podman-compose build incidents-service` termina sin errores
-- [ ] `podman-compose up incidents-service` levanta y responde en `:8084`
-- [ ] `curl localhost:8084/q/health` devuelve status UP
+- [ ] `oc start-build incidents-service -n guidewire-apps --from-dir=components/incidents-service --follow` termina sin errores
+- [ ] El pod de incidents-service pasa a estado Ready en guidewire-apps
+- [ ] `curl -sk https://incidents-service-guidewire-apps.apps-crc.testing/q/health` devuelve status UP
 - [ ] Los otros 4 servicios siguen buildeando correctamente
 
 ## Comandos de commit

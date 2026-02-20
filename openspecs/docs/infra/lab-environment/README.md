@@ -1,39 +1,35 @@
-# Lab Environment — Documentación
+# Lab Environment — Documentacion
 
-## Descripción
+## Descripcion
 
-Entorno de laboratorio completamente aislado. Nada se instala en el host excepto Vagrant + libvirt/KVM. Dentro de la VM corre todo con Podman + Podman Compose.
+Entorno de laboratorio sobre CRC (OpenShift Local). Dos namespaces organizan el stack: `guidewire-infra` para infraestructura (PostgreSQL, Kafka, ActiveMQ, Apicurio, 3Scale, Kafdrop) y `guidewire-apps` para los microservicios de negocio. Todo se despliega con manifiestos Kubernetes nativos via `oc apply`.
 
 ## Arquitectura
 
 ```mermaid
 graph TD
-    HOST["HOST (tu máquina)"]
-    HOST --> VAGRANT["Vagrant + libvirt/KVM"]
-    VAGRANT --> VM["VM Ubuntu 24.04<br/>20GB RAM / 8 CPUs / 80GB"]
-    VM --> PODMAN["Podman + Podman Compose"]
+    HOST["HOST (tu maquina)"]
+    HOST --> CRC["CRC (OpenShift Local)<br/>14GB RAM / 6 CPUs / 60GB"]
+    CRC --> NS_INFRA["Namespace: guidewire-infra"]
+    CRC --> NS_APPS["Namespace: guidewire-apps"]
 
-    PODMAN --> INFRA_GROUP["Infraestructura"]
-    PODMAN --> APP_GROUP["Aplicaciones"]
+    NS_INFRA --> PG["PostgreSQL"]
+    NS_INFRA --> KAFKA["Kafka (Strimzi)"]
+    NS_INFRA --> KAFDROP["Kafdrop"]
+    NS_INFRA --> AMQ["ActiveMQ (AMQ Broker)"]
+    NS_INFRA --> APICURIO["Apicurio Registry"]
+    NS_INFRA --> THREESCALE["3Scale (APIcast)"]
 
-    INFRA_GROUP --> PG["PostgreSQL"]
-    INFRA_GROUP --> KAFKA["Kafka (KRaft)"]
-    INFRA_GROUP --> KAFDROP["Kafdrop"]
-    INFRA_GROUP --> AMQ["ActiveMQ Artemis"]
-    INFRA_GROUP --> APICURIO["Apicurio Registry"]
-    INFRA_GROUP --> THREESCALE["3Scale (APIcast)"]
-
-    APP_GROUP --> CAMEL["Camel Gateway"]
-    APP_GROUP --> DROOLS["Drools Engine"]
-    APP_GROUP --> BILLING["Billing Service"]
-    APP_GROUP --> INCIDENTS["Incidents Service"]
-    APP_GROUP --> CUSTOMERS["Customers Service"]
+    NS_APPS --> CAMEL["Camel Gateway"]
+    NS_APPS --> DROOLS["Drools Engine"]
+    NS_APPS --> BILLING["Billing Service"]
+    NS_APPS --> INCIDENTS["Incidents Service"]
+    NS_APPS --> CUSTOMERS["Customers Service"]
 
     style HOST fill:#f9f,stroke:#333
-    style VM fill:#bbf,stroke:#333
-    style PODMAN fill:#bfb,stroke:#333
-    style INFRA_GROUP fill:#fdb,stroke:#333
-    style APP_GROUP fill:#bdf,stroke:#333
+    style CRC fill:#bbf,stroke:#333
+    style NS_INFRA fill:#fdb,stroke:#333
+    style NS_APPS fill:#bdf,stroke:#333
 ```
 
 ## Requisitos del Host
@@ -41,88 +37,120 @@ graph TD
 Solo necesitas instalar:
 
 ```bash
-# Ubuntu/Debian
-sudo apt install vagrant qemu-kvm libvirt-daemon-system virt-manager
-vagrant plugin install vagrant-libvirt
+# 1. Descargar CRC desde la consola de Red Hat
+#    https://console.redhat.com/openshift/create/local
 
-# Fedora
-sudo dnf install vagrant libvirt qemu-kvm virt-manager
-vagrant plugin install vagrant-libvirt
+# 2. Instalar y configurar
+crc setup
+crc start --cpus 6 --memory 14336 --disk-size 60
 ```
 
-**NO necesitas**: Docker, Java, Node.js, Maven, ni ninguna herramienta de desarrollo.
+**Necesitas**: Cuenta gratuita en Red Hat (para descargar CRC y el pull secret).
+
+**NO necesitas**: Docker, Podman, Java, Node.js, Maven, ni ninguna herramienta de desarrollo.
 
 ## Ciclo de Vida
 
 ### Desde el HOST
 
-| Acción | Comando | Descripción |
+| Accion | Comando | Descripcion |
 |--------|---------|-------------|
-| Encender | `vagrant up` | Crea/enciende la VM |
-| Apagar | `vagrant halt` | Apaga la VM (datos persisten) |
-| Suspender | `vagrant suspend` | Congela en memoria |
-| Reanudar | `vagrant resume` | Retoma instantáneamente |
-| Destruir | `vagrant destroy -f` | Elimina la VM |
-| SSH | `vagrant ssh` | Entrar a la VM |
+| Encender | `crc start` | Inicia el cluster OpenShift |
+| Apagar | `crc stop` | Detiene el cluster (datos persisten) |
+| Estado | `crc status` | Muestra estado del cluster |
+| Consola web | `crc console` | Abre la consola OpenShift en el navegador |
+| Destruir | `crc delete` | Elimina el cluster completo |
+| Config oc | `eval $(crc oc-env)` | Configura el CLI `oc` en tu shell |
+| Login | `oc login -u developer -p developer https://api.crc.testing:6443` | Autenticarse |
 
-### Dentro de la VM
+### Operaciones con oc
 
-| Acción | Comando |
+| Accion | Comando |
 |--------|---------|
-| Levantar stack | `cd ~/lab-guidewire/podman && podman-compose up -d` |
-| Detener stack | `podman-compose down` |
-| Ver logs | `podman-compose logs -f [servicio]` |
-| Estado | `podman-compose ps` |
-| Reconstruir | `podman-compose up -d --build [servicio]` |
-| Limpiar todo | `podman-compose down -v && podman system prune -af` |
+| Ver pods | `oc get pods -n guidewire-infra` |
+| Ver logs | `oc logs -f deploy/billing-service -n guidewire-apps` |
+| Shell en pod | `oc exec -it deploy/postgres -n guidewire-infra -- bash` |
+| Reconstruir imagen | `oc start-build billing-service -n guidewire-apps --from-dir=../../components/billing-service --follow` |
+| Escalar | `oc scale deploy/billing-service --replicas=2 -n guidewire-apps` |
+| Borrar namespace | `oc delete project guidewire-infra guidewire-apps` |
+| Desplegar todo | `cd lab/openshift && ./deploy-all.sh` |
+| Solo infra | `./deploy-all.sh --infra` |
+| Solo apps | `./deploy-all.sh --apps` |
 
-## Snapshots (puntos de restauración)
+## Routes (servicios accesibles)
 
-```bash
-# Guardar estado
-virsh snapshot-create-as lab-guidewire_default snap-infra-ok
+Los servicios se exponen como Routes de OpenShift con TLS automatico:
 
-# Listar snapshots
-virsh snapshot-list lab-guidewire_default
-
-# Restaurar
-virsh snapshot-revert lab-guidewire_default snap-infra-ok
-```
-
-## Puertos Accesibles
-
-Todos los puertos están forwarded al host. Accede desde tu navegador:
-
-| Puerto | Servicio | URL |
-|--------|----------|-----|
-| 8000 | 3Scale Gateway | http://localhost:8000 |
-| 8081 | Apicurio UI | http://localhost:8081 |
-| 8161 | ActiveMQ Console | http://localhost:8161/console |
-| 9000 | Kafdrop | http://localhost:9000 |
+| Servicio | URL |
+|----------|-----|
+| OpenShift Console | https://console-openshift-console.apps-crc.testing |
+| 3Scale Gateway | https://apicast-guidewire-infra.apps-crc.testing |
+| Apicurio UI | https://apicurio-guidewire-infra.apps-crc.testing |
+| Kafdrop | https://kafdrop-guidewire-infra.apps-crc.testing |
+| Billing Service | https://billing-service-guidewire-apps.apps-crc.testing |
+| Incidents Service | https://incidents-service-guidewire-apps.apps-crc.testing |
+| Customers Service | https://customers-service-guidewire-apps.apps-crc.testing |
+| Camel Gateway | https://camel-gateway-guidewire-apps.apps-crc.testing |
+| Drools Engine | https://drools-engine-guidewire-apps.apps-crc.testing |
 
 ## Recursos
 
-| Recurso | VM | Contenedores | Libre |
-|---------|-----|-------------|-------|
-| RAM | 20 GB | ~5.5 GB | ~14.5 GB |
-| CPU | 8 cores | ~4 cores | ~4 cores |
-| Disco | 80 GB | ~10 GB | ~70 GB |
+| Recurso | CRC (cluster) | Stack estimado | Libre |
+|---------|---------------|----------------|-------|
+| RAM | 14 GB | ~6 GB | ~8 GB |
+| CPU | 6 cores | ~4 cores | ~2 cores |
+| Disco | 60 GB | ~15 GB | ~45 GB |
+
+> **Nota**: CRC reserva recursos para el propio OpenShift (~3-4GB RAM para etcd, API server, ingress, etc.). El stack Guidewire usa ~6GB adicionales.
 
 ## Estructura de Archivos
 
 ```
-lab/
-├── Vagrantfile
-├── provision/
-│   ├── setup.sh                 # Provisioning base (Podman)
-│   └── install-dev-tools.sh     # Herramientas dev (opcional)
-└── podman/
-    ├── podman-compose.yml       # Stack completo
-    ├── .env                     # Variables de entorno
-    └── config/
-        ├── init-db.sql          # Init PostgreSQL
-        ├── create-topics.sh     # Crear topics Kafka
-        └── apicast-config.json  # Config 3Scale
+lab/openshift/
+├── deploy-all.sh                  # Script de despliegue completo
+├── namespaces.yml                 # guidewire-infra + guidewire-apps
+├── operators/
+│   ├── strimzi-subscription.yml   # Operador Strimzi (Kafka)
+│   ├── amq-broker-subscription.yml# Operador AMQ Broker (ActiveMQ)
+│   └── apicurio-subscription.yml  # Operador Apicurio Registry
+├── infra/
+│   ├── postgres/
+│   │   ├── secret.yml
+│   │   ├── configmap-init-db.yml
+│   │   ├── pvc.yml
+│   │   ├── deployment.yml
+│   │   └── service.yml
+│   ├── kafka/
+│   │   ├── kafka-cluster.yml      # Strimzi Kafka CR
+│   │   └── kafka-topics.yml       # KafkaTopic CRs
+│   ├── activemq/
+│   │   ├── activemq-broker.yml    # ActiveMQArtemis CR
+│   │   └── activemq-addresses.yml # ActiveMQArtemisAddress CRs
+│   ├── apicurio/
+│   │   └── apicurio-registry.yml  # ApicurioRegistry CR
+│   ├── kafdrop/
+│   │   ├── deployment.yml
+│   │   ├── service.yml
+│   │   └── route.yml
+│   └── threescale/
+│       ├── configmap-apicast.yml
+│       ├── deployment.yml
+│       ├── service.yml
+│       └── route.yml
+└── apps/
+    ├── billing-service/
+    │   ├── buildconfig.yml
+    │   ├── deployment.yml
+    │   ├── service.yml
+    │   └── route.yml
+    ├── camel-gateway/
+    │   └── ...
+    ├── incidents-service/
+    │   └── ...
+    ├── customers-service/
+    │   └── ...
+    └── drools-engine/
+        └── ...
 ```
 
 ## Spec de referencia

@@ -1,0 +1,18 @@
+---
+apiVersion: route.openshift.io/v1
+kind: Route
+metadata:
+  name: kafdrop
+  namespace: guidewire-infra
+  labels:
+    app: kafdrop
+    app.kubernetes.io/part-of: guidewire-poc
+spec:
+  host: kafdrop-guidewire-infra.apps-crc.testing
+  to:
+    kind: Service
+    name: kafdrop
+    weight: 100
+  port:
+    targetPort: http
+  wildcardPolicy: None

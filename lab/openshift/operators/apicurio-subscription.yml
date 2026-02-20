@@ -1,0 +1,14 @@
+---
+apiVersion: operators.coreos.com/v1alpha1
+kind: Subscription
+metadata:
+  name: apicurio-registry
+  namespace: openshift-operators
+  labels:
+    app.kubernetes.io/part-of: guidewire-poc
+spec:
+  channel: "2.x"
+  name: apicurio-registry
+  source: community-operators
+  sourceNamespace: openshift-marketplace
+  installPlanApproval: Automatic

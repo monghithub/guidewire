@@ -1,0 +1,98 @@
+---
+apiVersion: kafka.strimzi.io/v1beta2
+kind: KafkaTopic
+metadata:
+  name: billing.invoice-created
+  namespace: guidewire-infra
+  labels:
+    strimzi.io/cluster: kafka-cluster
+    app.kubernetes.io/part-of: guidewire-poc
+spec:
+  partitions: 3
+  replicas: 1
+  config:
+    retention.ms: 604800000
+---
+apiVersion: kafka.strimzi.io/v1beta2
+kind: KafkaTopic
+metadata:
+  name: billing.invoice-status-changed
+  namespace: guidewire-infra
+  labels:
+    strimzi.io/cluster: kafka-cluster
+    app.kubernetes.io/part-of: guidewire-poc
+spec:
+  partitions: 3
+  replicas: 1
+  config:
+    retention.ms: 604800000
+---
+apiVersion: kafka.strimzi.io/v1beta2
+kind: KafkaTopic
+metadata:
+  name: incidents.incident-created
+  namespace: guidewire-infra
+  labels:
+    strimzi.io/cluster: kafka-cluster
+    app.kubernetes.io/part-of: guidewire-poc
+spec:
+  partitions: 3
+  replicas: 1
+  config:
+    retention.ms: 604800000
+---
+apiVersion: kafka.strimzi.io/v1beta2
+kind: KafkaTopic
+metadata:
+  name: incidents.incident-status-changed
+  namespace: guidewire-infra
+  labels:
+    strimzi.io/cluster: kafka-cluster
+    app.kubernetes.io/part-of: guidewire-poc
+spec:
+  partitions: 3
+  replicas: 1
+  config:
+    retention.ms: 604800000
+---
+apiVersion: kafka.strimzi.io/v1beta2
+kind: KafkaTopic
+metadata:
+  name: customers.customer-registered
+  namespace: guidewire-infra
+  labels:
+    strimzi.io/cluster: kafka-cluster
+    app.kubernetes.io/part-of: guidewire-poc
+spec:
+  partitions: 3
+  replicas: 1
+  config:
+    retention.ms: 604800000
+---
+apiVersion: kafka.strimzi.io/v1beta2
+kind: KafkaTopic
+metadata:
+  name: customers.customer-status-changed
+  namespace: guidewire-infra
+  labels:
+    strimzi.io/cluster: kafka-cluster
+    app.kubernetes.io/part-of: guidewire-poc
+spec:
+  partitions: 3
+  replicas: 1
+  config:
+    retention.ms: 604800000
+---
+apiVersion: kafka.strimzi.io/v1beta2
+kind: KafkaTopic
+metadata:
+  name: dlq.errors
+  namespace: guidewire-infra
+  labels:
+    strimzi.io/cluster: kafka-cluster
+    app.kubernetes.io/part-of: guidewire-poc
+spec:
+  partitions: 1
+  replicas: 1
+  config:
+    retention.ms: 2592000000

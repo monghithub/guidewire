@@ -1,0 +1,64 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: apicast
+  namespace: guidewire-infra
+  labels:
+    app: apicast
+    app.kubernetes.io/part-of: guidewire-poc
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: apicast
+  template:
+    metadata:
+      labels:
+        app: apicast
+        app.kubernetes.io/part-of: guidewire-poc
+    spec:
+      containers:
+        - name: apicast
+          image: quay.io/3scale/apicast:v3.11
+          ports:
+            - containerPort: 8080
+              protocol: TCP
+              name: proxy
+            - containerPort: 8090
+              protocol: TCP
+              name: management
+          env:
+            - name: THREESCALE_CONFIG_FILE
+              value: /opt/app-root/src/config/apicast-config.json
+            - name: APICAST_LOG_LEVEL
+              value: info
+            - name: THREESCALE_DEPLOYMENT_ENV
+              value: production
+          volumeMounts:
+            - name: apicast-config
+              mountPath: /opt/app-root/src/config
+              readOnly: true
+          readinessProbe:
+            httpGet:
+              path: /status/ready
+              port: 8090
+            initialDelaySeconds: 10
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /status/live
+              port: 8090
+            initialDelaySeconds: 15
+            periodSeconds: 15
+          resources:
+            requests:
+              memory: 128Mi
+              cpu: 100m
+            limits:
+              memory: 256Mi
+              cpu: 250m
+      volumes:
+        - name: apicast-config
+          configMap:
+            name: apicast-config

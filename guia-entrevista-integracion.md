@@ -991,9 +991,8 @@ Capa avanzada de gestión de tráfico entre pods. OpenShift integra **Istio** co
 
 ### 10.6 Equivalente Local para POC
 
-- **CRC (CodeReady Containers):** OpenShift real de un solo nodo. Requiere 9GB RAM y 4 CPUs.
-- **Minikube / Kind:** Kubernetes puro. Suficiente para la POC.
-- **Docker Compose:** La opción más simple. Permite levantar todos los servicios con un solo comando.
+- **CRC (Red Hat OpenShift Local):** Plataforma elegida para la POC. OpenShift 4.x real de un solo nodo con Operators, Routes, BuildConfigs y Service Discovery. Requiere 9GB RAM mínimo y 4 CPUs. Proporciona el entorno más fiel a producción.
+- **Minikube / Kind:** Alternativas con Kubernetes puro. Suficiente para validar workloads pero sin las capacidades enterprise de OpenShift (Operators, SCC, Routes).
 
 ### 10.7 Preguntas Típicas de Entrevista
 
@@ -1031,39 +1030,42 @@ Demostrar el dominio del stack completo montando un flujo de integración end-to
 ### 12.2 Arquitectura de la POC
 
 ```
-                    ┌──────────────┐
-                    │  Kong         │  (API Management)
-                    │  API Gateway  │
-                    └──────┬───────┘
-                           │
-                    ┌──────▼───────┐
-                    │ Camel Route   │  (Integration Gateway)
-                    │ Spring Boot   │
-                    └──┬────────┬──┘
-                       │        │
-              ┌────────▼──┐  ┌──▼────────┐
-              │ Mock       │  │ Kafka     │
-              │ Guidewire  │  │ (KRaft)   │
-              │ REST API   │  │           │
-              └────────────┘  └──┬────────┘
-                                 │
-                    ┌────────────▼────────────┐
-                    │                         │
-              ┌─────▼─────┐          ┌────────▼────────┐
-              │ Drools     │          │ Consumer         │
-              │ Fraud      │          │ Notificaciones   │
-              │ Detection  │          │                  │
-              └────────────┘          └─────────────────┘
-
-              ┌────────────┐
-              │ Apicurio   │  (Schema Registry)
-              │ + PostgreSQL│
-              └────────────┘
+┌──────────────────────────────────────────────────────────┐
+│  OpenShift Local (CRC) — Single Node Cluster             │
+│                                                          │
+│  ┌────────────────────────────────────────────────────┐  │
+│  │  Namespace: guidewire-infra                        │  │
+│  │                                                    │  │
+│  │  ┌──────────────┐  ┌──────────┐  ┌────────────┐   │  │
+│  │  │ Kafka (KRaft) │  │ Apicurio │  │ PostgreSQL │   │  │
+│  │  │ Strimzi Op.  │  │ Registry │  │            │   │  │
+│  │  └──────┬───────┘  └──────────┘  └────────────┘   │  │
+│  │         │                                          │  │
+│  │  ┌──────┴───────┐  ┌──────────┐  ┌────────────┐   │  │
+│  │  │ Kafdrop      │  │ ActiveMQ │  │ 3Scale     │   │  │
+│  │  │ (Kafka UI)   │  │ Artemis  │  │ APIcast    │   │  │
+│  │  └──────────────┘  └──────────┘  └──────┬─────┘   │  │
+│  └─────────────────────────────────────────┼─────────┘  │
+│                                            │             │
+│  ┌─────────────────────────────────────────┼─────────┐  │
+│  │  Namespace: guidewire-apps              │         │  │
+│  │                                         ▼         │  │
+│  │  ┌──────────────┐  ┌──────────┐  ┌────────────┐   │  │
+│  │  │ Camel        │  │ Drools   │  │ Billing    │   │  │
+│  │  │ Gateway      │  │ Engine   │  │ Service    │   │  │
+│  │  └──────────────┘  └──────────┘  └────────────┘   │  │
+│  │                                                    │  │
+│  │  ┌──────────────┐  ┌──────────┐                    │  │
+│  │  │ Incidents    │  │ Customers│                    │  │
+│  │  │ Service      │  │ Service  │                    │  │
+│  │  └──────────────┘  └──────────┘                    │  │
+│  └────────────────────────────────────────────────────┘  │
+└──────────────────────────────────────────────────────────┘
 ```
 
-### 12.3 Stack Docker Compose
+### 12.3 Stack OpenShift/CRC
 
-| Servicio | Imagen Docker | RAM estimada |
+| Servicio | Imagen / Operator | RAM estimada |
 |---|---|---|
 | Kafka (KRaft, 1 broker) | `confluentinc/cp-kafka` | ~1.5GB |
 | Apicurio Registry | `apicurio/apicurio-registry` | ~512MB |
@@ -1092,598 +1094,120 @@ Con la BOSGAME M5 (96/128GB RAM), el stack completo ocupa menos del 6% de la mem
 
 ---
 
-## 13. Laboratorio Aislado — Montaje en BOSGAME M5
+## 13. Laboratorio Aislado — Red Hat OpenShift Local (CRC)
 
-### 13.1 Requisito
+### 13.1 Enfoque
 
-Un entorno completamente independiente del sistema base que se pueda encender y apagar a voluntad sin dejar rastro en el host. Tres opciones de menor a mayor aislamiento:
+Entorno OpenShift real de un solo nodo en tu máquina local. CRC (CodeReady Containers) ejecuta un cluster OpenShift 4.x completo con todas las capacidades enterprise: Operators, Routes, BuildConfigs, Service Discovery.
 
-### 13.2 Enfoque Elegido — VM con Vagrant + libvirt (Aislamiento total)
+### 13.2 Requisitos del Host
 
-Una máquina virtual completa que enciendes y apagas como un interruptor. Nada se instala en tu sistema base excepto Vagrant y libvirt. Dentro de la VM corre Docker con todo el stack. Desde tu host accedes a las UIs y APIs a través de puertos redirigidos.
+| Requisito | Mínimo | Recomendado |
+|-----------|--------|-------------|
+| RAM | 16 GB | 32 GB+ |
+| CPU | 4 cores | 8 cores+ |
+| Disco | 50 GB libres | 100 GB+ |
+| SO | Linux (Fedora/RHEL/Ubuntu), macOS, Windows | Linux |
+| Cuenta Red Hat | Sí (gratuita) | — |
 
-**Qué se instala en el host (una sola vez, mínimo impacto):**
-
-```bash
-# En Ubuntu 24.04 — Solo esto toca tu sistema base
-sudo apt install -y vagrant libvirt-daemon-system vagrant-libvirt \
-    qemu-kvm virt-manager bridge-utils
-```
-
-Vagrant es simplemente un gestor de VMs. libvirt/KVM es el hipervisor nativo de Linux (rendimiento casi bare-metal, muy superior a VirtualBox). virt-manager es opcional, te da una UI gráfica para ver la VM si la necesitas.
-
-**Estructura del proyecto en el host:**
-
-```
-~/lab-guidewire-vm/
-├── Vagrantfile                         # Definición de la VM
-├── provision/
-│   ├── setup-vm.sh                     # Provisión inicial de la VM
-│   └── setup-lab.sh                    # Prepara estructura del lab dentro de la VM
-└── lab-guidewire/                      # Se sincroniza con la VM
-    ├── docker-compose.yml
-    ├── .env
-    ├── contracts/
-    │   ├── openapi/
-    │   │   └── polizas-api.yaml
-    │   ├── asyncapi/
-    │   │   └── eventos-siniestros.yaml
-    │   └── avro/
-    │       ├── siniestro-abierto.avsc
-    │       └── siniestro-resuelto.avsc
-    ├── mock-guidewire/
-    │   ├── pom.xml
-    │   ├── Dockerfile
-    │   └── src/
-    ├── camel-gateway/
-    │   ├── pom.xml
-    │   ├── Dockerfile
-    │   └── src/
-    ├── fraud-consumer/
-    │   ├── pom.xml
-    │   ├── Dockerfile
-    │   └── src/
-    ├── notification-consumer/
-    │   ├── pom.xml
-    │   ├── Dockerfile
-    │   └── src/
-    ├── drools-rules/
-    │   └── fraud-detection.drl
-    ├── kong/
-    │   └── kong.yml
-    └── postman/
-        ├── guidewire-poc.postman_collection.json
-        └── local.postman_environment.json
-```
-
-La carpeta `lab-guidewire/` se sincroniza bidireccional con la VM. Editas código en tu host con tu IDE y los cambios se reflejan automáticamente dentro de la VM.
-
-### 13.3 Vagrantfile Completo
-
-```ruby
-# -*- mode: ruby -*-
-# vi: set ft=ruby :
-
-Vagrant.configure("2") do |config|
-  config.vm.box = "generic/ubuntu2404"
-  config.vm.hostname = "lab-guidewire"
-
-  # ── Recursos de la VM ──────────────────────────────────────────
-  config.vm.provider :libvirt do |lv|
-    lv.memory = 20480          # 20GB RAM (la M5 tiene 96/128GB, sobra)
-    lv.cpus = 8                # 8 de los 16 cores / 32 threads
-    lv.machine_virtual_size = 80  # 80GB disco (expansible)
-    lv.video_type = "virtio"
-    lv.channel :type => 'unix', :target_name => 'org.qemu.guest_agent.0',
-               :target_type => 'virtio'
-  end
-
-  # ── Red privada (IP fija para acceso estable) ──────────────────
-  config.vm.network "private_network", ip: "192.168.56.10"
-
-  # ── Puertos redirigidos al host ────────────────────────────────
-  # Accedes desde tu navegador en el host como http://localhost:PUERTO
-  config.vm.network "forwarded_port", guest: 8000, host: 8000   # Kong Gateway
-  config.vm.network "forwarded_port", guest: 8001, host: 8001   # Kong Admin
-  config.vm.network "forwarded_port", guest: 8081, host: 8081   # Apicurio UI
-  config.vm.network "forwarded_port", guest: 9000, host: 9000   # Kafdrop (Kafka UI)
-  config.vm.network "forwarded_port", guest: 8082, host: 8082   # Mock Guidewire
-  config.vm.network "forwarded_port", guest: 8083, host: 8083   # Camel Gateway
-  config.vm.network "forwarded_port", guest: 8161, host: 8161   # ActiveMQ Console
-  config.vm.network "forwarded_port", guest: 5432, host: 15432  # PostgreSQL (15432 para no colisionar)
-
-  # ── Sincronización de ficheros ─────────────────────────────────
-  # Tu código en el host se sincroniza con la VM automáticamente
-  config.vm.synced_folder "./lab-guidewire", "/home/vagrant/lab-guidewire",
-    type: "rsync",
-    rsync__exclude: [".git/", "target/", "node_modules/", "volumes/"],
-    rsync__auto: true
-
-  # ── Provisión: se ejecuta solo la primera vez (vagrant up) ─────
-  config.vm.provision "shell", path: "provision/setup-vm.sh"
-end
-```
-
-### 13.4 Script de Provisión de la VM
+### 13.3 Instalación
 
 ```bash
-#!/bin/bash
-# provision/setup-vm.sh — Se ejecuta automáticamente la primera vez
-set -euo pipefail
+# 1. Descargar CRC desde https://console.redhat.com/openshift/create/local
+# 2. Descomprimir y mover al PATH
+tar xvf crc-linux-amd64.tar.xz
+sudo mv crc-linux-*-amd64/crc /usr/local/bin/
 
-echo "══════════════════════════════════════════"
-echo "  Provisionando Lab Guidewire"
-echo "══════════════════════════════════════════"
+# 3. Setup inicial (descarga ~4GB, configura hipervisor)
+crc setup
 
-# ── Docker ───────────────────────────────────────────────────────
-echo "[1/5] Instalando Docker..."
-curl -fsSL https://get.docker.com | sh
-usermod -aG docker vagrant
-systemctl enable docker
+# 4. Arrancar el cluster
+crc start --cpus 8 --memory 20480 --disk-size 80
 
-# ── Docker Compose v2 (ya viene con Docker, verificar) ───────────
-echo "[2/5] Verificando Docker Compose..."
-docker compose version
-
-# ── JDK 21 + Maven ──────────────────────────────────────────────
-echo "[3/5] Instalando JDK 21 y Maven..."
-apt-get update -qq
-apt-get install -y -qq openjdk-21-jdk maven git curl jq
-
-# ── Herramientas de desarrollo ───────────────────────────────────
-echo "[4/5] Instalando herramientas adicionales..."
-# kafkacat (kcat) para interactuar con Kafka desde CLI
-apt-get install -y -qq kafkacat
-
-# ── Estructura de volúmenes persistentes ─────────────────────────
-echo "[5/5] Preparando estructura de datos..."
-mkdir -p /home/vagrant/lab-guidewire/volumes/{kafka-data,postgres-data,apicurio-data,artemis-data}
-chown -R vagrant:vagrant /home/vagrant/lab-guidewire/volumes
-
-echo ""
-echo "══════════════════════════════════════════"
-echo "  Provisión completada"
-echo "  Java: $(java -version 2>&1 | head -1)"
-echo "  Maven: $(mvn -version 2>&1 | head -1)"
-echo "  Docker: $(docker --version)"
-echo "══════════════════════════════════════════"
-echo ""
-echo "  Siguiente paso:"
-echo "    vagrant ssh"
-echo "    cd ~/lab-guidewire"
-echo "    docker compose up -d"
-echo ""
+# 5. Configurar oc CLI
+eval $(crc oc-env)
+oc login -u developer -p developer https://api.crc.testing:6443
 ```
 
-### 13.5 Fichero .env (Variables del Stack)
-
-```bash
-# lab-guidewire/.env
-
-# ── Versiones ────────────────────────────────────────────────────
-KAFKA_VERSION=7.6.0
-APICURIO_VERSION=2.6.4.Final
-POSTGRES_VERSION=16
-ARTEMIS_VERSION=2.37.0
-KONG_VERSION=3.7
-KAFDROP_VERSION=4.0.2
-
-# ── Puertos (dentro de la VM, redirigidos al host por Vagrant) ───
-KONG_PROXY_PORT=8000
-KONG_ADMIN_PORT=8001
-APICURIO_PORT=8081
-KAFDROP_PORT=9000
-MOCK_GW_PORT=8082
-CAMEL_PORT=8083
-ARTEMIS_CONSOLE_PORT=8161
-POSTGRES_PORT=5432
-
-# ── Credenciales ─────────────────────────────────────────────────
-POSTGRES_USER=apicurio
-POSTGRES_PASSWORD=apicurio_dev
-POSTGRES_DB=apicurio
-ARTEMIS_USER=admin
-ARTEMIS_PASSWORD=admin
-
-# ── Kafka ────────────────────────────────────────────────────────
-KAFKA_BROKER_ID=1
-KAFKA_CLUSTER_ID=MkU3OEVBNTcwNTJENDM2Qk
-```
-
-### 13.6 Docker Compose del Stack Completo
-
-```yaml
-# lab-guidewire/docker-compose.yml
-version: "3.9"
-
-services:
-  # ── Kafka (KRaft, sin ZooKeeper) ─────────────────────────────
-  kafka:
-    image: confluentinc/cp-kafka:${KAFKA_VERSION}
-    container_name: kafka
-    ports:
-      - "${KAFKA_BROKER_PORT:-9092}:9092"
-    environment:
-      KAFKA_NODE_ID: 1
-      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT
-      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092
-      KAFKA_LISTENERS: PLAINTEXT://0.0.0.0:9092,CONTROLLER://0.0.0.0:9093
-      KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
-      KAFKA_CONTROLLER_QUORUM_VOTERS: 1@kafka:9093
-      KAFKA_PROCESS_ROLES: broker,controller
-      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
-      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
-      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
-      KAFKA_LOG_RETENTION_HOURS: 168
-      CLUSTER_ID: ${KAFKA_CLUSTER_ID}
-    volumes:
-      - kafka-data:/var/lib/kafka/data
-    networks:
-      - guidewire-lab
-    healthcheck:
-      test: kafka-topics --bootstrap-server localhost:9092 --list || exit 1
-      interval: 15s
-      timeout: 10s
-      retries: 5
-
-  # ── Kafdrop (UI para Kafka) ──────────────────────────────────
-  kafdrop:
-    image: obsidiandynamics/kafdrop:${KAFDROP_VERSION}
-    container_name: kafdrop
-    ports:
-      - "${KAFDROP_PORT}:9000"
-    environment:
-      KAFKA_BROKERCONNECT: kafka:9092
-      JVM_OPTS: "-Xms64m -Xmx128m"
-    depends_on:
-      kafka:
-        condition: service_healthy
-    networks:
-      - guidewire-lab
-
-  # ── PostgreSQL (backend de Apicurio) ─────────────────────────
-  postgres:
-    image: postgres:${POSTGRES_VERSION}
-    container_name: postgres
-    ports:
-      - "${POSTGRES_PORT}:5432"
-    environment:
-      POSTGRES_USER: ${POSTGRES_USER}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
-      POSTGRES_DB: ${POSTGRES_DB}
-    volumes:
-      - postgres-data:/var/lib/postgresql/data
-    networks:
-      - guidewire-lab
-    healthcheck:
-      test: pg_isready -U ${POSTGRES_USER}
-      interval: 10s
-      timeout: 5s
-      retries: 5
-
-  # ── Apicurio Service Registry ────────────────────────────────
-  apicurio:
-    image: apicurio/apicurio-registry:${APICURIO_VERSION}
-    container_name: apicurio
-    ports:
-      - "${APICURIO_PORT}:8080"
-    environment:
-      APICURIO_STORAGE_KIND: sql
-      APICURIO_STORAGE_SQL_KIND: postgresql
-      APICURIO_DATASOURCE_URL: jdbc:postgresql://postgres:5432/${POSTGRES_DB}
-      APICURIO_DATASOURCE_USERNAME: ${POSTGRES_USER}
-      APICURIO_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD}
-    depends_on:
-      postgres:
-        condition: service_healthy
-    networks:
-      - guidewire-lab
-    healthcheck:
-      test: curl -f http://localhost:8080/apis/registry/v3/system/info || exit 1
-      interval: 15s
-      timeout: 5s
-      retries: 5
-
-  # ── ActiveMQ Artemis ─────────────────────────────────────────
-  artemis:
-    image: apache/activemq-artemis:${ARTEMIS_VERSION}
-    container_name: artemis
-    ports:
-      - "${ARTEMIS_CONSOLE_PORT}:8161"
-      - "61616:61616"
-      - "5672:5672"
-    environment:
-      ARTEMIS_USER: ${ARTEMIS_USER}
-      ARTEMIS_PASSWORD: ${ARTEMIS_PASSWORD}
-    volumes:
-      - artemis-data:/var/lib/artemis-instance
-    networks:
-      - guidewire-lab
-
-  # ── Kong API Gateway (DB-less mode) ──────────────────────────
-  kong:
-    image: kong:${KONG_VERSION}
-    container_name: kong
-    ports:
-      - "${KONG_PROXY_PORT}:8000"
-      - "${KONG_ADMIN_PORT}:8001"
-    environment:
-      KONG_DATABASE: "off"
-      KONG_DECLARATIVE_CONFIG: /kong/kong.yml
-      KONG_PROXY_LISTEN: 0.0.0.0:8000
-      KONG_ADMIN_LISTEN: 0.0.0.0:8001
-      KONG_LOG_LEVEL: info
-    volumes:
-      - ./kong/kong.yml:/kong/kong.yml:ro
-    networks:
-      - guidewire-lab
-
-  # ── Mock Guidewire (Spring Boot) ─────────────────────────────
-  # Descomenta cuando tengas el Dockerfile y código listos
-  # mock-guidewire:
-  #   build: ./mock-guidewire
-  #   container_name: mock-guidewire
-  #   ports:
-  #     - "${MOCK_GW_PORT}:8080"
-  #   environment:
-  #     SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka:9092
-  #     APICURIO_REGISTRY_URL: http://apicurio:8080/apis/registry/v3
-  #   depends_on:
-  #     kafka:
-  #       condition: service_healthy
-  #     apicurio:
-  #       condition: service_healthy
-  #   networks:
-  #     - guidewire-lab
-
-  # ── Camel Integration Gateway ────────────────────────────────
-  # Descomenta cuando tengas el Dockerfile y código listos
-  # camel-gateway:
-  #   build: ./camel-gateway
-  #   container_name: camel-gateway
-  #   ports:
-  #     - "${CAMEL_PORT}:8080"
-  #   environment:
-  #     SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka:9092
-  #     APICURIO_REGISTRY_URL: http://apicurio:8080/apis/registry/v3
-  #     GUIDEWIRE_API_URL: http://mock-guidewire:8080
-  #   depends_on:
-  #     kafka:
-  #       condition: service_healthy
-  #     apicurio:
-  #       condition: service_healthy
-  #   networks:
-  #     - guidewire-lab
-
-volumes:
-  kafka-data:
-    driver: local
-  postgres-data:
-    driver: local
-  artemis-data:
-    driver: local
-
-networks:
-  guidewire-lab:
-    driver: bridge
-    ipam:
-      config:
-        - subnet: 172.28.0.0/16
-```
-
-### 13.7 Configuración Kong (DB-less)
-
-```yaml
-# lab-guidewire/kong/kong.yml
-_format_version: "3.0"
-
-services:
-  - name: mock-guidewire
-    url: http://mock-guidewire:8080
-    routes:
-      - name: guidewire-polizas
-        paths:
-          - /api/v1/polizas
-        methods:
-          - GET
-          - POST
-      - name: guidewire-siniestros
-        paths:
-          - /api/v1/siniestros
-        methods:
-          - GET
-          - POST
-
-  - name: camel-gateway
-    url: http://camel-gateway:8080
-    routes:
-      - name: integration-gateway
-        paths:
-          - /api/v1/integration
-        methods:
-          - GET
-          - POST
-
-plugins:
-  - name: rate-limiting
-    config:
-      minute: 100
-      policy: local
-  - name: key-auth
-    config:
-      key_names:
-        - apikey
-
-consumers:
-  - username: poc-consumer
-    keyauth_credentials:
-      - key: poc-api-key-12345
-```
-
-### 13.8 Puertos Accesibles desde el Host
-
-Desde tu navegador o Postman en el host (la BOSGAME M5), accedes a todo a través de localhost:
-
-| Servicio | Puerto Host | URL desde el Host | Descripción |
-|---|---|---|---|
-| Kong Gateway | 8000 | http://localhost:8000 | Punto de entrada de las APIs |
-| Kong Admin | 8001 | http://localhost:8001 | Administración de Kong |
-| Apicurio UI | 8081 | http://localhost:8081 | Schemas y contratos registrados |
-| Kafdrop | 9000 | http://localhost:9000 | Topics, mensajes, consumer groups |
-| Mock Guidewire | 8082 | http://localhost:8082 | APIs fake de PolicyCenter/ClaimCenter |
-| Camel Gateway | 8083 | http://localhost:8083 | Integration Gateway |
-| ActiveMQ Console | 8161 | http://localhost:8161 | Colas y topics JMS (admin/admin) |
-| PostgreSQL | 15432 | localhost:15432 | Conexión desde DBeaver/pgAdmin |
-
-Todos estos puertos solo existen mientras la VM está encendida. Cuando haces `vagrant halt`, desaparecen completamente.
-
-### 13.9 Gestión Día a Día del Laboratorio
-
-```bash
-# ══════════════════════════════════════════════════════════════
-# PRIMERA VEZ — Crear la VM y provisionar (10-15 minutos)
-# ══════════════════════════════════════════════════════════════
-cd ~/lab-guidewire-vm
-vagrant up                      # Crea VM, instala Docker, JDK, Maven
-vagrant ssh                     # Entras a la VM
-cd ~/lab-guidewire
-docker compose up -d            # Levantas el stack
-exit                            # Vuelves al host
-
-# Verificar desde el host que todo funciona
-curl -s http://localhost:8081/apis/registry/v3/system/info | jq   # Apicurio
-curl -s http://localhost:9000                                      # Kafdrop
-curl -s http://localhost:8001/status | jq                          # Kong
-
-# ══════════════════════════════════════════════════════════════
-# DÍA NORMAL — Arranco a trabajar
-# ══════════════════════════════════════════════════════════════
-cd ~/lab-guidewire-vm
-vagrant up                      # Enciende la VM (si estaba halt)
-                                # O: vagrant resume (si estaba suspend)
-vagrant ssh                     # Entro
-cd ~/lab-guidewire
-docker compose ps               # Verifico estado
-docker compose start            # Si los contenedores estaban parados
-
-# Trabajo: edito código en el HOST con mi IDE
-# Los cambios se sincronizan automáticamente con la VM
-# Reconstruyo solo lo que toque:
-docker compose build camel-gateway && docker compose up -d camel-gateway
-
-# Ver logs en tiempo real
-docker compose logs -f camel-gateway
-
-# Probar con kcat desde dentro de la VM
-kcat -b kafka:9092 -L           # Listar topics
-kcat -b kafka:9092 -t guidewire.claims.siniestro-abierto -C  # Consumir
-
-exit                            # Salgo de la VM
-
-# ══════════════════════════════════════════════════════════════
-# PAUSA — Me voy a comer / cambio de tarea
-# ══════════════════════════════════════════════════════════════
-vagrant suspend                 # Hiberna: guarda estado RAM a disco
-                                # Instantáneo, todo queda congelado
-
-vagrant resume                  # Reanuda: vuelve exactamente donde estaba
-                                # Los contenedores siguen corriendo
-
-# ══════════════════════════════════════════════════════════════
-# FIN DEL DÍA — Apago
-# ══════════════════════════════════════════════════════════════
-vagrant halt                    # Apagado limpio de la VM
-                                # Los datos persisten en los volúmenes Docker
-                                # Mañana: vagrant up → todo vuelve
-
-# ══════════════════════════════════════════════════════════════
-# RESET — Quiero empezar de cero (dentro de la VM)
-# ══════════════════════════════════════════════════════════════
-vagrant ssh
-cd ~/lab-guidewire
-docker compose down -v          # Destruye contenedores Y volúmenes
-docker compose up -d            # Levanta todo limpio desde cero
-exit
-
-# ══════════════════════════════════════════════════════════════
-# NUCLEAR — Borrar todo como si nunca existió
-# ══════════════════════════════════════════════════════════════
-cd ~/lab-guidewire-vm
-vagrant destroy -f              # Elimina la VM completamente
-                                # Solo queda el Vagrantfile y tu código
-                                # vagrant up la recrea desde cero
-```
-
-### 13.10 Flujo de Desarrollo con la VM
+### 13.4 Arquitectura del Laboratorio
 
 ```
 ┌─────────────────────────────────────────────────────────┐
-│  HOST (BOSGAME M5 — Ubuntu 24.04)                       │
+│  HOST (tu máquina)                                      │
 │                                                         │
 │  ┌─────────────────┐  ┌──────────────────────────────┐  │
-│  │ IDE (IntelliJ/  │  │ Navegador                    │  │
-│  │ VSCode)         │  │  • Apicurio UI  :8081        │  │
-│  │                 │  │  • Kafdrop      :9000        │  │
-│  │ Editas código   │  │  • Artemis      :8161        │  │
-│  │ en ~/lab-       │  │  • Kong Admin   :8001        │  │
-│  │ guidewire-vm/   │  │                              │  │
-│  │ lab-guidewire/  │  │ Postman                      │  │
-│  └────────┬────────┘  │  • localhost:8000 (Kong)     │  │
-│           │ rsync     │  • localhost:8082 (Mock GW)   │  │
-│           │ auto      │  • localhost:8083 (Camel)     │  │
-│           │           └──────────────────────────────┘  │
-│  ─────────┼─────────────────────────────────────────────│
-│           ▼                                             │
+│  │ IDE + Navegador  │  │ oc CLI                       │  │
+│  │                  │  │ oc get pods -n guidewire-apps │  │
+│  └─────────────────┘  └──────────────────────────────┘  │
+│                                                         │
 │  ┌──────────────────────────────────────────────────┐   │
-│  │  VM (Vagrant + libvirt/KVM)                      │   │
-│  │  Ubuntu 24.04 — 20GB RAM — 8 CPUs               │   │
+│  │  CRC (OpenShift 4.x — single node)              │   │
 │  │                                                  │   │
-│  │  ~/lab-guidewire/  ← sincronizado con host       │   │
+│  │  ┌─────────────────────────────────────┐         │   │
+│  │  │  Namespace: guidewire-infra         │         │   │
+│  │  │  PostgreSQL · Kafka (Strimzi)       │         │   │
+│  │  │  ActiveMQ (AMQ Broker) · Apicurio   │         │   │
+│  │  │  Kafdrop · 3Scale APIcast           │         │   │
+│  │  └─────────────────────────────────────┘         │   │
 │  │                                                  │   │
-│  │  ┌────────────────────────────────────────────┐  │   │
-│  │  │  Docker Compose                            │  │   │
-│  │  │                                            │  │   │
-│  │  │  Kafka ─── Apicurio ─── PostgreSQL         │  │   │
-│  │  │    │                                       │  │   │
-│  │  │  Kafdrop   Kong   ActiveMQ Artemis         │  │   │
-│  │  │    │                                       │  │   │
-│  │  │  Mock Guidewire ─── Camel Gateway          │  │   │
-│  │  │                       │                    │  │   │
-│  │  │              Drools ──┘── Notification      │  │   │
-│  │  └────────────────────────────────────────────┘  │   │
+│  │  ┌─────────────────────────────────────┐         │   │
+│  │  │  Namespace: guidewire-apps          │         │   │
+│  │  │  Camel Gateway · Drools Engine      │         │   │
+│  │  │  Billing · Incidents · Customers    │         │   │
+│  │  └─────────────────────────────────────┘         │   │
 │  └──────────────────────────────────────────────────┘   │
 └─────────────────────────────────────────────────────────┘
 ```
 
-El flujo es: editas código en el host con tu IDE → rsync sincroniza con la VM → dentro de la VM haces `docker compose build X && docker compose up -d X` → pruebas desde Postman en el host apuntando a localhost.
-
-### 13.11 Recursos Consumidos en la BOSGAME M5
-
-| Recurso | VM asignada | Stack Docker | Host libre (de 128GB/16cores) |
-|---|---|---|---|
-| RAM | 20GB | ~5.5GB usados | ~108GB libres |
-| CPUs | 8 cores | Variable | 8 cores + 16 threads libres |
-| Disco | 80GB (expansible) | ~10GB imágenes + datos | Resto del SSD 2TB |
-
-La VM con todo el stack encendido consume menos del 16% de la RAM total. Queda margen de sobra para tu IDE, navegador, LLMs locales o lo que necesites en el host.
-
-### 13.12 Snapshot: Guardar/Restaurar Estado de la VM
-
-libvirt soporta snapshots nativos. Puedes guardar el estado completo de la VM (incluyendo todos los contenedores y datos) y restaurarlo cuando quieras:
+### 13.5 Despliegue
 
 ```bash
-# Guardar un snapshot con nombre (VM debe estar corriendo o halt)
-virsh snapshot-create-as lab-guidewire_lab-guidewire "stack-funcionando" \
-    --description "Stack completo levantado y funcionando"
-
-# Listar snapshots
-virsh snapshot-list lab-guidewire_lab-guidewire
-
-# Restaurar un snapshot
-virsh snapshot-revert lab-guidewire_lab-guidewire "stack-funcionando"
-
-# Borrar un snapshot
-virsh snapshot-delete lab-guidewire_lab-guidewire "stack-funcionando"
+cd lab/openshift
+./deploy-all.sh
 ```
 
-Esto es útil para: guardar un estado "todo funciona" antes de hacer cambios arriesgados, tener un punto de restauración rápida, o compartir el estado exacto del lab.
+El script despliega en orden:
+1. Namespaces
+2. Operators (Strimzi, AMQ Broker, Apicurio)
+3. Infraestructura (PostgreSQL, Kafka, ActiveMQ, Apicurio, Kafdrop, APIcast)
+4. Aplicaciones (BuildConfig + Deployment × 5 servicios)
+
+### 13.6 Acceso a Servicios
+
+```bash
+# Ver todas las routes
+oc get routes -n guidewire-infra
+oc get routes -n guidewire-apps
+
+# Acceder a la consola OpenShift
+crc console
+# URL: https://console-openshift-console.apps-crc.testing
+# Credenciales: developer / developer (o kubeadmin)
+```
+
+### 13.7 Operaciones Día a Día
+
+| Acción | Comando |
+|--------|---------|
+| Arrancar CRC | `crc start` |
+| Detener CRC | `crc stop` |
+| Consola web | `crc console` |
+| Estado | `crc status` |
+| Login | `eval $(crc oc-env) && oc login -u developer` |
+| Ver pods infra | `oc get pods -n guidewire-infra` |
+| Ver pods apps | `oc get pods -n guidewire-apps` |
+| Logs de un pod | `oc logs -f deploy/<service> -n guidewire-apps` |
+| Rebuild service | `oc start-build <service> --from-dir=components/<service>` |
+| Eliminar todo | `oc delete project guidewire-infra guidewire-apps` |
+
+### 13.8 Recursos Consumidos
+
+| Recurso | CRC | Stack Guidewire | Descripción |
+|---------|-----|-----------------|-------------|
+| RAM | 20 GB | ~5.5 GB | Queda ~14.5 GB para workloads |
+| CPU | 8 cores | ~4 cores | Queda ~4 cores libres |
+| Disco | 80 GB | ~15 GB | Imágenes + PVCs |
+
+### 13.9 Alternativa Legacy: Podman Compose
+
+Para entornos sin CRC, se mantiene `lab/podman/podman-compose.yml` como alternativa funcional. Consultar `lab/podman/README.md`.

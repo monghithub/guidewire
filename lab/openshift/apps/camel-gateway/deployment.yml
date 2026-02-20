@@ -1,0 +1,55 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: camel-gateway
+  namespace: guidewire-apps
+  labels:
+    app: camel-gateway
+    app.kubernetes.io/part-of: guidewire-poc
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: camel-gateway
+  template:
+    metadata:
+      labels:
+        app: camel-gateway
+        app.kubernetes.io/part-of: guidewire-poc
+    spec:
+      containers:
+        - name: camel-gateway
+          image: image-registry.openshift-image-registry.svc:5000/guidewire-apps/camel-gateway:latest
+          ports:
+            - containerPort: 8083
+              protocol: TCP
+          env:
+            - name: KAFKA_BOOTSTRAP_SERVERS
+              value: "kafka-cluster-kafka-bootstrap.guidewire-infra.svc.cluster.local:9092"
+            - name: APICURIO_URL
+              value: "http://apicurio-registry.guidewire-infra.svc.cluster.local:8080/apis/registry/v2"
+            - name: ACTIVEMQ_URL
+              value: "tcp://activemq-broker-hdls-svc.guidewire-infra.svc.cluster.local:61616"
+            - name: ACTIVEMQ_USER
+              value: "admin"
+            - name: ACTIVEMQ_PASSWORD
+              value: "admin123"
+          resources:
+            requests:
+              cpu: 100m
+              memory: 256Mi
+            limits:
+              cpu: 500m
+              memory: 512Mi
+          readinessProbe:
+            httpGet:
+              path: /q/health/ready
+              port: 8083
+            initialDelaySeconds: 30
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /q/health/live
+              port: 8083
+            initialDelaySeconds: 60
+            periodSeconds: 15

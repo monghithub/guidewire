@@ -1,0 +1,39 @@
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: postgres-init-db
+  namespace: guidewire-infra
+  labels:
+    app: postgres
+    app.kubernetes.io/part-of: guidewire-poc
+data:
+  init-db.sql: |
+    CREATE USER apicurio WITH PASSWORD 'apicurio123';
+    CREATE USER billing_user WITH PASSWORD 'billing123';
+    CREATE USER incidents_user WITH PASSWORD 'incidents123';
+    CREATE USER customers_user WITH PASSWORD 'customers123';
+    CREATE DATABASE apicurio OWNER apicurio;
+    CREATE DATABASE billing OWNER billing_user;
+    CREATE DATABASE incidents OWNER incidents_user;
+    CREATE DATABASE customers OWNER customers_user;
+    GRANT ALL PRIVILEGES ON DATABASE apicurio TO apicurio;
+    GRANT ALL PRIVILEGES ON DATABASE billing TO billing_user;
+    GRANT ALL PRIVILEGES ON DATABASE incidents TO incidents_user;
+    GRANT ALL PRIVILEGES ON DATABASE customers TO customers_user;
+    REVOKE ALL ON DATABASE apicurio FROM PUBLIC;
+    REVOKE ALL ON DATABASE billing FROM PUBLIC;
+    REVOKE ALL ON DATABASE incidents FROM PUBLIC;
+    REVOKE ALL ON DATABASE customers FROM PUBLIC;
+    \connect apicurio
+    CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
+    GRANT ALL ON SCHEMA public TO apicurio;
+    \connect billing
+    CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
+    GRANT ALL ON SCHEMA public TO billing_user;
+    \connect incidents
+    CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
+    GRANT ALL ON SCHEMA public TO incidents_user;
+    \connect customers
+    CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
+    GRANT ALL ON SCHEMA public TO customers_user;

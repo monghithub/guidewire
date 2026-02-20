@@ -14,6 +14,13 @@ Instancia PostgreSQL 16 compartida que aloja 4 bases de datos lógicas, una por 
 | Superusuario | `postgres` / `postgres123` |
 | Volumen | `pgdata` → `/var/lib/postgresql/data` |
 
+## DNS (OpenShift)
+
+| Contexto | Dirección |
+|----------|-----------|
+| Mismo namespace | `postgres:5432` |
+| Cross-namespace | `postgres.guidewire-infra.svc.cluster.local:5432` |
+
 ## Bases de Datos
 
 | Base de Datos | Usuario | Password | Servicio |
@@ -32,15 +39,20 @@ Ruta en el contenedor: `/docker-entrypoint-initdb.d/init-db.sql`
 ## Conexión desde el Host
 
 ```bash
+# Via oc port-forward
+oc port-forward -n guidewire-infra svc/postgres 15432:5432 &
 psql -h localhost -p 15432 -U postgres
-psql -h localhost -p 15432 -U billing_user -d billing
+
+# O directamente via oc exec
+oc exec -it -n guidewire-infra deploy/postgres -- psql -U postgres
+oc exec -it -n guidewire-infra deploy/postgres -- psql -U billing_user -d billing
 ```
 
 ## Conexión desde otros contenedores
 
 ```
-jdbc:postgresql://postgres:5432/billing     # Java (Spring/Quarkus)
-postgresql://customers_user:customers123@postgres:5432/customers  # Node.js (Prisma)
+jdbc:postgresql://postgres.guidewire-infra.svc.cluster.local:5432/billing     # Java (Spring/Quarkus)
+postgresql://customers_user:customers123@postgres.guidewire-infra.svc.cluster.local:5432/customers  # Node.js (Prisma)
 ```
 
 ## Healthcheck
@@ -51,7 +63,7 @@ pg_isready -U postgres   # Retorna 0 si acepta conexiones
 
 ## Persistencia
 
-Los datos se almacenan en el volumen nombrado `pgdata`. Sobreviven `podman-compose down` pero se eliminan con `podman-compose down -v`.
+Los datos se almacenan en el PVC `postgres-data`. Sobreviven `oc delete deploy/postgres` pero se eliminan con `oc delete pvc postgres-data -n guidewire-infra`.
 
 ## Diagrama de Bases de Datos
 

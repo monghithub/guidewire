@@ -64,9 +64,9 @@ networking:
       description: PostgreSQL (remapeado para evitar conflictos con local)
 
 runtime:
-  engine: Podman
-  orchestration: Podman Compose
-  vm: Vagrant + libvirt/KVM
+  platform: Red Hat OpenShift Local (CRC)
+  orchestration: Kubernetes / OpenShift
+  namespace: guidewire-infra
 
 resources:
   memory: 256MB

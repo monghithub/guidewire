@@ -1,0 +1,17 @@
+apiVersion: route.openshift.io/v1
+kind: Route
+metadata:
+  name: billing-service
+  namespace: guidewire-apps
+  labels:
+    app: billing-service
+    app.kubernetes.io/part-of: guidewire-poc
+spec:
+  host: billing-service-guidewire-apps.apps-crc.testing
+  to:
+    kind: Service
+    name: billing-service
+    weight: 100
+  port:
+    targetPort: http
+  wildcardPolicy: None
