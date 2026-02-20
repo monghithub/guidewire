@@ -94,7 +94,7 @@ guidewire/
 | ActiveMQ Artemis | [spec.yml](openspecs/infra/activemq/spec.yml) | [docs](openspecs/docs/infra/activemq/README.md) |
 | 3Scale API Gateway | [spec.yml](openspecs/infra/threescale/spec.yml) | [docs](openspecs/docs/infra/threescale/README.md) |
 | Apicurio Registry | [spec.yml](openspecs/infra/apicurio/spec.yml) | [docs](openspecs/docs/infra/apicurio/README.md) |
-| Lab Environment | [spec.yml](openspecs/infra/lab-environment/spec.yml) | [docs](openspecs/docs/infra/lab-environment/README.md) |
+| Lab Environment | [spec.yml](openspecs/infra/lab-environment/spec.yml) | [docs](openspecs/docs/infra/lab-environment/README.md) · [**INSTALL**](openspecs/docs/infra/lab-environment/INSTALL.md) |
 
 ### Contratos API-First
 
@@ -155,10 +155,16 @@ guidewire/
 
 ## Quick Start
 
+> **Primera vez?** Sigue la [guía de instalación completa](openspecs/docs/infra/lab-environment/INSTALL.md) con troubleshooting y solución de problemas.
+
 ```bash
 # 1. Instalar en tu máquina (lo único necesario)
-sudo apt install vagrant qemu-kvm libvirt-daemon-system virt-manager
+# Ver guía completa: openspecs/docs/infra/lab-environment/INSTALL.md
+wget https://releases.hashicorp.com/vagrant/2.4.3/vagrant_2.4.3-1_amd64.deb
+sudo dpkg -i vagrant_2.4.3-1_amd64.deb && rm vagrant_2.4.3-1_amd64.deb
+sudo apt install -y qemu-system-x86 libvirt-daemon-system virt-manager bridge-utils
 vagrant plugin install vagrant-libvirt
+sudo usermod -aG libvirt,kvm $(whoami) && newgrp libvirt
 
 # 2. Levantar la VM
 cd lab
