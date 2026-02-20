@@ -1,0 +1,44 @@
+package com.guidewire.rules.policy;
+
+import com.guidewire.rules.model.PolicyFact;
+import java.math.BigDecimal;
+
+rule "MaxAutoLimit"
+    salience 100
+    when
+        $policy : PolicyFact(productType == "AUTO", premiumAmount > 100000, eligible == true)
+    then
+        $policy.setEligible(false);
+        $policy.setRejectionReason("Premium amount exceeds maximum limit of 100,000 MXN for AUTO policies");
+        update($policy);
+end
+
+rule "MaxHomeLimit"
+    salience 100
+    when
+        $policy : PolicyFact(productType == "HOME", premiumAmount > 500000, eligible == true)
+    then
+        $policy.setEligible(false);
+        $policy.setRejectionReason("Premium amount exceeds maximum limit of 500,000 MXN for HOME policies");
+        update($policy);
+end
+
+rule "MaxLifeLimit"
+    salience 100
+    when
+        $policy : PolicyFact(productType == "LIFE", premiumAmount > 1000000, eligible == true)
+    then
+        $policy.setEligible(false);
+        $policy.setRejectionReason("Premium amount exceeds maximum limit of 1,000,000 MXN for LIFE policies");
+        update($policy);
+end
+
+rule "CustomerNotActive"
+    salience 200
+    when
+        $policy : PolicyFact(customerStatus != "ACTIVE", eligible == true)
+    then
+        $policy.setEligible(false);
+        $policy.setRejectionReason("Customer status is not ACTIVE. Current status: " + $policy.getCustomerStatus());
+        update($policy);
+end

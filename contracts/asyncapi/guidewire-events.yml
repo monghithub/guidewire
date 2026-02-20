@@ -1,0 +1,331 @@
+asyncapi: "3.0.0"
+info:
+  title: Guidewire Events
+  version: "1.0.0"
+  description: |
+    Eventos asincronicos del ecosistema de integracion Guidewire.
+
+    Define todos los canales de eventos Kafka utilizados para la
+    comunicacion entre los sistemas Guidewire (PolicyCenter, ClaimCenter,
+    BillingCenter) y los microservicios internos (billing-service,
+    incidents-service, customers-service).
+
+    Los mensajes se serializan en formato Apache AVRO y los schemas
+    estan registrados en Apicurio Schema Registry.
+
+    ## Arquitectura de eventos
+
+    ```
+    Guidewire Systems --> Camel Gateway --> Kafka --> Microservices
+    ```
+
+    ## Configuracion de consumidores Kafka
+    - auto.offset.reset: earliest
+    - enable.auto.commit: false
+    - group.id pattern: {service-name}-group
+
+    ## Configuracion de productores Kafka
+    - acks: all
+    - retries: 3
+    - key.serializer: org.apache.kafka.common.serialization.StringSerializer
+    - value.serializer: io.apicurio.registry.serde.avro.AvroKafkaSerializer
+  contact:
+    name: Guidewire Integration Team
+  license:
+    name: Apache 2.0
+    url: https://www.apache.org/licenses/LICENSE-2.0
+
+servers:
+  kafka:
+    host: kafka:9092
+    protocol: kafka
+    description: Broker Kafka en modo KRaft (sin ZooKeeper)
+
+channels:
+  billingInvoiceCreated:
+    address: billing.invoice-created
+    description: Emitido cuando se crea una factura en BillingCenter
+    messages:
+      InvoiceCreated:
+        $ref: "#/components/messages/InvoiceCreated"
+
+  billingInvoiceStatusChanged:
+    address: billing.invoice-status-changed
+    description: Emitido cuando cambia el estado de una factura en BillingCenter
+    messages:
+      InvoiceStatusChanged:
+        $ref: "#/components/messages/InvoiceStatusChanged"
+
+  incidentsIncidentCreated:
+    address: incidents.incident-created
+    description: Emitido cuando se abre un siniestro en ClaimCenter
+    messages:
+      IncidentCreated:
+        $ref: "#/components/messages/IncidentCreated"
+
+  incidentsIncidentStatusChanged:
+    address: incidents.incident-status-changed
+    description: Emitido cuando cambia el estado de un siniestro
+    messages:
+      IncidentStatusChanged:
+        $ref: "#/components/messages/IncidentStatusChanged"
+
+  customersCustomerRegistered:
+    address: customers.customer-registered
+    description: Emitido cuando se registra un nuevo cliente en el sistema
+    messages:
+      CustomerRegistered:
+        $ref: "#/components/messages/CustomerRegistered"
+
+  customersCustomerStatusChanged:
+    address: customers.customer-status-changed
+    description: Emitido cuando cambia el estado de un cliente
+    messages:
+      CustomerStatusChanged:
+        $ref: "#/components/messages/CustomerStatusChanged"
+
+  dlqErrors:
+    address: dlq.errors
+    description: |
+      Dead Letter Queue para mensajes que fallaron el procesamiento.
+      Contiene un wrapper JSON con el mensaje original, el error,
+      timestamp, topic de origen y numero de reintentos.
+    messages:
+      ErrorEnvelope:
+        $ref: "#/components/messages/ErrorEnvelope"
+
+operations:
+  publishInvoiceCreated:
+    action: send
+    channel:
+      $ref: "#/channels/billingInvoiceCreated"
+    summary: Publicar evento de factura creada
+    description: Producido por camel-gateway cuando BillingCenter crea una factura.
+    messages:
+      - $ref: "#/channels/billingInvoiceCreated/messages/InvoiceCreated"
+
+  consumeInvoiceCreated:
+    action: receive
+    channel:
+      $ref: "#/channels/billingInvoiceCreated"
+    summary: Consumir evento de factura creada
+    description: Consumido por billing-service para crear la factura interna.
+    messages:
+      - $ref: "#/channels/billingInvoiceCreated/messages/InvoiceCreated"
+
+  publishInvoiceStatusChanged:
+    action: send
+    channel:
+      $ref: "#/channels/billingInvoiceStatusChanged"
+    summary: Publicar evento de cambio de estado de factura
+    description: Producido por camel-gateway cuando cambia el estado de una factura en BillingCenter.
+    messages:
+      - $ref: "#/channels/billingInvoiceStatusChanged/messages/InvoiceStatusChanged"
+
+  consumeInvoiceStatusChanged:
+    action: receive
+    channel:
+      $ref: "#/channels/billingInvoiceStatusChanged"
+    summary: Consumir evento de cambio de estado de factura
+    description: Consumido por billing-service para actualizar el estado interno.
+    messages:
+      - $ref: "#/channels/billingInvoiceStatusChanged/messages/InvoiceStatusChanged"
+
+  publishIncidentCreated:
+    action: send
+    channel:
+      $ref: "#/channels/incidentsIncidentCreated"
+    summary: Publicar evento de incidencia creada
+    description: Producido por camel-gateway cuando ClaimCenter abre un siniestro.
+    messages:
+      - $ref: "#/channels/incidentsIncidentCreated/messages/IncidentCreated"
+
+  consumeIncidentCreated:
+    action: receive
+    channel:
+      $ref: "#/channels/incidentsIncidentCreated"
+    summary: Consumir evento de incidencia creada
+    description: Consumido por incidents-service y drools-engine.
+    messages:
+      - $ref: "#/channels/incidentsIncidentCreated/messages/IncidentCreated"
+
+  publishIncidentStatusChanged:
+    action: send
+    channel:
+      $ref: "#/channels/incidentsIncidentStatusChanged"
+    summary: Publicar evento de cambio de estado de incidencia
+    description: Producido por camel-gateway cuando cambia el estado de un siniestro.
+    messages:
+      - $ref: "#/channels/incidentsIncidentStatusChanged/messages/IncidentStatusChanged"
+
+  consumeIncidentStatusChanged:
+    action: receive
+    channel:
+      $ref: "#/channels/incidentsIncidentStatusChanged"
+    summary: Consumir evento de cambio de estado de incidencia
+    description: Consumido por incidents-service para actualizar el estado interno.
+    messages:
+      - $ref: "#/channels/incidentsIncidentStatusChanged/messages/IncidentStatusChanged"
+
+  publishCustomerRegistered:
+    action: send
+    channel:
+      $ref: "#/channels/customersCustomerRegistered"
+    summary: Publicar evento de cliente registrado
+    description: Producido por camel-gateway cuando se registra un nuevo cliente.
+    messages:
+      - $ref: "#/channels/customersCustomerRegistered/messages/CustomerRegistered"
+
+  consumeCustomerRegistered:
+    action: receive
+    channel:
+      $ref: "#/channels/customersCustomerRegistered"
+    summary: Consumir evento de cliente registrado
+    description: Consumido por customers-service, billing-service e incidents-service (cross-domain).
+    messages:
+      - $ref: "#/channels/customersCustomerRegistered/messages/CustomerRegistered"
+
+  publishCustomerStatusChanged:
+    action: send
+    channel:
+      $ref: "#/channels/customersCustomerStatusChanged"
+    summary: Publicar evento de cambio de estado de cliente
+    description: Producido por camel-gateway cuando cambia el estado de un cliente.
+    messages:
+      - $ref: "#/channels/customersCustomerStatusChanged/messages/CustomerStatusChanged"
+
+  consumeCustomerStatusChanged:
+    action: receive
+    channel:
+      $ref: "#/channels/customersCustomerStatusChanged"
+    summary: Consumir evento de cambio de estado de cliente
+    description: Consumido por customers-service para actualizar el estado interno.
+    messages:
+      - $ref: "#/channels/customersCustomerStatusChanged/messages/CustomerStatusChanged"
+
+  publishDlqError:
+    action: send
+    channel:
+      $ref: "#/channels/dlqErrors"
+    summary: Publicar mensaje fallido al DLQ
+    description: Producido por cualquier servicio cuando falla el procesamiento de un mensaje.
+    messages:
+      - $ref: "#/channels/dlqErrors/messages/ErrorEnvelope"
+
+  consumeDlqError:
+    action: receive
+    channel:
+      $ref: "#/channels/dlqErrors"
+    summary: Consumir errores del DLQ
+    description: Consumido por el sistema de monitoreo para alertas y reprocessing.
+    messages:
+      - $ref: "#/channels/dlqErrors/messages/ErrorEnvelope"
+
+components:
+  messages:
+    InvoiceCreated:
+      name: InvoiceCreated
+      title: Invoice Created Event
+      summary: Evento emitido cuando se crea una factura en BillingCenter
+      contentType: application/avro
+      payload:
+        schemaFormat: application/vnd.apache.avro;version=1.9.0
+        schema:
+          $ref: ../avro/InvoiceCreated.avsc
+
+    InvoiceStatusChanged:
+      name: InvoiceStatusChanged
+      title: Invoice Status Changed Event
+      summary: Evento emitido cuando cambia el estado de una factura
+      contentType: application/avro
+      payload:
+        schemaFormat: application/vnd.apache.avro;version=1.9.0
+        schema:
+          $ref: ../avro/InvoiceStatusChanged.avsc
+
+    IncidentCreated:
+      name: IncidentCreated
+      title: Incident Created Event
+      summary: Evento emitido cuando se abre un siniestro en ClaimCenter
+      contentType: application/avro
+      payload:
+        schemaFormat: application/vnd.apache.avro;version=1.9.0
+        schema:
+          $ref: ../avro/IncidentCreated.avsc
+
+    IncidentStatusChanged:
+      name: IncidentStatusChanged
+      title: Incident Status Changed Event
+      summary: Evento emitido cuando cambia el estado de un siniestro
+      contentType: application/avro
+      payload:
+        schemaFormat: application/vnd.apache.avro;version=1.9.0
+        schema:
+          $ref: ../avro/IncidentStatusChanged.avsc
+
+    CustomerRegistered:
+      name: CustomerRegistered
+      title: Customer Registered Event
+      summary: Evento emitido cuando se registra un nuevo cliente
+      contentType: application/avro
+      payload:
+        schemaFormat: application/vnd.apache.avro;version=1.9.0
+        schema:
+          $ref: ../avro/CustomerRegistered.avsc
+
+    CustomerStatusChanged:
+      name: CustomerStatusChanged
+      title: Customer Status Changed Event
+      summary: Evento emitido cuando cambia el estado de un cliente
+      contentType: application/avro
+      payload:
+        schemaFormat: application/vnd.apache.avro;version=1.9.0
+        schema:
+          $ref: ../avro/CustomerStatusChanged.avsc
+
+    ErrorEnvelope:
+      name: ErrorEnvelope
+      title: DLQ Error Envelope
+      summary: |
+        Wrapper con el mensaje original, error, timestamp,
+        topic de origen y numero de reintentos.
+      contentType: application/json
+      payload:
+        schemaFormat: application/vnd.aai.asyncapi+json;version=3.0.0
+        schema:
+          type: object
+          required:
+            - errorId
+            - originalTopic
+            - originalMessage
+            - errorMessage
+            - errorTimestamp
+            - retryCount
+            - producerService
+          properties:
+            errorId:
+              type: string
+              format: uuid
+              description: Identificador unico del error
+            originalTopic:
+              type: string
+              description: Topic Kafka de origen del mensaje fallido
+            originalMessage:
+              type: string
+              description: Mensaje original serializado en base64
+            errorMessage:
+              type: string
+              description: Mensaje de error descriptivo
+            errorClass:
+              type: string
+              description: Clase de excepcion (Java fully qualified name)
+            errorTimestamp:
+              type: string
+              format: date-time
+              description: Momento en que ocurrio el error
+            retryCount:
+              type: integer
+              description: Numero de reintentos realizados antes de enviar al DLQ
+            producerService:
+              type: string
+              description: Servicio que produjo el error

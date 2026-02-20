@@ -1,0 +1,91 @@
+##############################################################################
+# SPEC: PostgreSQL
+# Issue: #33
+##############################################################################
+
+metadata:
+  name: postgresql
+  type: infra
+  issue: 33
+  labels: [infra, database, postgres]
+  status: pending
+  priority: critical
+  depends_on: []
+
+description: >
+  Base de datos relacional compartida (instancia única para POC).
+  Cada servicio tiene su propia base de datos lógica con usuario
+  dedicado, respetando el patrón database-per-service.
+
+technology:
+  product: PostgreSQL
+  version: "16"
+  image: postgres:16-alpine
+
+configuration:
+  superuser:
+    username: postgres
+    password: postgres123
+
+  databases:
+    - name: apicurio
+      owner: apicurio
+      password: apicurio123
+      description: Backend de Apicurio Service Registry
+
+    - name: billing
+      owner: billing_user
+      password: billing123
+      description: Base de datos del servicio de facturación
+      extensions: [uuid-ossp]
+
+    - name: incidents
+      owner: incidents_user
+      password: incidents123
+      description: Base de datos del servicio de incidencias
+      extensions: [uuid-ossp]
+
+    - name: customers
+      owner: customers_user
+      password: customers123
+      description: Base de datos del servicio de clientes
+      extensions: [uuid-ossp]
+
+  init_scripts:
+    description: >
+      Script SQL de inicialización que crea las bases de datos,
+      usuarios y permisos al primer arranque del contenedor.
+    path: docker/init-db.sql
+
+networking:
+  ports:
+    - host: 15432
+      container: 5432
+      description: PostgreSQL (remapeado para evitar conflictos con local)
+
+runtime:
+  engine: Podman
+  orchestration: Podman Compose
+  vm: Vagrant + libvirt/KVM
+
+resources:
+  memory: 256MB
+  cpu: 0.5
+
+volumes:
+  - name: pgdata
+    path: /var/lib/postgresql/data
+    description: Datos persistentes
+
+healthcheck:
+  command: pg_isready -U postgres
+  interval: 10s
+  timeout: 5s
+  retries: 5
+
+acceptance_criteria:
+  - PostgreSQL arranca y es accesible en puerto 15432
+  - Las 4 bases de datos existen (apicurio, billing, incidents, customers)
+  - Cada usuario solo puede acceder a su propia base de datos
+  - La extensión uuid-ossp está habilitada donde se requiere
+  - Los datos persisten entre reinicios del contenedor

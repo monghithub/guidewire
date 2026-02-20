@@ -1,0 +1,177 @@
+##############################################################################
+# SPEC: OpenAPI — Guidewire ClaimCenter
+# Issue: #36
+##############################################################################
+
+metadata:
+  name: openapi-guidewire-claimcenter
+  type: design
+  subtype: openapi
+  issue: 36
+  labels: [design, openapi, guidewire]
+  status: pending
+  priority: high
+  depends_on: []
+
+description: >
+  Especificación OpenAPI 3.1 para las APIs REST de ClaimCenter
+  (Guidewire). Define el contrato para gestión de siniestros:
+  apertura, investigación, aprobación, denegación, cierre.
+
+specification:
+  format: OpenAPI 3.1
+  file: claimcenter-api.yml
+  base_path: /api/v1/claims
+  register_in: apicurio (grupo: guidewire-openapi)
+
+  info:
+    title: Guidewire ClaimCenter API
+    version: "1.0.0"
+    description: API REST para gestión de siniestros de seguros
+
+  endpoints:
+    - method: GET
+      path: /claims
+      summary: Listar siniestros
+      query_params:
+        - name: status
+          type: string
+          enum: [OPEN, IN_INVESTIGATION, APPROVED, DENIED, CLOSED]
+        - name: policyId
+          type: string
+          format: uuid
+        - name: customerId
+          type: string
+          format: uuid
+        - name: page
+          type: integer
+        - name: size
+          type: integer
+      response: PaginatedClaimList
+
+    - method: GET
+      path: /claims/{claimId}
+      summary: Obtener siniestro por ID
+      response: Claim
+
+    - method: POST
+      path: /claims
+      summary: Abrir nuevo siniestro
+      request: CreateClaimRequest
+      response: Claim
+      status: 201
+
+    - method: PATCH
+      path: /claims/{claimId}
+      summary: Actualizar siniestro
+      request: UpdateClaimRequest
+      response: Claim
+
+  models:
+    Claim:
+      properties:
+        claimId:
+          type: string
+          format: uuid
+        claimNumber:
+          type: string
+          example: "CLM-2024-000001"
+        policyId:
+          type: string
+          format: uuid
+        customerId:
+          type: string
+          format: uuid
+        status:
+          type: string
+          enum: [OPEN, IN_INVESTIGATION, APPROVED, DENIED, CLOSED]
+        priority:
+          type: string
+          enum: [LOW, MEDIUM, HIGH, CRITICAL]
+        description:
+          type: string
+        incidentDate:
+          type: string
+          format: date
+        claimedAmount:
+          type: number
+          format: decimal
+        approvedAmount:
+          type: number
+          format: decimal
+          nullable: true
+        currency:
+          type: string
+          default: "MXN"
+        assignedTo:
+          type: string
+          nullable: true
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    CreateClaimRequest:
+      required: [policyId, customerId, description, incidentDate, claimedAmount]
+      properties:
+        policyId:
+          type: string
+          format: uuid
+        customerId:
+          type: string
+          format: uuid
+        description:
+          type: string
+          minLength: 10
+        incidentDate:
+          type: string
+          format: date
+        claimedAmount:
+          type: number
+          minimum: 0.01
+        priority:
+          type: string
+          enum: [LOW, MEDIUM, HIGH, CRITICAL]
+          default: MEDIUM
+
+    UpdateClaimRequest:
+      properties:
+        status:
+          type: string
+          enum: [OPEN, IN_INVESTIGATION, APPROVED, DENIED, CLOSED]
+        priority:
+          type: string
+          enum: [LOW, MEDIUM, HIGH, CRITICAL]
+        approvedAmount:
+          type: number
+          minimum: 0
+        assignedTo:
+          type: string
+
+  status_transitions:
+    OPEN: [IN_INVESTIGATION, DENIED, CLOSED]
+    IN_INVESTIGATION: [APPROVED, DENIED]
+    APPROVED: [CLOSED]
+    DENIED: [CLOSED]
+    CLOSED: []  # estado final
+
+  error_responses:
+    400: Solicitud inválida
+    404: Siniestro no encontrado
+    409: Transición de estado no permitida
+    500: Error interno
+
+code_generation:
+  tool: openapi-generator-maven-plugin
+  language: java
+  library: spring
+  package: com.guidewire.claimcenter.api
+
+acceptance_criteria:
+  - La spec OpenAPI es válida
+  - Registrada en Apicurio bajo guidewire-openapi
+  - Las transiciones de estado están validadas
+  - El campo approvedAmount solo se permite en transición a APPROVED
+  - Generación de código produce interfaces compilables

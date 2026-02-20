@@ -1,0 +1,125 @@
+##############################################################################
+# SPEC: 3Scale API Gateway
+# Issue: #31
+##############################################################################
+
+metadata:
+  name: threescale-api-gateway
+  type: infra
+  issue: 31
+  labels: [infra, 3scale, api-gateway]
+  status: pending
+  priority: critical
+  depends_on: []
+
+description: >
+  API Gateway empresarial que expone todas las APIs del ecosistema.
+  Gestiona autenticación, rate limiting, throttling y portal de
+  desarrolladores. Reemplaza a Kong de la iteración anterior.
+
+technology:
+  product: Red Hat 3Scale API Management
+  community_alternative: APIcast (standalone)
+  version: "2.14.x"
+  image: quay.io/3scale/apicast:v3.11
+  mode: standalone  # Sin backend 3Scale completo para POC
+
+configuration:
+  gateway:
+    mode: standalone
+    configuration_source: file  # Declarativo para POC
+    log_level: info
+
+  services:
+    # APIs Guidewire (expuestas por Camel Gateway)
+    - name: guidewire-policycenter
+      upstream: http://camel-gateway:8083/api/v1/policies
+      path: /api/v1/policies
+      auth: api_key
+      rate_limit:
+        requests_per_minute: 100
+
+    - name: guidewire-claimcenter
+      upstream: http://camel-gateway:8083/api/v1/claims
+      path: /api/v1/claims
+      auth: api_key
+      rate_limit:
+        requests_per_minute: 100
+
+    - name: guidewire-billingcenter
+      upstream: http://camel-gateway:8083/api/v1/gw-invoices
+      path: /api/v1/gw-invoices
+      auth: api_key
+      rate_limit:
+        requests_per_minute: 100
+
+    # APIs Microservicios
+    - name: billing-service
+      upstream: http://billing-service:8082/api/v1/invoices
+      path: /api/v1/invoices
+      auth: api_key
+      rate_limit:
+        requests_per_minute: 200
+
+    - name: incidents-service
+      upstream: http://incidents-service:8084/api/v1/incidents
+      path: /api/v1/incidents
+      auth: api_key
+      rate_limit:
+        requests_per_minute: 200
+
+    - name: customers-service
+      upstream: http://customers-service:8085/api/v1/customers
+      path: /api/v1/customers
+      auth: api_key
+      rate_limit:
+        requests_per_minute: 200
+
+  security:
+    authentication:
+      - type: api_key
+        header: X-API-Key
+        description: Clave de API por consumidor
+      - type: oauth2
+        description: OAuth 2.0 para flujos más complejos (futuro)
+
+    policies:
+      - name: cors
+        enabled: true
+        allow_origins: ["*"]
+        allow_methods: [GET, POST, PUT, PATCH, DELETE, OPTIONS]
+      - name: ip_check
+        enabled: false
+        description: Whitelist de IPs (deshabilitado en POC)
+
+networking:
+  ports:
+    - host: 8000
+      container: 8080
+      description: API Gateway proxy
+    - host: 8001
+      container: 8090
+      description: Management API
+
+runtime:
+  engine: Podman
+  orchestration: Podman Compose
+  vm: Vagrant + libvirt/KVM
+
+resources:
+  memory: 256MB
+  cpu: 0.5
+
+healthcheck:
+  endpoint: /status/live
+  interval: 15s
+  timeout: 5s
+  retries: 3
+
+acceptance_criteria:
+  - APIcast arranca y sirve requests en puerto 8000
+  - Todas las 6 APIs son accesibles a través del gateway
+  - Requests sin API key son rechazados con 403
+  - Rate limiting funciona (429 al exceder límite)
+  - CORS headers presentes en las respuestas
+  - Logs muestran requests entrantes con latencia

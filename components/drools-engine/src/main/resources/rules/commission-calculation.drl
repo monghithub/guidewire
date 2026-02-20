@@ -1,0 +1,70 @@
+package com.guidewire.rules.commission;
+
+import com.guidewire.rules.model.CommissionFact;
+
+// Base commission rates by product type
+
+rule "AutoCommission"
+    salience 100
+    when
+        $commission : CommissionFact(productType == "AUTO", commissionPercentage == 0.0)
+    then
+        $commission.setCommissionPercentage(5.0);
+        update($commission);
+end
+
+rule "HomeCommission"
+    salience 100
+    when
+        $commission : CommissionFact(productType == "HOME", commissionPercentage == 0.0)
+    then
+        $commission.setCommissionPercentage(7.0);
+        update($commission);
+end
+
+rule "LifeCommission"
+    salience 100
+    when
+        $commission : CommissionFact(productType == "LIFE", commissionPercentage == 0.0)
+    then
+        $commission.setCommissionPercentage(10.0);
+        update($commission);
+end
+
+rule "HealthCommission"
+    salience 100
+    when
+        $commission : CommissionFact(productType == "HEALTH", commissionPercentage == 0.0)
+    then
+        $commission.setCommissionPercentage(8.0);
+        update($commission);
+end
+
+rule "CommercialCommission"
+    salience 100
+    when
+        $commission : CommissionFact(productType == "COMMERCIAL", commissionPercentage == 0.0)
+    then
+        $commission.setCommissionPercentage(6.0);
+        update($commission);
+end
+
+// Sales channel adjustments
+
+rule "DirectChannelDiscount"
+    salience 50
+    when
+        $commission : CommissionFact(salesChannel == "DIRECT", commissionPercentage > 0.0)
+    then
+        $commission.setCommissionPercentage($commission.getCommissionPercentage() - 1.0);
+        update($commission);
+end
+
+rule "BrokerChannelBonus"
+    salience 50
+    when
+        $commission : CommissionFact(salesChannel == "BROKER", commissionPercentage > 0.0)
+    then
+        $commission.setCommissionPercentage($commission.getCommissionPercentage() + 2.0);
+        update($commission);
+end

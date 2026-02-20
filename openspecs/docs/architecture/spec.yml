@@ -1,0 +1,96 @@
+##############################################################################
+# SPEC: Documentación de Arquitectura
+# Issue: #68
+##############################################################################
+
+metadata:
+  name: architecture-docs
+  type: docs
+  issue: 68
+  labels: [documentation, architecture]
+  status: pending
+  priority: low
+  depends_on: []
+
+description: >
+  Documentación de arquitectura del POC: diagramas, flujos de datos,
+  guía de desarrollo, troubleshooting y decisiones arquitectónicas.
+
+deliverables:
+  - name: README.md
+    description: >
+      Documento principal con descripción del proyecto, requisitos,
+      quick start y estructura del repositorio.
+
+  - name: Diagrama de Arquitectura
+    format: PlantUML / Mermaid
+    description: >
+      Vista general del ecosistema mostrando todos los componentes
+      y sus conexiones.
+    components:
+      - 3Scale (API Gateway)
+      - Camel Gateway (Integration)
+      - Guidewire Mock (PolicyCenter, ClaimCenter, BillingCenter)
+      - Kafka (Event Streaming)
+      - ActiveMQ Artemis (JMS Messaging)
+      - Drools (Rules Engine)
+      - Apicurio (Schema Registry)
+      - Billing Service (Spring Boot)
+      - Incidents Service (Quarkus)
+      - Customers Service (Node.js)
+      - PostgreSQL (Database)
+
+  - name: Diagrama de Flujo de Datos
+    format: PlantUML / Mermaid
+    flows:
+      - name: "Flujo Póliza → Factura"
+        description: >
+          PolicyCenter → Camel (SOAP/REST) → Drools (validación) →
+          Kafka (billing.invoice-created) → Billing Service
+      - name: "Flujo Siniestro → Incidencia"
+        description: >
+          ClaimCenter → Camel (REST) → Drools (fraude) →
+          Kafka (incidents.incident-created) → Incidents Service
+      - name: "Flujo Registro Cliente"
+        description: >
+          API → Camel → Kafka (customers.customer-registered) →
+          Customers Service + Billing Service + Incidents Service
+
+  - name: Guía de Desarrollo
+    sections:
+      - Requisitos previos (Docker, Java 21, Node.js 20, Maven)
+      - Clonar y configurar
+      - Levantar infraestructura (docker compose up)
+      - Desarrollo local de cada servicio
+      - Registrar schemas en Apicurio
+      - Ejecutar tests E2E
+
+  - name: ADR (Architecture Decision Records)
+    decisions:
+      - title: "ADR-001: 3Scale sobre Kong"
+        reason: Alineación con stack Red Hat enterprise
+      - title: "ADR-002: Camel como Integration Gateway"
+        reason: EIP nativos, soporte SOAP/REST, ecosistema Red Hat
+      - title: "ADR-003: Kafka KRaft sin ZooKeeper"
+        reason: Simplificación operativa, es el futuro de Kafka
+      - title: "ADR-004: Polyglot (Spring Boot + Quarkus + Node.js)"
+        reason: Demostrar independencia tecnológica de microservicios
+      - title: "ADR-005: AVRO sobre Protobuf/JSON Schema"
+        reason: Estándar en ecosistema Kafka, soporte Apicurio nativo
+
+  - name: Troubleshooting
+    common_issues:
+      - problem: Kafka no arranca
+        solution: Verificar puertos 9092 libres, verificar memoria
+      - problem: Apicurio no conecta a PostgreSQL
+        solution: Verificar que PostgreSQL arrancó primero (healthcheck)
+      - problem: Consumer no recibe mensajes
+        solution: Verificar group.id, auto.offset.reset, topic existe
+
+acceptance_criteria:
+  - README con quick start funcional
+  - Diagrama de arquitectura actualizado con todos los componentes
+  - Diagramas de flujo para los 3 flujos principales
+  - Guía de desarrollo permite levantar el POC desde cero
+  - ADRs documentan las decisiones clave
+  - Troubleshooting cubre los problemas más comunes

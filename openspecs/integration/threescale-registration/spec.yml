@@ -1,0 +1,89 @@
+##############################################################################
+# SPEC: 3Scale — Registro de todas las APIs
+# Issue: #66
+##############################################################################
+
+metadata:
+  name: threescale-api-registration
+  type: integration
+  issue: 66
+  labels: [integration, 3scale, api-gateway]
+  status: pending
+  priority: medium
+  depends_on:
+    - infra/threescale
+    - design/openapi/guidewire-policycenter
+    - design/openapi/guidewire-claimcenter
+    - design/openapi/guidewire-billingcenter
+    - design/openapi/billing-service
+    - design/openapi/incidents-service
+    - design/openapi/customers-service
+    - components/camel-gateway
+    - components/billing-service
+    - components/incidents-service
+    - components/customers-service
+
+description: >
+  Registro de todas las APIs (Guidewire + microservicios) en 3Scale.
+  Importación de specs OpenAPI, creación de planes de servicio,
+  configuración de rate limiting, API keys y portal de desarrolladores.
+
+registrations:
+  guidewire_apis:
+    - name: PolicyCenter API
+      openapi_source: design/openapi/guidewire-policycenter
+      upstream: http://camel-gateway:8083
+      plan: guidewire-standard
+      rate_limit: 100 req/min
+      auth: api_key
+
+    - name: ClaimCenter API
+      openapi_source: design/openapi/guidewire-claimcenter
+      upstream: http://camel-gateway:8083
+      plan: guidewire-standard
+      rate_limit: 100 req/min
+      auth: api_key
+
+    - name: BillingCenter API
+      openapi_source: design/openapi/guidewire-billingcenter
+      upstream: http://camel-gateway:8083
+      plan: guidewire-standard
+      rate_limit: 100 req/min
+      auth: api_key
+
+  microservice_apis:
+    - name: Billing Service API
+      openapi_source: design/openapi/billing-service
+      upstream: http://billing-service:8082
+      plan: microservices-standard
+      rate_limit: 200 req/min
+      auth: api_key
+
+    - name: Incidents Service API
+      openapi_source: design/openapi/incidents-service
+      upstream: http://incidents-service:8084
+      plan: microservices-standard
+      rate_limit: 200 req/min
+      auth: api_key
+
+    - name: Customers Service API
+      openapi_source: design/openapi/customers-service
+      upstream: http://customers-service:8085
+      plan: microservices-standard
+      rate_limit: 200 req/min
+      auth: api_key
+
+  service_plans:
+    - name: guidewire-standard
+      rate_limit: 100 req/min
+      description: Plan estándar para APIs de Guidewire
+    - name: microservices-standard
+      rate_limit: 200 req/min
+      description: Plan estándar para microservicios
+
+acceptance_criteria:
+  - Las 6 APIs están registradas en 3Scale
+  - Las specs OpenAPI se importaron correctamente
+  - Rate limiting funciona según los planes configurados
+  - API keys son requeridas para todas las APIs
+  - Las APIs son accesibles a través del gateway (puerto 8000)

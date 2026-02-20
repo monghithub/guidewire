@@ -1,0 +1,102 @@
+##############################################################################
+# SPEC: Apicurio Service Registry
+# Issue: #30
+##############################################################################
+
+metadata:
+  name: apicurio-registry
+  type: infra
+  issue: 30
+  labels: [infra, apicurio, registry]
+  status: pending
+  priority: critical
+  depends_on:
+    - infra/postgres  # Requiere PostgreSQL como backend
+
+description: >
+  Registro centralizado de contratos y esquemas. Almacena OpenAPI, AsyncAPI
+  y AVRO schemas. Actúa como fuente de verdad para la validación de contratos
+  en tiempo de compilación y runtime.
+
+technology:
+  product: Apicurio Registry
+  enterprise_name: Red Hat Service Registry
+  version: "2.5.x"
+  image: apicurio/apicurio-registry-sql:2.5.11.Final
+  storage: PostgreSQL
+
+configuration:
+  storage:
+    type: sql
+    datasource: postgresql
+    database: apicurio
+    username: apicurio
+    password: apicurio123
+
+  artifact_groups:
+    - group_id: guidewire
+      description: Schemas AVRO para eventos Kafka de Guidewire
+      artifact_types: [AVRO]
+      compatibility_rule: FULL
+
+    - group_id: guidewire-openapi
+      description: Especificaciones OpenAPI de APIs REST
+      artifact_types: [OPENAPI]
+      compatibility_rule: NONE
+
+    - group_id: guidewire-asyncapi
+      description: Especificaciones AsyncAPI de eventos
+      artifact_types: [ASYNCAPI]
+      compatibility_rule: NONE
+
+  compatibility:
+    global_rule: FULL
+    description: >
+      FULL compatibility: los schemas nuevos deben ser compatibles
+      tanto hacia adelante (FORWARD) como hacia atrás (BACKWARD).
+      Garantiza que producers y consumers antiguos y nuevos coexistan.
+
+  validation:
+    moments:
+      - stage: registration
+        description: Al registrar un schema, se valida contra reglas de compatibilidad
+      - stage: serialization
+        description: En runtime, el serializer valida contra el schema del registry
+      - stage: build
+        description: Opcional, el plugin Maven descarga y valida schemas en compilación
+
+networking:
+  ports:
+    - host: 8081
+      container: 8080
+      description: Apicurio UI y API REST
+
+  api_endpoints:
+    - path: /apis/registry/v2
+      description: API REST v2 del registry
+    - path: /ui
+      description: Interfaz web de administración
+
+runtime:
+  engine: Podman
+  orchestration: Podman Compose
+  vm: Vagrant + libvirt/KVM
+
+resources:
+  memory: 512MB
+  cpu: 0.5
+
+healthcheck:
+  endpoint: /health/ready
+  interval: 15s
+  timeout: 5s
+  retries: 3
+
+acceptance_criteria:
+  - Apicurio arranca y se conecta a PostgreSQL
+  - La UI es accesible en http://localhost:8081
+  - Se pueden registrar schemas AVRO en el grupo "guidewire"
+  - Se pueden registrar specs OpenAPI en "guidewire-openapi"
+  - Se pueden registrar specs AsyncAPI en "guidewire-asyncapi"
+  - La regla FULL compatibility rechaza schemas incompatibles
+  - Los clientes Kafka pueden resolver schemas por ID desde el registry

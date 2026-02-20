@@ -1,0 +1,49 @@
+package com.guidewire.rules.routing;
+
+import com.guidewire.rules.model.IncidentRoutingFact;
+import java.math.BigDecimal;
+
+rule "CriticalToSeniorAdjusters"
+    salience 100
+    when
+        $routing : IncidentRoutingFact(priority == "CRITICAL", assignedTeam == null)
+    then
+        $routing.setAssignedTeam("senior-adjusters");
+        update($routing);
+end
+
+rule "HighAmountToSpecialist"
+    salience 90
+    when
+        $routing : IncidentRoutingFact(claimedAmount > 1000000, assignedTeam == null)
+    then
+        $routing.setAssignedTeam("specialist");
+        update($routing);
+end
+
+rule "HighPriorityToSenior"
+    salience 80
+    when
+        $routing : IncidentRoutingFact(priority == "HIGH", assignedTeam == null)
+    then
+        $routing.setAssignedTeam("senior-adjusters");
+        update($routing);
+end
+
+rule "CommercialToCommercialTeam"
+    salience 70
+    when
+        $routing : IncidentRoutingFact(productType == "COMMERCIAL", assignedTeam == null)
+    then
+        $routing.setAssignedTeam("commercial-adjusters");
+        update($routing);
+end
+
+rule "DefaultToStandardAdjusters"
+    salience 10
+    when
+        $routing : IncidentRoutingFact(assignedTeam == null)
+    then
+        $routing.setAssignedTeam("standard-adjusters");
+        update($routing);
+end

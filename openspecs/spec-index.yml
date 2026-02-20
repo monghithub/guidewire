@@ -1,0 +1,99 @@
+##############################################################################
+# GUIDEWIRE INTEGRATION POC — SPEC INDEX
+# Fuente de verdad para desarrollo Spec-Driven con IA
+##############################################################################
+
+project:
+  name: guidewire-integration-poc
+  description: >
+    POC de arquitectura de integración para Guidewire InsuranceSuite.
+    Demuestra patrones SOA/MSA/EDA con API-First, contract-driven development
+    y stack enterprise (3Scale, Camel, Kafka, Drools, Apicurio).
+  version: "0.1.0"
+  methodology: spec-driven-development
+  ai_assisted: true
+
+tech_stack:
+  runtime: Java 21 (LTS)
+  frameworks:
+    - Spring Boot 3.3.x
+    - Quarkus 3.8.x
+    - Express.js 4.x (Node.js 20 LTS)
+    - Apache Camel 4.x
+  api_gateway: Red Hat 3Scale (APIcast)
+  integration: Apache Camel (Red Hat Fuse)
+  event_streaming: Apache Kafka (KRaft mode)
+  messaging: Apache ActiveMQ Artemis
+  rules_engine: Drools 8.x (KIE Server)
+  schema_registry: Apicurio Service Registry
+  database: PostgreSQL 16
+  containerization: Docker Compose
+  specifications:
+    - OpenAPI 3.1
+    - AsyncAPI 3.0
+    - Apache AVRO
+
+modules:
+  infra:
+    path: infra/
+    description: Componentes de infraestructura y plataforma
+    specs:
+      - infra/kafka/spec.yml
+      - infra/apicurio/spec.yml
+      - infra/threescale/spec.yml
+      - infra/activemq/spec.yml
+      - infra/postgres/spec.yml
+      - infra/lab-environment/spec.yml
+
+  design:
+    path: design/
+    description: Contratos API-First (OpenAPI, AsyncAPI, AVRO)
+    specs:
+      - design/openapi/guidewire-policycenter/spec.yml
+      - design/openapi/guidewire-claimcenter/spec.yml
+      - design/openapi/guidewire-billingcenter/spec.yml
+      - design/openapi/billing-service/spec.yml
+      - design/openapi/incidents-service/spec.yml
+      - design/openapi/customers-service/spec.yml
+      - design/asyncapi/guidewire-events/spec.yml
+      - design/avro/billing-events/spec.yml
+      - design/avro/incidents-events/spec.yml
+      - design/avro/customers-events/spec.yml
+
+  components:
+    path: components/
+    description: Componentes aplicativos (gateway, servicios, reglas)
+    specs:
+      - components/camel-gateway/spec.yml
+      - components/drools-engine/spec.yml
+      - components/billing-service/spec.yml
+      - components/incidents-service/spec.yml
+      - components/customers-service/spec.yml
+
+  integration:
+    path: integration/
+    description: Integración cross-cutting y testing E2E
+    specs:
+      - integration/threescale-registration/spec.yml
+      - integration/postman-e2e/spec.yml
+
+  devops:
+    path: devops/
+    description: CI/CD y automatización
+    specs:
+      - devops/ci-cd/spec.yml
+
+  docs:
+    path: docs/
+    description: Documentación de arquitectura
+    specs:
+      - docs/architecture/spec.yml
+
+workflow:
+  order:
+    - infra        # 1. Levantar infraestructura
+    - design       # 2. Definir contratos API-First
+    - components   # 3. Implementar componentes
+    - integration  # 4. Registrar APIs y testing E2E
+    - devops       # 5. Pipeline CI/CD
+    - docs         # 6. Documentación

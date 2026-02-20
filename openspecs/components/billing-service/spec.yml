@@ -1,0 +1,129 @@
+##############################################################################
+# SPEC: Microservicio de Facturación (Spring Boot)
+# Issues: #54, #55, #56, #57
+##############################################################################
+
+metadata:
+  name: billing-service
+  type: component
+  issues: [54, 55, 56, 57]
+  labels: [feature, billing, spring-boot, backend]
+  status: pending
+  priority: high
+  depends_on:
+    - infra/postgres
+    - infra/kafka
+    - infra/apicurio
+    - design/openapi/billing-service
+    - design/avro/billing-events
+
+description: >
+  Microservicio de facturación implementado con Spring Boot.
+  Gestiona facturas internas del ecosistema, alimentadas por
+  eventos de Guidewire BillingCenter via Kafka.
+
+technology:
+  runtime: Java 21
+  framework: Spring Boot 3.3.x
+  orm: Spring Data JPA / Hibernate
+  database: PostgreSQL 16
+  migration: Flyway
+  build: Maven
+  image_name: guidewire-poc/billing-service
+
+project:
+  group_id: com.guidewire.billing
+  artifact_id: billing-service
+  package: com.guidewire.billing
+
+submodules:
+  setup:
+    issue: 54
+    description: >
+      Proyecto Spring Boot base con todas las dependencias.
+      Generación de stubs desde OpenAPI spec.
+    deliverables:
+      - pom.xml (Spring Boot + JPA + Kafka + AVRO + OpenAPI generator)
+      - application.yml
+      - Dockerfile
+      - BillingServiceApplication.java
+
+  database:
+    issue: 55
+    description: Esquema de base de datos con migraciones Flyway
+    tables:
+      - name: invoices
+        columns:
+          - { name: id, type: UUID, pk: true, default: gen_random_uuid() }
+          - { name: policy_id, type: UUID, nullable: false }
+          - { name: customer_id, type: UUID, nullable: false }
+          - { name: status, type: VARCHAR(20), nullable: false, default: "'PENDING'" }
+          - { name: total_amount, type: DECIMAL(10,2), nullable: false }
+          - { name: currency, type: VARCHAR(3), default: "'MXN'" }
+          - { name: source_event, type: VARCHAR(255), nullable: true }
+          - { name: created_at, type: TIMESTAMP, default: NOW() }
+          - { name: updated_at, type: TIMESTAMP, default: NOW() }
+        indices:
+          - { columns: [policy_id] }
+          - { columns: [customer_id] }
+          - { columns: [status] }
+          - { columns: [created_at] }
+
+      - name: invoice_items
+        columns:
+          - { name: id, type: UUID, pk: true, default: gen_random_uuid() }
+          - { name: invoice_id, type: UUID, fk: invoices.id }
+          - { name: description, type: VARCHAR(255), nullable: false }
+          - { name: quantity, type: INTEGER, nullable: false }
+          - { name: unit_price, type: DECIMAL(10,2), nullable: false }
+          - { name: subtotal, type: DECIMAL(10,2), nullable: false }
+
+    migrations:
+      - V1__create_invoices_table.sql
+      - V2__create_invoice_items_table.sql
+
+  api:
+    issue: 56
+    description: >
+      API REST CRUD generada desde OpenAPI spec.
+      Implementa las interfaces generadas por openapi-generator.
+    layers:
+      - Controller (generado, implements API interface)
+      - Service (lógica de negocio)
+      - Repository (Spring Data JPA)
+      - Entity (JPA entities)
+      - Mapper (MapStruct, Entity <-> DTO)
+    validations:
+      - totalAmount > 0
+      - Al menos un item por factura
+      - Transiciones de estado válidas (PENDING -> PROCESSING -> COMPLETED)
+
+  kafka_consumer:
+    issue: 57
+    description: >
+      Consumer Kafka para eventos de facturación y clientes.
+      Deserialización AVRO con Apicurio registry.
+    consumers:
+      - topic: billing.invoice-created
+        group: billing-service-group
+        action: Crear factura interna desde evento de BillingCenter
+        deserializer: KafkaAvroDeserializer
+      - topic: customers.customer-registered
+        group: billing-service-group
+        action: Registrar referencia de cliente para facturas futuras
+    config:
+      auto_offset_reset: earliest
+      enable_auto_commit: false
+      apicurio_url: http://apicurio:8080/apis/registry/v2
+
+networking:
+  port: 8082
+
+acceptance_criteria:
+  - El servicio arranca y se conecta a PostgreSQL y Kafka
+  - Las migraciones Flyway crean las tablas automáticamente
+  - CRUD REST funciona según la spec OpenAPI
+  - Validaciones de negocio rechazan requests inválidos
+  - Consumer Kafka procesa eventos InvoiceCreated correctamente
+  - Consumer Kafka procesa eventos CustomerRegistered
+  - Transiciones de estado validadas

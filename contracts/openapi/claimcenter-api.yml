@@ -1,0 +1,479 @@
+openapi: "3.1.0"
+info:
+  title: Guidewire ClaimCenter API
+  version: "1.0.0"
+  description: |
+    API REST para gestion de siniestros de seguros en Guidewire ClaimCenter.
+
+    Gestiona el ciclo de vida de siniestros: apertura, investigacion,
+    aprobacion, denegacion y cierre.
+
+    ## Transiciones de estado permitidas
+
+    | Estado actual      | Estados siguientes permitidos       |
+    |--------------------|-------------------------------------|
+    | OPEN               | IN_INVESTIGATION, DENIED, CLOSED    |
+    | IN_INVESTIGATION   | APPROVED, DENIED                    |
+    | APPROVED           | CLOSED                              |
+    | DENIED             | CLOSED                              |
+    | CLOSED             | _(estado final)_                    |
+
+    El campo `approvedAmount` solo se permite al transicionar a APPROVED.
+  contact:
+    name: Guidewire Integration Team
+  license:
+    name: Apache 2.0
+    url: https://www.apache.org/licenses/LICENSE-2.0
+
+servers:
+  - url: http://localhost:8081
+    description: Local development server
+
+paths:
+  /api/v1/claims:
+    get:
+      operationId: listClaims
+      summary: Listar siniestros
+      description: Retorna una lista paginada de siniestros con filtros opcionales.
+      tags:
+        - Claims
+      parameters:
+        - name: status
+          in: query
+          required: false
+          description: Filtrar por estado del siniestro
+          schema:
+            $ref: "#/components/schemas/ClaimStatus"
+        - name: policyId
+          in: query
+          required: false
+          description: Filtrar por ID de la poliza
+          schema:
+            type: string
+            format: uuid
+        - name: customerId
+          in: query
+          required: false
+          description: Filtrar por ID del cliente
+          schema:
+            type: string
+            format: uuid
+        - name: page
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 0
+            default: 0
+        - name: size
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+      responses:
+        "200":
+          description: Lista paginada de siniestros
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PaginatedClaimList"
+              example:
+                content:
+                  - claimId: "d4e5f6a7-b8c9-0123-4567-890abcdef012"
+                    claimNumber: "CLM-2024-000001"
+                    policyId: "a1b2c3d4-e5f6-7890-abcd-ef1234567890"
+                    customerId: "c1d2e3f4-a5b6-7890-cdef-123456789abc"
+                    status: OPEN
+                    priority: HIGH
+                    description: "Colision vehicular en autopista Mexico-Puebla km 45"
+                    incidentDate: "2024-03-15"
+                    claimedAmount: 85000.00
+                    approvedAmount: null
+                    currency: MXN
+                    assignedTo: null
+                    createdAt: "2024-03-16T09:00:00Z"
+                    updatedAt: "2024-03-16T09:00:00Z"
+                page: 0
+                size: 20
+                totalElements: 1
+                totalPages: 1
+        "400":
+          description: Solicitud invalida
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "500":
+          description: Error interno del servidor
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+    post:
+      operationId: createClaim
+      summary: Abrir nuevo siniestro
+      description: Abre un nuevo siniestro asociado a una poliza existente. Se crea en estado OPEN.
+      tags:
+        - Claims
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateClaimRequest"
+            example:
+              policyId: "a1b2c3d4-e5f6-7890-abcd-ef1234567890"
+              customerId: "c1d2e3f4-a5b6-7890-cdef-123456789abc"
+              description: "Colision vehicular en autopista Mexico-Puebla km 45"
+              incidentDate: "2024-03-15"
+              claimedAmount: 85000.00
+              priority: HIGH
+      responses:
+        "201":
+          description: Siniestro creado exitosamente
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Claim"
+        "400":
+          description: Solicitud invalida
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              example:
+                error: VALIDATION_ERROR
+                message: "description must be at least 10 characters"
+                timestamp: "2024-03-16T09:00:00Z"
+                path: /api/v1/claims
+        "500":
+          description: Error interno del servidor
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /api/v1/claims/{claimId}:
+    get:
+      operationId: getClaimById
+      summary: Obtener siniestro por ID
+      tags:
+        - Claims
+      parameters:
+        - name: claimId
+          in: path
+          required: true
+          description: UUID del siniestro
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Siniestro encontrado
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Claim"
+        "404":
+          description: Siniestro no encontrado
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              example:
+                error: NOT_FOUND
+                message: "Claim with ID d4e5f6a7-b8c9-0123-4567-890abcdef012 not found"
+                timestamp: "2024-03-16T09:00:00Z"
+                path: /api/v1/claims/d4e5f6a7-b8c9-0123-4567-890abcdef012
+        "500":
+          description: Error interno del servidor
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+    patch:
+      operationId: updateClaim
+      summary: Actualizar siniestro
+      description: |
+        Permite actualizar el estado, prioridad, monto aprobado y asignacion de un siniestro.
+        Las transiciones de estado deben seguir las reglas definidas.
+      tags:
+        - Claims
+      parameters:
+        - name: claimId
+          in: path
+          required: true
+          description: UUID del siniestro
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateClaimRequest"
+            example:
+              status: IN_INVESTIGATION
+              assignedTo: "investigador.perez"
+      responses:
+        "200":
+          description: Siniestro actualizado exitosamente
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Claim"
+        "400":
+          description: Solicitud invalida
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Siniestro no encontrado
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "409":
+          description: Transicion de estado no permitida
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              example:
+                error: INVALID_STATE_TRANSITION
+                message: "Cannot transition from CLOSED to OPEN"
+                timestamp: "2024-03-16T09:00:00Z"
+                path: /api/v1/claims/d4e5f6a7-b8c9-0123-4567-890abcdef012
+        "500":
+          description: Error interno del servidor
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+components:
+  schemas:
+    ClaimStatus:
+      type: string
+      enum:
+        - OPEN
+        - IN_INVESTIGATION
+        - APPROVED
+        - DENIED
+        - CLOSED
+      description: |
+        Estado del ciclo de vida del siniestro.
+        - OPEN: Siniestro abierto, pendiente de investigacion
+        - IN_INVESTIGATION: En proceso de investigacion
+        - APPROVED: Siniestro aprobado para pago
+        - DENIED: Siniestro denegado
+        - CLOSED: Siniestro cerrado (estado final)
+
+    ClaimPriority:
+      type: string
+      enum:
+        - LOW
+        - MEDIUM
+        - HIGH
+        - CRITICAL
+      description: Nivel de prioridad del siniestro
+
+    Claim:
+      type: object
+      required:
+        - claimId
+        - claimNumber
+        - policyId
+        - customerId
+        - status
+        - priority
+        - description
+        - incidentDate
+        - claimedAmount
+        - currency
+        - createdAt
+        - updatedAt
+      properties:
+        claimId:
+          type: string
+          format: uuid
+          description: Identificador unico del siniestro
+          example: "d4e5f6a7-b8c9-0123-4567-890abcdef012"
+        claimNumber:
+          type: string
+          description: Numero de siniestro legible
+          example: "CLM-2024-000001"
+        policyId:
+          type: string
+          format: uuid
+          description: UUID de la poliza asociada
+          example: "a1b2c3d4-e5f6-7890-abcd-ef1234567890"
+        customerId:
+          type: string
+          format: uuid
+          description: UUID del cliente reclamante
+          example: "c1d2e3f4-a5b6-7890-cdef-123456789abc"
+        status:
+          $ref: "#/components/schemas/ClaimStatus"
+        priority:
+          $ref: "#/components/schemas/ClaimPriority"
+        description:
+          type: string
+          description: Descripcion detallada del siniestro
+          example: "Colision vehicular en autopista Mexico-Puebla km 45"
+        incidentDate:
+          type: string
+          format: date
+          description: Fecha en que ocurrio el siniestro
+          example: "2024-03-15"
+        claimedAmount:
+          type: number
+          format: double
+          description: Monto reclamado por el asegurado
+          example: 85000.00
+        approvedAmount:
+          type:
+            - number
+            - "null"
+          format: double
+          description: Monto aprobado (solo aplica cuando status es APPROVED)
+          example: 72000.00
+        currency:
+          type: string
+          description: Codigo de moneda ISO 4217
+          default: "MXN"
+          example: "MXN"
+        assignedTo:
+          type:
+            - string
+            - "null"
+          description: Investigador o ajustador asignado
+          example: "investigador.perez"
+        createdAt:
+          type: string
+          format: date-time
+          description: Fecha de creacion del registro
+          example: "2024-03-16T09:00:00Z"
+        updatedAt:
+          type: string
+          format: date-time
+          description: Fecha de ultima actualizacion
+          example: "2024-03-16T09:00:00Z"
+
+    CreateClaimRequest:
+      type: object
+      required:
+        - policyId
+        - customerId
+        - description
+        - incidentDate
+        - claimedAmount
+      properties:
+        policyId:
+          type: string
+          format: uuid
+          description: UUID de la poliza asociada
+        customerId:
+          type: string
+          format: uuid
+          description: UUID del cliente reclamante
+        description:
+          type: string
+          minLength: 10
+          description: Descripcion detallada del siniestro (minimo 10 caracteres)
+        incidentDate:
+          type: string
+          format: date
+          description: Fecha en que ocurrio el siniestro
+        claimedAmount:
+          type: number
+          format: double
+          minimum: 0.01
+          description: Monto reclamado
+        priority:
+          $ref: "#/components/schemas/ClaimPriority"
+
+    UpdateClaimRequest:
+      type: object
+      properties:
+        status:
+          $ref: "#/components/schemas/ClaimStatus"
+        priority:
+          $ref: "#/components/schemas/ClaimPriority"
+        approvedAmount:
+          type: number
+          format: double
+          minimum: 0
+          description: Monto aprobado (solo cuando se transiciona a APPROVED)
+        assignedTo:
+          type: string
+          description: Investigador o ajustador asignado
+
+    PaginatedClaimList:
+      type: object
+      required:
+        - content
+        - page
+        - size
+        - totalElements
+        - totalPages
+      properties:
+        content:
+          type: array
+          items:
+            $ref: "#/components/schemas/Claim"
+        page:
+          type: integer
+          description: Numero de pagina actual (base 0)
+          example: 0
+        size:
+          type: integer
+          description: Elementos por pagina
+          example: 20
+        totalElements:
+          type: integer
+          format: int64
+          description: Total de elementos
+          example: 15
+        totalPages:
+          type: integer
+          description: Total de paginas
+          example: 1
+
+    ErrorResponse:
+      type: object
+      required:
+        - error
+        - message
+        - timestamp
+        - path
+      properties:
+        error:
+          type: string
+          description: Codigo de error
+          example: "VALIDATION_ERROR"
+        message:
+          type: string
+          description: Mensaje descriptivo del error
+          example: "description must be at least 10 characters"
+        timestamp:
+          type: string
+          format: date-time
+          description: Momento en que ocurrio el error
+          example: "2024-03-16T09:00:00Z"
+        path:
+          type: string
+          description: Ruta del request que genero el error
+          example: "/api/v1/claims"
+        details:
+          type: array
+          items:
+            type: string
+          description: Lista de detalles adicionales del error

@@ -1,0 +1,99 @@
+##############################################################################
+# SPEC: ActiveMQ Artemis (Red Hat AMQ Broker)
+# Issue: #32
+##############################################################################
+
+metadata:
+  name: activemq-artemis
+  type: infra
+  issue: 32
+  labels: [infra, activemq]
+  status: pending
+  priority: high
+  depends_on: []
+
+description: >
+  Broker de mensajería JMS/AMQP para patrones request/reply,
+  transacciones y colas de trabajo. Complementa a Kafka para
+  casos donde se necesita entrega garantizada punto a punto.
+
+technology:
+  product: Apache ActiveMQ Artemis
+  enterprise_name: Red Hat AMQ Broker
+  version: "2.33.x"
+  image: apache/activemq-artemis:2.33.0
+  protocols: [AMQP 1.0, JMS, STOMP, MQTT, OpenWire]
+
+configuration:
+  broker:
+    name: artemis-broker
+    user: admin
+    password: admin123
+    allow_anonymous: false
+
+  queues:
+    - name: claims.invoice-requests
+      type: anycast
+      durable: true
+      description: >
+        Solicitudes de facturación originadas desde ClaimCenter.
+        Camel consume y enruta al servicio de facturación.
+
+    - name: claims.fraud-alerts
+      type: anycast
+      durable: true
+      description: >
+        Alertas de fraude generadas por Drools.
+        Consumidas por el equipo de investigación.
+
+    - name: notifications.outbound
+      type: anycast
+      durable: true
+      description: >
+        Notificaciones salientes (email, SMS) generadas por
+        eventos de negocio. Cola de trabajo para el servicio
+        de notificaciones.
+
+  addresses:
+    - name: claims.events
+      type: multicast
+      description: >
+        Topic para broadcasting de eventos de siniestros
+        a múltiples consumers (patrón pub/sub JMS).
+
+networking:
+  ports:
+    - host: 61616
+      container: 61616
+      description: AMQP / JMS broker
+    - host: 8161
+      container: 8161
+      description: Web Console (Hawtio)
+
+  console:
+    url: http://localhost:8161/console
+    credentials:
+      user: admin
+      password: admin123
+
+runtime:
+  engine: Podman
+  orchestration: Podman Compose
+  vm: Vagrant + libvirt/KVM
+
+resources:
+  memory: 512MB
+  cpu: 0.5
+
+healthcheck:
+  command: /var/lib/artemis-instance/bin/artemis check node
+  interval: 30s
+  timeout: 10s
+  retries: 3
+
+acceptance_criteria:
+  - Artemis arranca y acepta conexiones AMQP en puerto 61616
+  - Las 3 colas (invoice-requests, fraud-alerts, notifications) existen
+  - La consola web Hawtio es accesible en http://localhost:8161
+  - Se pueden enviar y recibir mensajes JMS desde Camel
+  - Los mensajes durables sobreviven reinicios del broker

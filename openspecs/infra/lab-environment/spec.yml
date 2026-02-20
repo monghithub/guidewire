@@ -1,0 +1,478 @@
+##############################################################################
+# SPEC: Laboratorio Completo — Vagrant + Podman + Podman Compose
+# Issue: #34
+##############################################################################
+
+metadata:
+  name: lab-environment
+  type: infra
+  issue: 34
+  labels: [infra, vagrant, podman, devops]
+  status: pending
+  priority: critical
+  depends_on:
+    - infra/kafka
+    - infra/apicurio
+    - infra/threescale
+    - infra/activemq
+    - infra/postgres
+
+description: >
+  Entorno de laboratorio completamente aislado. Nada se instala
+  en el host excepto Vagrant + libvirt/KVM. Dentro de la VM
+  corre todo con Podman + Podman Compose (stack Red Hat nativo).
+  Un solo "vagrant up" levanta todo. Un "vagrant halt" lo apaga.
+
+##############################################################################
+# CAPA 1: HOST (tu máquina física)
+##############################################################################
+
+host:
+  requirements:
+    description: Lo ÚNICO que necesitas instalar en tu máquina
+    packages:
+      - name: vagrant
+        version: "2.4+"
+        install: sudo apt install vagrant  # o brew install vagrant
+      - name: libvirt + KVM
+        install: sudo apt install qemu-kvm libvirt-daemon-system virt-manager
+      - name: vagrant-libvirt plugin
+        install: vagrant plugin install vagrant-libvirt
+
+  project_layout:
+    description: Estructura en tu máquina local (fuera de la VM)
+    tree: |
+      ~/lab-guidewire/
+      ├── Vagrantfile                    # Define la VM
+      ├── provision/
+      │   ├── setup.sh                   # Script de provisioning
+      │   └── install-dev-tools.sh       # JDK, Maven, Node.js (opcionales, para dev)
+      ├── podman/
+      │   ├── podman-compose.yml         # Stack completo de servicios
+      │   ├── .env                       # Variables de entorno
+      │   └── config/
+      │       ├── init-db.sql            # Inicialización PostgreSQL
+      │       ├── create-topics.sh       # Creación de topics Kafka
+      │       └── kong.yml               # Config declarativa 3Scale/APIcast
+      └── openspecs/                     # Synced desde el repo git
+          └── (specs YAML)
+
+  sync_folder:
+    host_path: ~/lab-guidewire
+    vm_path: /home/vagrant/lab-guidewire
+    type: rsync
+    description: >
+      Bidireccional. Editas en tu host con tu IDE favorito,
+      los cambios se sincronizan a la VM automáticamente.
+
+##############################################################################
+# CAPA 2: VAGRANTFILE
+##############################################################################
+
+vagrant:
+  box: generic/ubuntu2404    # Ubuntu 24.04 LTS
+  provider: libvirt
+
+  vm_resources:
+    memory: 20480            # 20GB RAM
+    cpus: 8
+    disk: 80GB
+    description: >
+      Suficiente para todo el stack (~5.5GB en contenedores)
+      + herramientas de desarrollo + margen.
+      En un M5 de 128GB/16 cores, usa <16% de recursos.
+
+  network:
+    type: private_network
+    ip: 192.168.56.10
+    description: IP fija para acceder a servicios desde el host
+
+  port_forwarding:
+    - { guest: 8000, host: 8000, description: "3Scale API Gateway (proxy)" }
+    - { guest: 8001, host: 8001, description: "3Scale Management API" }
+    - { guest: 8081, host: 8081, description: "Apicurio UI" }
+    - { guest: 8082, host: 8082, description: "Billing Service" }
+    - { guest: 8083, host: 8083, description: "Camel Gateway" }
+    - { guest: 8084, host: 8084, description: "Incidents Service" }
+    - { guest: 8085, host: 8085, description: "Customers Service" }
+    - { guest: 8086, host: 8086, description: "Drools KIE Server" }
+    - { guest: 8161, host: 8161, description: "ActiveMQ Console (Hawtio)" }
+    - { guest: 9000, host: 9000, description: "Kafdrop UI" }
+    - { guest: 9092, host: 9092, description: "Kafka Broker" }
+    - { guest: 15432, host: 15432, description: "PostgreSQL" }
+    - { guest: 61616, host: 61616, description: "ActiveMQ AMQP/JMS" }
+
+  provisioning:
+    description: >
+      Script que se ejecuta automáticamente la primera vez
+      que haces "vagrant up". Instala Podman y herramientas.
+
+##############################################################################
+# CAPA 3: PROVISIONING (dentro de la VM)
+##############################################################################
+
+provisioning:
+  setup_script:
+    file: provision/setup.sh
+    description: Instalación base (se ejecuta solo la primera vez)
+    steps:
+      - name: Actualizar sistema
+        command: apt-get update && apt-get upgrade -y
+
+      - name: Instalar Podman
+        commands:
+          - apt-get install -y podman podman-compose
+          - systemctl --user enable podman.socket
+        version: "4.9+"
+
+      - name: Instalar Podman Compose
+        commands:
+          - pip3 install podman-compose
+        version: "1.2+"
+        note: >
+          podman-compose es compatible con docker-compose.yml.
+          Lee el mismo formato de archivo, usa Podman como backend.
+
+      - name: Configurar registries
+        file: /etc/containers/registries.conf
+        content: |
+          unqualified-search-registries = ["docker.io", "quay.io", "ghcr.io"]
+
+      - name: Crear estructura de volúmenes
+        commands:
+          - mkdir -p /home/vagrant/volumes/{pgdata,kafka-data,artemis-data}
+
+  dev_tools_script:
+    file: provision/install-dev-tools.sh
+    description: Herramientas de desarrollo (opcional, para compilar dentro de la VM)
+    optional: true
+    tools:
+      - name: JDK 21 (Temurin)
+        command: apt-get install -y temurin-21-jdk
+      - name: Maven 3.9
+        command: apt-get install -y maven
+      - name: Node.js 20 LTS
+        command: curl -fsSL https://deb.nodesource.com/setup_20.x | bash && apt-get install -y nodejs
+      - name: kafkacat (kcat)
+        command: apt-get install -y kafkacat
+      - name: jq
+        command: apt-get install -y jq
+
+##############################################################################
+# CAPA 4: PODMAN COMPOSE (servicios containerizados)
+##############################################################################
+
+podman_compose:
+  file: podman/podman-compose.yml
+  env_file: podman/.env
+
+  networks:
+    - name: guidewire-net
+      driver: bridge
+      description: Red compartida entre todos los contenedores
+
+  pods:
+    description: >
+      Podman soporta pods nativos (como Kubernetes).
+      Agrupamos contenedores relacionados en pods para compartir
+      namespace de red (se ven como localhost entre sí).
+      Para el POC usamos podman-compose con red compartida
+      por simplicidad, pero la estructura está preparada para
+      migrar a pods Podman o manifiestos Kubernetes.
+
+  services_startup_order:
+    phase_1_data:
+      description: Almacenamiento y mensajería
+      services:
+        - postgres
+        - kafka
+        - activemq
+      wait: healthchecks pass
+
+    phase_2_platform:
+      description: Plataforma y herramientas
+      depends_on: phase_1_data
+      services:
+        - apicurio        # necesita postgres
+        - kafdrop         # necesita kafka
+        - threescale       # independiente
+      wait: healthchecks pass
+
+    phase_3_engines:
+      description: Motores de integración y reglas
+      depends_on: phase_2_platform
+      services:
+        - drools-engine
+        - camel-gateway    # necesita kafka, apicurio, activemq
+      wait: healthchecks pass
+
+    phase_4_apps:
+      description: Microservicios de negocio
+      depends_on: phase_3_engines
+      services:
+        - billing-service
+        - incidents-service
+        - customers-service
+
+  services:
+    postgres:
+      image: docker.io/postgres:16-alpine
+      port: "15432:5432"
+      environment:
+        POSTGRES_PASSWORD: postgres123
+      volumes:
+        - pgdata:/var/lib/postgresql/data
+        - ./config/init-db.sql:/docker-entrypoint-initdb.d/init-db.sql
+      healthcheck:
+        test: pg_isready -U postgres
+        interval: 10s
+        retries: 5
+
+    kafka:
+      image: docker.io/apache/kafka:3.7.0
+      port: "9092:9092"
+      environment:
+        KAFKA_NODE_ID: 1
+        KAFKA_PROCESS_ROLES: broker,controller
+        KAFKA_LISTENERS: PLAINTEXT://0.0.0.0:9092,CONTROLLER://0.0.0.0:9093
+        KAFKA_CONTROLLER_QUORUM_VOTERS: 1@localhost:9093
+        KAFKA_AUTO_CREATE_TOPICS_ENABLE: "false"
+        KAFKA_NUM_PARTITIONS: 3
+        KAFKA_LOG_RETENTION_HOURS: 168
+      volumes:
+        - kafka-data:/var/lib/kafka/data
+      healthcheck:
+        test: kafka-broker-api-versions --bootstrap-server localhost:9092
+        interval: 30s
+        retries: 5
+
+    kafdrop:
+      image: docker.io/obsidiandynamics/kafdrop:4.0.1
+      port: "9000:9000"
+      environment:
+        KAFKA_BROKERCONNECT: kafka:9092
+      depends_on:
+        kafka:
+          condition: service_healthy
+
+    activemq:
+      image: docker.io/apache/activemq-artemis:2.33.0
+      ports:
+        - "61616:61616"
+        - "8161:8161"
+      environment:
+        ARTEMIS_USER: admin
+        ARTEMIS_PASSWORD: admin123
+      volumes:
+        - artemis-data:/var/lib/artemis-instance/data
+      healthcheck:
+        test: /var/lib/artemis-instance/bin/artemis check node
+        interval: 30s
+        retries: 3
+
+    apicurio:
+      image: docker.io/apicurio/apicurio-registry-sql:2.5.11.Final
+      port: "8081:8080"
+      environment:
+        REGISTRY_DATASOURCE_URL: jdbc:postgresql://postgres:5432/apicurio
+        REGISTRY_DATASOURCE_USERNAME: apicurio
+        REGISTRY_DATASOURCE_PASSWORD: apicurio123
+      depends_on:
+        postgres:
+          condition: service_healthy
+      healthcheck:
+        test: curl -f http://localhost:8080/health/ready
+        interval: 15s
+        retries: 3
+
+    threescale:
+      image: quay.io/3scale/apicast:v3.11
+      ports:
+        - "8000:8080"
+        - "8001:8090"
+      environment:
+        THREESCALE_CONFIG_FILE: /config/kong.yml
+      volumes:
+        - ./config/kong.yml:/config/kong.yml:ro
+
+    drools-engine:
+      image: guidewire-poc/drools-engine:latest
+      build: ../../components/drools-engine
+      port: "8086:8086"
+      depends_on:
+        postgres:
+          condition: service_healthy
+
+    camel-gateway:
+      image: guidewire-poc/camel-gateway:latest
+      build: ../../components/camel-gateway
+      port: "8083:8083"
+      environment:
+        KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+        APICURIO_URL: http://apicurio:8080/apis/registry/v2
+        ACTIVEMQ_URL: tcp://activemq:61616
+      depends_on:
+        kafka:
+          condition: service_healthy
+        apicurio:
+          condition: service_healthy
+        activemq:
+          condition: service_healthy
+
+    billing-service:
+      image: guidewire-poc/billing-service:latest
+      build: ../../components/billing-service
+      port: "8082:8082"
+      environment:
+        SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/billing
+        KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+        APICURIO_URL: http://apicurio:8080/apis/registry/v2
+      depends_on:
+        postgres:
+          condition: service_healthy
+        kafka:
+          condition: service_healthy
+
+    incidents-service:
+      image: guidewire-poc/incidents-service:latest
+      build: ../../components/incidents-service
+      port: "8084:8084"
+      environment:
+        QUARKUS_DATASOURCE_URL: jdbc:postgresql://postgres:5432/incidents
+        KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+        APICURIO_URL: http://apicurio:8080/apis/registry/v2
+      depends_on:
+        postgres:
+          condition: service_healthy
+        kafka:
+          condition: service_healthy
+
+    customers-service:
+      image: guidewire-poc/customers-service:latest
+      build: ../../components/customers-service
+      port: "8085:8085"
+      environment:
+        DATABASE_URL: postgresql://customers_user:customers123@postgres:5432/customers
+        KAFKA_BROKERS: kafka:9092
+        APICURIO_URL: http://apicurio:8080/apis/registry/v2
+      depends_on:
+        postgres:
+          condition: service_healthy
+        kafka:
+          condition: service_healthy
+
+  volumes:
+    - pgdata
+    - kafka-data
+    - artemis-data
+
+  total_resources:
+    estimated_memory: 5.5GB
+    estimated_cpu: 4 cores
+    description: >
+      ~28% de los 20GB asignados a la VM.
+      Deja ~14.5GB libres para compilación y dev tools.
+
+##############################################################################
+# CAPA 5: OPERACIONES DÍA A DÍA
+##############################################################################
+
+operations:
+  lab_lifecycle:
+    description: Comandos desde tu HOST (fuera de la VM)
+
+    encender_todo:
+      command: vagrant up
+      description: >
+        Primera vez: crea la VM, provisiona, baja imágenes.
+        Siguientes veces: enciende la VM donde la dejaste.
+
+    apagar_todo:
+      command: vagrant halt
+      description: >
+        Apaga la VM limpiamente. Los datos persisten.
+        Equivale a apagar un servidor.
+
+    suspender:
+      command: vagrant suspend
+      description: >
+        Congela la VM en memoria. vagrant resume la retoma
+        instantáneamente donde la dejaste.
+
+    destruir_todo:
+      command: vagrant destroy -f
+      description: >
+        Elimina la VM por completo. Borra todo.
+        Puedes recrearla con "vagrant up".
+
+    ssh:
+      command: vagrant ssh
+      description: Entrar a la VM por SSH
+
+  inside_vm:
+    description: Comandos dentro de la VM (después de vagrant ssh)
+
+    levantar_stack:
+      command: cd ~/lab-guidewire/podman && podman-compose up -d
+      description: Levanta todos los contenedores
+
+    detener_stack:
+      command: cd ~/lab-guidewire/podman && podman-compose down
+      description: Detiene todos los contenedores (datos persisten)
+
+    ver_logs:
+      command: podman-compose logs -f [servicio]
+      description: Ver logs (todos o de un servicio específico)
+
+    estado:
+      command: podman-compose ps
+      description: Ver estado de todos los contenedores
+
+    reconstruir:
+      command: podman-compose up -d --build [servicio]
+      description: Reconstruir imagen de un servicio
+
+    limpiar_todo:
+      command: podman-compose down -v && podman system prune -af
+      description: Eliminar contenedores, volúmenes e imágenes
+
+  snapshots:
+    description: Guardar/restaurar estados de la VM desde el HOST
+    save:
+      command: virsh snapshot-create-as lab-guidewire_default snap-nombre
+      description: Guardar punto de restauración
+    restore:
+      command: virsh snapshot-revert lab-guidewire_default snap-nombre
+      description: Volver a un punto de restauración
+    list:
+      command: virsh snapshot-list lab-guidewire_default
+      description: Listar snapshots disponibles
+
+##############################################################################
+# RESUMEN: ¿QUÉ INSTALAS EN TU MÁQUINA?
+##############################################################################
+
+host_footprint:
+  installed:
+    - vagrant
+    - libvirt + KVM (virtualización nativa del kernel)
+    - vagrant-libvirt plugin
+  NOT_installed:
+    - Docker
+    - Java / JDK
+    - Node.js
+    - Maven
+    - Kafka tools
+    - Bases de datos
+    - "Nada más"
+
+acceptance_criteria:
+  - "vagrant up" desde cero crea la VM e instala todo automáticamente
+  - "vagrant halt" apaga todo y los datos persisten
+  - "vagrant suspend / resume" congela y retoma instantáneamente
+  - Todos los puertos son accesibles desde el host (localhost:8081, etc.)
+  - podman-compose up -d levanta los 12 servicios sin errores
+  - Todos los healthchecks pasan en menos de 3 minutos
+  - Los servicios se comunican entre sí por la red guidewire-net
+  - "vagrant destroy && vagrant up" recrea todo desde cero
+  - Snapshots permiten guardar/restaurar estados de la VM

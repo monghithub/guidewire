@@ -1,0 +1,46 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum DocumentType {
+  RFC
+  CURP
+  INE
+  PASSPORT
+}
+
+enum CustomerStatus {
+  ACTIVE
+  INACTIVE
+  SUSPENDED
+  BLOCKED
+}
+
+model Customer {
+  id             String         @id @default(uuid())
+  firstName      String
+  lastName       String
+  email          String         @unique
+  phone          String?
+  documentType   DocumentType
+  documentNumber String
+  status         CustomerStatus @default(ACTIVE)
+  street         String?
+  city           String?
+  state          String?
+  zipCode        String?
+  country        String         @default("MX")
+  sourceEvent    String?
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+
+  @@unique([documentType, documentNumber])
+  @@index([email])
+  @@index([status])
+  @@map("customers")
+}

@@ -1,0 +1,96 @@
+##############################################################################
+# SPEC: CI/CD Pipeline (GitHub Actions)
+# Issue: #69
+##############################################################################
+
+metadata:
+  name: ci-cd-pipeline
+  type: devops
+  issue: 69
+  labels: [devops, ci-cd, github-actions]
+  status: pending
+  priority: low
+  depends_on:
+    - components/camel-gateway
+    - components/drools-engine
+    - components/billing-service
+    - components/incidents-service
+    - components/customers-service
+    - integration/postman-e2e
+
+description: >
+  Pipeline CI/CD con GitHub Actions para build, test, validación
+  de contratos, seguridad y publicación de imágenes Docker.
+
+platform: GitHub Actions
+
+workflows:
+  - name: Build & Test
+    file: .github/workflows/build.yml
+    trigger:
+      push: [main, develop]
+      pull_request: [main]
+    jobs:
+      - name: build-java-services
+        runs_on: ubuntu-latest
+        strategy:
+          matrix:
+            service: [camel-gateway, drools-engine, billing-service, incidents-service]
+        steps:
+          - checkout
+          - setup-java: "21"
+          - maven-build: mvn clean verify
+          - unit-tests: mvn test
+          - integration-tests: mvn verify -Pintegration
+
+      - name: build-node-service
+        runs_on: ubuntu-latest
+        steps:
+          - checkout
+          - setup-node: "20"
+          - npm-install: npm ci
+          - lint: npm run lint
+          - test: npm test
+          - build: npm run build
+
+      - name: contract-validation
+        runs_on: ubuntu-latest
+        steps:
+          - validate-openapi: spectral lint openspecs/design/openapi/**/spec.yml
+          - validate-asyncapi: asyncapi validate openspecs/design/asyncapi/**/spec.yml
+          - validate-avro: avro-tools compile openspecs/design/avro/**/*.avsc
+
+      - name: security-scan
+        runs_on: ubuntu-latest
+        steps:
+          - dependency-check: OWASP dependency-check
+          - container-scan: trivy image scan
+          - secret-scan: gitleaks
+
+      - name: docker-build
+        runs_on: ubuntu-latest
+        needs: [build-java-services, build-node-service]
+        strategy:
+          matrix:
+            service: [camel-gateway, drools-engine, billing-service, incidents-service, customers-service]
+        steps:
+          - docker-build: docker build -t guidewire-poc/{service}
+          - docker-push: push to GitHub Container Registry (ghcr.io)
+
+      - name: e2e-tests
+        runs_on: ubuntu-latest
+        needs: [docker-build]
+        steps:
+          - docker-compose-up: levantar stack completo
+          - wait-for-healthy: esperar healthchecks
+          - newman-run: ejecutar colección Postman
+          - upload-report: subir reporte JUnit
+
+acceptance_criteria:
+  - El pipeline ejecuta en cada push/PR a main
+  - Build de los 5 servicios exitoso
+  - Tests unitarios pasan
+  - Validación de contratos (OpenAPI, AsyncAPI, AVRO) pasa
+  - Scan de seguridad no tiene vulnerabilidades críticas
+  - Imágenes Docker se publican en ghcr.io
+  - Tests E2E con Newman pasan

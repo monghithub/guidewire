@@ -1,0 +1,123 @@
+##############################################################################
+# SPEC: Colección Postman E2E
+# Issue: #67
+##############################################################################
+
+metadata:
+  name: postman-e2e-tests
+  type: integration
+  issue: 67
+  labels: [test, postman, e2e]
+  status: pending
+  priority: medium
+  depends_on:
+    - integration/threescale-registration
+    - components/camel-gateway
+    - components/billing-service
+    - components/incidents-service
+    - components/customers-service
+
+description: >
+  Colección Postman para pruebas end-to-end del ecosistema completo.
+  Ejecutable con Newman en CI/CD. Valida el flujo completo desde
+  la creación de entidades hasta la verificación de eventos Kafka.
+
+tools:
+  design: Postman
+  execution: Newman CLI
+  ci_integration: GitHub Actions
+
+environments:
+  - name: local
+    variables:
+      gateway_url: http://localhost:8000
+      api_key: poc-test-key-12345
+      camel_url: http://localhost:8083
+      billing_url: http://localhost:8082
+      incidents_url: http://localhost:8084
+      customers_url: http://localhost:8085
+      kafdrop_url: http://localhost:9000
+
+test_flows:
+  - name: "Flow 1: Registro de Cliente"
+    order: 1
+    steps:
+      - request: POST /api/v1/customers
+        body: { firstName: "Juan", lastName: "Pérez", email: "juan@test.com", documentType: "RFC", documentNumber: "PEPJ800101XXX" }
+        assertions:
+          - status == 201
+          - body.customerId is not null
+          - body.status == "ACTIVE"
+        save: customerId
+
+      - request: GET /api/v1/customers/{customerId}
+        assertions:
+          - status == 200
+          - body.email == "juan@test.com"
+
+  - name: "Flow 2: Creación de Póliza (via Camel)"
+    order: 2
+    steps:
+      - request: POST /api/v1/policies
+        via: camel-gateway
+        body: { customerId: "{customerId}", productType: "AUTO", effectiveDate: "2024-01-01", expirationDate: "2025-01-01", premiumAmount: 15000.00 }
+        assertions:
+          - status == 201
+          - body.status == "QUOTED"
+        save: policyId
+
+  - name: "Flow 3: Creación de Factura"
+    order: 3
+    steps:
+      - request: POST /api/v1/invoices
+        body: { policyId: "{policyId}", customerId: "{customerId}", items: [{ description: "Prima anual AUTO", quantity: 1, unitPrice: 15000.00 }] }
+        assertions:
+          - status == 201
+          - body.totalAmount == 15000.00
+        save: invoiceId
+
+  - name: "Flow 4: Creación de Siniestro"
+    order: 4
+    steps:
+      - request: POST /api/v1/claims
+        via: camel-gateway
+        body: { policyId: "{policyId}", customerId: "{customerId}", description: "Choque frontal en autopista", incidentDate: "2024-06-15", claimedAmount: 50000.00, priority: "HIGH" }
+        assertions:
+          - status == 201
+        save: claimId
+
+      - request: GET /api/v1/incidents
+        query: { claimId: "{claimId}" }
+        assertions:
+          - status == 200
+          - body.content.length >= 1
+        description: Verificar que se creó la incidencia desde el evento
+
+  - name: "Flow 5: Verificación de Eventos Kafka"
+    order: 5
+    steps:
+      - request: GET {kafdrop_url}/topic/customers.customer-registered/messages
+        assertions:
+          - Al menos 1 mensaje en el topic
+      - request: GET {kafdrop_url}/topic/billing.invoice-created/messages
+        assertions:
+          - Al menos 1 mensaje en el topic
+
+  - name: "Flow 6: Validación de Schemas en Apicurio"
+    order: 6
+    steps:
+      - request: GET http://localhost:8081/apis/registry/v2/groups/guidewire/artifacts
+        assertions:
+          - Los schemas AVRO están registrados
+
+newman:
+  command: newman run guidewire-e2e.postman_collection.json -e local.postman_environment.json --reporters cli,junit
+  output: reports/e2e-results.xml
+
+acceptance_criteria:
+  - La colección Postman ejecuta los 6 flows sin errores
+  - Cada flow valida respuestas HTTP y datos
+  - Los eventos Kafka se verifican via Kafdrop API
+  - Los schemas en Apicurio se verifican
+  - Newman genera reporte JUnit para CI/CD
+  - Variables de entorno permiten cambiar URLs fácilmente

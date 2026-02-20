@@ -1,0 +1,147 @@
+##############################################################################
+# SPEC: Drools Rules Engine (KIE Server)
+# Issues: #52, #53
+##############################################################################
+
+metadata:
+  name: drools-rules-engine
+  type: component
+  issues: [52, 53]
+  labels: [feature, drools, rules, business-logic]
+  status: pending
+  priority: high
+  depends_on:
+    - infra/postgres
+
+description: >
+  Motor de reglas de negocio basado en Drools/KIE Server.
+  Evalúa reglas de fraude, validaciones de pólizas, cálculo
+  de comisiones y enrutamiento de incidencias. Invocado por
+  Camel via REST API del KIE Server.
+
+technology:
+  runtime: Java 21
+  framework: Spring Boot 3.3.x
+  rules_engine: Drools 8.x
+  server: KIE Server
+  build: Maven
+  image_name: guidewire-poc/drools-engine
+
+project:
+  group_id: com.guidewire.rules
+  artifact_id: drools-engine
+  package: com.guidewire.rules
+
+submodules:
+  setup:
+    issue: 52
+    description: >
+      Proyecto base con KIE Server embebido en Spring Boot.
+      Configuración de persistencia (PostgreSQL) para auditoría
+      de ejecución de reglas.
+    deliverables:
+      - pom.xml con dependencias Drools/KIE
+      - application.yml
+      - Dockerfile
+      - KIE Server REST endpoints habilitados
+
+  rules:
+    issue: 53
+    description: >
+      Reglas de negocio implementadas en DRL y DMN.
+
+    rule_sets:
+      - name: Detección de Fraude
+        file: fraud-detection.drl
+        package: com.guidewire.rules.fraud
+        description: >
+          Evalúa indicadores de fraude en siniestros:
+          monto > umbral, frecuencia de reclamos, cliente nuevo
+          con reclamo inmediato, etc.
+        rules:
+          - name: HighAmountClaim
+            condition: claimedAmount > 500000 MXN
+            action: flag as HIGH_RISK, send to claims.fraud-alerts queue
+          - name: FrequentClaimant
+            condition: customer has > 3 claims in last 12 months
+            action: flag as MEDIUM_RISK
+          - name: NewCustomerImmediateClaim
+            condition: claim within 30 days of customer registration
+            action: flag as HIGH_RISK
+          - name: SuspiciousPattern
+            condition: multiple claims on same date across policies
+            action: flag as CRITICAL_RISK
+
+      - name: Validación de Pólizas
+        file: policy-validation.drl
+        package: com.guidewire.rules.policy
+        description: Valida límites y condiciones de pólizas
+        rules:
+          - name: MaxCoverageLimit
+            condition: premiumAmount > product max limit
+            action: reject with reason
+          - name: CustomerEligibility
+            condition: customer status != ACTIVE
+            action: reject policy creation
+
+      - name: Cálculo de Comisiones
+        file: commission-calculation.dmn
+        format: DMN
+        package: com.guidewire.rules.commission
+        description: >
+          Tabla de decisión DMN para calcular comisiones
+          según tipo de producto, monto y canal de venta.
+        decision_table:
+          inputs: [productType, premiumAmount, salesChannel]
+          output: commissionPercentage
+
+      - name: Enrutamiento de Incidencias
+        file: incident-routing.drl
+        package: com.guidewire.rules.routing
+        description: >
+          Asigna incidencias al equipo correcto según
+          prioridad, tipo de producto y monto.
+        rules:
+          - name: CriticalToSenior
+            condition: priority == CRITICAL
+            action: assign to senior-adjusters team
+          - name: HighAmountToSpecialist
+            condition: claimedAmount > 1000000 MXN
+            action: assign to specialist team
+
+  api:
+    description: KIE Server REST API para invocación desde Camel
+    endpoints:
+      - method: POST
+        path: /kie-server/services/rest/server/containers/{containerId}/dmn
+        description: Evaluar decisión DMN
+      - method: POST
+        path: /kie-server/services/rest/server/containers/{containerId}/rules
+        description: Ejecutar reglas DRL
+      - method: GET
+        path: /kie-server/services/rest/server/containers
+        description: Listar contenedores de reglas desplegados
+
+  integration_with_camel:
+    description: >
+      Camel invoca KIE Server via REST antes de publicar
+      eventos a Kafka. El resultado de las reglas enriquece
+      el mensaje (risk score, assigned team, etc).
+    flow:
+      1: Camel recibe evento de Guidewire
+      2: Camel invoca Drools via REST con los datos del evento
+      3: Drools evalúa reglas y retorna resultado
+      4: Camel enriquece el evento con el resultado
+      5: Camel publica evento enriquecido a Kafka
+
+networking:
+  port: 8086
+  management_port: 8086
+
+acceptance_criteria:
+  - KIE Server arranca y expone REST API
+  - Las 4 rule sets están desplegadas como containers
+  - Reglas de fraude clasifican correctamente (HIGH/MEDIUM/CRITICAL)
+  - DMN de comisiones retorna porcentajes correctos
+  - Camel puede invocar reglas via REST y obtener resultados
+  - Auditoría de ejecución persistida en PostgreSQL

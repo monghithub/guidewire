@@ -1,0 +1,151 @@
+##############################################################################
+# SPEC: OpenAPI — Guidewire BillingCenter
+# Issue: #37
+##############################################################################
+
+metadata:
+  name: openapi-guidewire-billingcenter
+  type: design
+  subtype: openapi
+  issue: 37
+  labels: [design, openapi, guidewire]
+  status: pending
+  priority: high
+  depends_on: []
+
+description: >
+  Especificación OpenAPI 3.1 para las APIs REST de BillingCenter
+  (Guidewire). Define el contrato para gestión de facturación,
+  cobros y comisiones del sistema core de seguros.
+
+specification:
+  format: OpenAPI 3.1
+  file: billingcenter-api.yml
+  base_path: /api/v1/gw-invoices
+  register_in: apicurio (grupo: guidewire-openapi)
+
+  info:
+    title: Guidewire BillingCenter API
+    version: "1.0.0"
+    description: API REST para facturación y cobros de Guidewire
+
+  endpoints:
+    - method: GET
+      path: /gw-invoices
+      summary: Listar facturas de Guidewire
+      query_params:
+        - name: status
+          type: string
+          enum: [DRAFT, ISSUED, SENT, PAID, OVERDUE, CANCELLED, CREDITED]
+        - name: policyId
+          type: string
+          format: uuid
+        - name: customerId
+          type: string
+          format: uuid
+      response: PaginatedInvoiceList
+
+    - method: GET
+      path: /gw-invoices/{invoiceId}
+      summary: Obtener factura por ID
+      response: GwInvoice
+
+    - method: POST
+      path: /gw-invoices
+      summary: Crear factura
+      request: CreateGwInvoiceRequest
+      response: GwInvoice
+      status: 201
+
+    - method: PATCH
+      path: /gw-invoices/{invoiceId}
+      summary: Actualizar factura (estado, pago)
+      request: UpdateGwInvoiceRequest
+      response: GwInvoice
+
+  models:
+    GwInvoice:
+      properties:
+        invoiceId:
+          type: string
+          format: uuid
+        invoiceNumber:
+          type: string
+          example: "INV-2024-000001"
+        policyId:
+          type: string
+          format: uuid
+        customerId:
+          type: string
+          format: uuid
+        status:
+          type: string
+          enum: [DRAFT, ISSUED, SENT, PAID, OVERDUE, CANCELLED, CREDITED]
+        totalAmount:
+          type: number
+          format: decimal
+        paidAmount:
+          type: number
+          format: decimal
+          default: 0
+        currency:
+          type: string
+          default: "MXN"
+        dueDate:
+          type: string
+          format: date
+        items:
+          type: array
+          items:
+            $ref: GwInvoiceItem
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    GwInvoiceItem:
+      properties:
+        description:
+          type: string
+        quantity:
+          type: integer
+          minimum: 1
+        unitPrice:
+          type: number
+          minimum: 0.01
+        subtotal:
+          type: number
+
+    CreateGwInvoiceRequest:
+      required: [policyId, customerId, dueDate, items]
+
+    UpdateGwInvoiceRequest:
+      properties:
+        status:
+          type: string
+        paidAmount:
+          type: number
+
+  status_transitions:
+    DRAFT: [ISSUED, CANCELLED]
+    ISSUED: [SENT, CANCELLED]
+    SENT: [PAID, OVERDUE, CANCELLED]
+    OVERDUE: [PAID, CANCELLED]
+    PAID: [CREDITED]
+    CANCELLED: []
+    CREDITED: []
+
+code_generation:
+  tool: openapi-generator-maven-plugin
+  language: java
+  library: spring
+  package: com.guidewire.billingcenter.api
+
+acceptance_criteria:
+  - La spec OpenAPI es válida
+  - Registrada en Apicurio bajo guidewire-openapi
+  - El path /gw-invoices evita conflicto con /invoices del microservicio
+  - Transiciones de estado explícitas y validables
+  - Items de factura embebidos en la respuesta

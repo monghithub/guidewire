@@ -1,0 +1,284 @@
+{
+  "services": [
+    {
+      "id": 1,
+      "backend_version": 1,
+      "proxy": {
+        "api_backend": "http://camel-gateway:8083",
+        "hosts": ["localhost", "192.168.56.10"],
+        "backend": {
+          "endpoint": "http://localhost:8080",
+          "host": "localhost"
+        },
+        "policy_chain": [
+          {
+            "name": "apicast.policy.cors",
+            "configuration": {
+              "allow_headers": ["Content-Type", "X-API-Key", "Authorization", "Accept"],
+              "allow_methods": ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+              "allow_origin": "*",
+              "allow_credentials": false
+            }
+          },
+          {
+            "name": "apicast.policy.rate_limit",
+            "configuration": {
+              "fixed_window_limiters": [
+                {
+                  "key": { "name": "gw-policies-limiter" },
+                  "count": 100,
+                  "window": 60
+                }
+              ]
+            }
+          },
+          {
+            "name": "apicast.policy.apicast"
+          }
+        ],
+        "proxy_rules": [
+          {
+            "pattern": "/api/v1/policies",
+            "http_method": "GET",
+            "metric_system_name": "policies_get",
+            "delta": 1
+          },
+          {
+            "pattern": "/api/v1/policies",
+            "http_method": "POST",
+            "metric_system_name": "policies_post",
+            "delta": 1
+          },
+          {
+            "pattern": "/api/v1/policies/{id}",
+            "http_method": "GET",
+            "metric_system_name": "policies_get_by_id",
+            "delta": 1
+          },
+          {
+            "pattern": "/api/v1/claims",
+            "http_method": "GET",
+            "metric_system_name": "claims_get",
+            "delta": 1
+          },
+          {
+            "pattern": "/api/v1/claims",
+            "http_method": "POST",
+            "metric_system_name": "claims_post",
+            "delta": 1
+          },
+          {
+            "pattern": "/api/v1/claims/{id}",
+            "http_method": "GET",
+            "metric_system_name": "claims_get_by_id",
+            "delta": 1
+          },
+          {
+            "pattern": "/api/v1/gw-invoices",
+            "http_method": "GET",
+            "metric_system_name": "gw_invoices_get",
+            "delta": 1
+          },
+          {
+            "pattern": "/api/v1/gw-invoices",
+            "http_method": "POST",
+            "metric_system_name": "gw_invoices_post",
+            "delta": 1
+          }
+        ]
+      }
+    },
+    {
+      "id": 2,
+      "backend_version": 1,
+      "proxy": {
+        "api_backend": "http://billing-service:8082",
+        "hosts": ["localhost", "192.168.56.10"],
+        "backend": {
+          "endpoint": "http://localhost:8080",
+          "host": "localhost"
+        },
+        "policy_chain": [
+          {
+            "name": "apicast.policy.cors",
+            "configuration": {
+              "allow_headers": ["Content-Type", "X-API-Key", "Authorization", "Accept"],
+              "allow_methods": ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+              "allow_origin": "*",
+              "allow_credentials": false
+            }
+          },
+          {
+            "name": "apicast.policy.rate_limit",
+            "configuration": {
+              "fixed_window_limiters": [
+                {
+                  "key": { "name": "billing-limiter" },
+                  "count": 200,
+                  "window": 60
+                }
+              ]
+            }
+          },
+          {
+            "name": "apicast.policy.apicast"
+          }
+        ],
+        "proxy_rules": [
+          {
+            "pattern": "/api/v1/invoices",
+            "http_method": "GET",
+            "metric_system_name": "invoices_get",
+            "delta": 1
+          },
+          {
+            "pattern": "/api/v1/invoices",
+            "http_method": "POST",
+            "metric_system_name": "invoices_post",
+            "delta": 1
+          },
+          {
+            "pattern": "/api/v1/invoices/{id}",
+            "http_method": "GET",
+            "metric_system_name": "invoices_get_by_id",
+            "delta": 1
+          },
+          {
+            "pattern": "/api/v1/invoices/{id}",
+            "http_method": "PUT",
+            "metric_system_name": "invoices_put",
+            "delta": 1
+          }
+        ]
+      }
+    },
+    {
+      "id": 3,
+      "backend_version": 1,
+      "proxy": {
+        "api_backend": "http://incidents-service:8084",
+        "hosts": ["localhost", "192.168.56.10"],
+        "backend": {
+          "endpoint": "http://localhost:8080",
+          "host": "localhost"
+        },
+        "policy_chain": [
+          {
+            "name": "apicast.policy.cors",
+            "configuration": {
+              "allow_headers": ["Content-Type", "X-API-Key", "Authorization", "Accept"],
+              "allow_methods": ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+              "allow_origin": "*",
+              "allow_credentials": false
+            }
+          },
+          {
+            "name": "apicast.policy.rate_limit",
+            "configuration": {
+              "fixed_window_limiters": [
+                {
+                  "key": { "name": "incidents-limiter" },
+                  "count": 200,
+                  "window": 60
+                }
+              ]
+            }
+          },
+          {
+            "name": "apicast.policy.apicast"
+          }
+        ],
+        "proxy_rules": [
+          {
+            "pattern": "/api/v1/incidents",
+            "http_method": "GET",
+            "metric_system_name": "incidents_get",
+            "delta": 1
+          },
+          {
+            "pattern": "/api/v1/incidents",
+            "http_method": "POST",
+            "metric_system_name": "incidents_post",
+            "delta": 1
+          },
+          {
+            "pattern": "/api/v1/incidents/{id}",
+            "http_method": "GET",
+            "metric_system_name": "incidents_get_by_id",
+            "delta": 1
+          },
+          {
+            "pattern": "/api/v1/incidents/{id}",
+            "http_method": "PUT",
+            "metric_system_name": "incidents_put",
+            "delta": 1
+          }
+        ]
+      }
+    },
+    {
+      "id": 4,
+      "backend_version": 1,
+      "proxy": {
+        "api_backend": "http://customers-service:8085",
+        "hosts": ["localhost", "192.168.56.10"],
+        "backend": {
+          "endpoint": "http://localhost:8080",
+          "host": "localhost"
+        },
+        "policy_chain": [
+          {
+            "name": "apicast.policy.cors",
+            "configuration": {
+              "allow_headers": ["Content-Type", "X-API-Key", "Authorization", "Accept"],
+              "allow_methods": ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+              "allow_origin": "*",
+              "allow_credentials": false
+            }
+          },
+          {
+            "name": "apicast.policy.rate_limit",
+            "configuration": {
+              "fixed_window_limiters": [
+                {
+                  "key": { "name": "customers-limiter" },
+                  "count": 200,
+                  "window": 60
+                }
+              ]
+            }
+          },
+          {
+            "name": "apicast.policy.apicast"
+          }
+        ],
+        "proxy_rules": [
+          {
+            "pattern": "/api/v1/customers",
+            "http_method": "GET",
+            "metric_system_name": "customers_get",
+            "delta": 1
+          },
+          {
+            "pattern": "/api/v1/customers",
+            "http_method": "POST",
+            "metric_system_name": "customers_post",
+            "delta": 1
+          },
+          {
+            "pattern": "/api/v1/customers/{id}",
+            "http_method": "GET",
+            "metric_system_name": "customers_get_by_id",
+            "delta": 1
+          },
+          {
+            "pattern": "/api/v1/customers/{id}",
+            "http_method": "PUT",
+            "metric_system_name": "customers_put",
+            "delta": 1
+          }
+        ]
+      }
+    }
+  ]
+}

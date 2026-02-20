@@ -1,0 +1,157 @@
+##############################################################################
+# SPEC: OpenAPI — Microservicio de Facturación
+# Issue: #42
+##############################################################################
+
+metadata:
+  name: openapi-billing-service
+  type: design
+  subtype: openapi
+  issue: 42
+  labels: [design, openapi, billing]
+  status: pending
+  priority: high
+  depends_on: []
+
+description: >
+  Especificación OpenAPI 3.1 para el microservicio de facturación.
+  API REST para gestión de facturas internas del ecosistema,
+  alimentadas por eventos de Guidewire BillingCenter via Kafka.
+
+specification:
+  format: OpenAPI 3.1
+  file: billing-service-api.yml
+  base_path: /api/v1/invoices
+  register_in: apicurio (grupo: guidewire-openapi)
+
+  info:
+    title: Billing Microservice API
+    version: "1.0.0"
+    description: API REST del microservicio de facturación
+
+  endpoints:
+    - method: GET
+      path: /invoices
+      summary: Listar facturas
+      query_params:
+        - name: status
+          type: string
+          enum: [PENDING, PROCESSING, COMPLETED, FAILED, CANCELLED]
+        - name: policyId
+          type: string
+          format: uuid
+        - name: customerId
+          type: string
+          format: uuid
+        - name: dateFrom
+          type: string
+          format: date
+        - name: dateTo
+          type: string
+          format: date
+        - name: page
+          type: integer
+          default: 0
+        - name: size
+          type: integer
+          default: 20
+      response: PaginatedInvoiceList
+
+    - method: GET
+      path: /invoices/{invoiceId}
+      summary: Obtener factura por ID
+      response: Invoice
+
+    - method: POST
+      path: /invoices
+      summary: Crear factura
+      request: CreateInvoiceRequest
+      response: Invoice
+      status: 201
+
+    - method: PATCH
+      path: /invoices/{invoiceId}
+      summary: Actualizar factura
+      request: UpdateInvoiceRequest
+      response: Invoice
+
+  models:
+    Invoice:
+      properties:
+        invoiceId:
+          type: string
+          format: uuid
+        policyId:
+          type: string
+          format: uuid
+        customerId:
+          type: string
+          format: uuid
+        status:
+          type: string
+          enum: [PENDING, PROCESSING, COMPLETED, FAILED, CANCELLED]
+        totalAmount:
+          type: number
+          format: decimal
+        currency:
+          type: string
+          default: "MXN"
+        items:
+          type: array
+          items:
+            $ref: InvoiceItem
+        sourceEvent:
+          type: string
+          description: ID del evento Kafka que originó esta factura
+          nullable: true
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    InvoiceItem:
+      required: [description, quantity, unitPrice]
+      properties:
+        description:
+          type: string
+        quantity:
+          type: integer
+          minimum: 1
+        unitPrice:
+          type: number
+          minimum: 0.01
+        subtotal:
+          type: number
+
+    CreateInvoiceRequest:
+      required: [policyId, customerId, items]
+      validations:
+        - totalAmount debe ser > 0
+        - Al menos un item requerido
+        - policyId debe existir
+
+    UpdateInvoiceRequest:
+      properties:
+        status:
+          type: string
+
+  status_transitions:
+    PENDING: [PROCESSING, CANCELLED]
+    PROCESSING: [COMPLETED, FAILED]
+    COMPLETED: []
+    FAILED: [PENDING]  # retry
+    CANCELLED: []
+
+code_generation:
+  tool: openapi-generator-maven-plugin
+  language: java
+  library: spring
+  package: com.guidewire.billing.api
+
+acceptance_criteria:
+  - Spec OpenAPI válida y registrada en Apicurio
+  - Generación de código produce interfaces Spring MVC
+  - El campo sourceEvent traza el origen del evento Kafka
+  - Validaciones de negocio documentadas

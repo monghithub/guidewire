@@ -1,0 +1,150 @@
+##############################################################################
+# SPEC: OpenAPI — Microservicio de Clientes
+# Issue: #44
+##############################################################################
+
+metadata:
+  name: openapi-customers-service
+  type: design
+  subtype: openapi
+  issue: 44
+  labels: [design, openapi, customers]
+  status: pending
+  priority: high
+  depends_on: []
+
+description: >
+  Especificación OpenAPI 3.1 para el microservicio de clientes.
+  Gestiona el registro y estado de clientes del ecosistema
+  de seguros. Implementado en Node.js/TypeScript.
+
+specification:
+  format: OpenAPI 3.1
+  file: customers-service-api.yml
+  base_path: /api/v1/customers
+  register_in: apicurio (grupo: guidewire-openapi)
+
+  info:
+    title: Customers Microservice API
+    version: "1.0.0"
+
+  endpoints:
+    - method: GET
+      path: /customers
+      summary: Listar clientes
+      query_params:
+        - name: status
+          type: string
+          enum: [ACTIVE, INACTIVE, SUSPENDED, BLOCKED]
+        - name: email
+          type: string
+        - name: name
+          type: string
+          description: Búsqueda parcial por nombre
+        - name: page
+          type: integer
+        - name: size
+          type: integer
+      response: PaginatedCustomerList
+
+    - method: GET
+      path: /customers/{customerId}
+      summary: Obtener cliente por ID
+      response: Customer
+
+    - method: POST
+      path: /customers
+      summary: Registrar nuevo cliente
+      request: CreateCustomerRequest
+      response: Customer
+      status: 201
+
+    - method: PATCH
+      path: /customers/{customerId}
+      summary: Actualizar cliente
+      request: UpdateCustomerRequest
+      response: Customer
+
+  models:
+    Customer:
+      properties:
+        customerId:
+          type: string
+          format: uuid
+        firstName:
+          type: string
+        lastName:
+          type: string
+        email:
+          type: string
+          format: email
+        phone:
+          type: string
+        documentType:
+          type: string
+          enum: [RFC, CURP, INE, PASSPORT]
+        documentNumber:
+          type: string
+        status:
+          type: string
+          enum: [ACTIVE, INACTIVE, SUSPENDED, BLOCKED]
+        address:
+          $ref: Address
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    Address:
+      properties:
+        street:
+          type: string
+        city:
+          type: string
+        state:
+          type: string
+        zipCode:
+          type: string
+        country:
+          type: string
+          default: "MX"
+
+    CreateCustomerRequest:
+      required: [firstName, lastName, email, documentType, documentNumber]
+      validations:
+        - email debe ser único
+        - documentNumber debe ser único por documentType
+
+    UpdateCustomerRequest:
+      properties:
+        firstName:
+          type: string
+        lastName:
+          type: string
+        phone:
+          type: string
+        status:
+          type: string
+        address:
+          $ref: Address
+
+  status_transitions:
+    ACTIVE: [INACTIVE, SUSPENDED, BLOCKED]
+    INACTIVE: [ACTIVE]
+    SUSPENDED: [ACTIVE, BLOCKED]
+    BLOCKED: []  # requiere intervención manual
+
+code_generation:
+  tool: openapi-generator-cli
+  language: typescript-node
+  library: express
+  output: Interfaces TypeScript + validadores Zod/Joi
+
+acceptance_criteria:
+  - Spec OpenAPI válida y registrada en Apicurio
+  - Email único validado
+  - Documento único por tipo validado
+  - Búsqueda parcial por nombre funcional
+  - Generación de tipos TypeScript

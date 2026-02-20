@@ -1,0 +1,488 @@
+openapi: "3.1.0"
+info:
+  title: Guidewire BillingCenter API
+  version: "1.0.0"
+  description: |
+    API REST para facturacion y cobros de Guidewire BillingCenter.
+
+    Gestiona el ciclo de vida de facturas del sistema core de seguros:
+    creacion, emision, envio, cobro, vencimiento y cancelacion.
+
+    ## Transiciones de estado permitidas
+
+    | Estado actual | Estados siguientes permitidos     |
+    |---------------|----------------------------------|
+    | DRAFT         | ISSUED, CANCELLED                |
+    | ISSUED        | SENT, CANCELLED                  |
+    | SENT          | PAID, OVERDUE, CANCELLED         |
+    | OVERDUE       | PAID, CANCELLED                  |
+    | PAID          | CREDITED                         |
+    | CANCELLED     | _(estado final)_                 |
+    | CREDITED      | _(estado final)_                 |
+
+    El path `/gw-invoices` se usa para evitar conflictos con el microservicio
+    de facturacion que usa `/invoices`.
+  contact:
+    name: Guidewire Integration Team
+  license:
+    name: Apache 2.0
+    url: https://www.apache.org/licenses/LICENSE-2.0
+
+servers:
+  - url: http://localhost:8082
+    description: Local development server
+
+paths:
+  /api/v1/gw-invoices:
+    get:
+      operationId: listGwInvoices
+      summary: Listar facturas de Guidewire
+      description: Retorna una lista paginada de facturas con filtros opcionales.
+      tags:
+        - GwInvoices
+      parameters:
+        - name: status
+          in: query
+          required: false
+          description: Filtrar por estado de la factura
+          schema:
+            $ref: "#/components/schemas/GwInvoiceStatus"
+        - name: policyId
+          in: query
+          required: false
+          description: Filtrar por ID de la poliza
+          schema:
+            type: string
+            format: uuid
+        - name: customerId
+          in: query
+          required: false
+          description: Filtrar por ID del cliente
+          schema:
+            type: string
+            format: uuid
+        - name: page
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 0
+            default: 0
+        - name: size
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+      responses:
+        "200":
+          description: Lista paginada de facturas
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PaginatedGwInvoiceList"
+              example:
+                content:
+                  - invoiceId: "f1a2b3c4-d5e6-7890-abcd-1234567890ab"
+                    invoiceNumber: "INV-2024-000001"
+                    policyId: "a1b2c3d4-e5f6-7890-abcd-ef1234567890"
+                    customerId: "c1d2e3f4-a5b6-7890-cdef-123456789abc"
+                    status: ISSUED
+                    totalAmount: 15000.00
+                    paidAmount: 0.00
+                    currency: MXN
+                    dueDate: "2024-04-15"
+                    items:
+                      - description: "Prima mensual - Seguro Auto"
+                        quantity: 1
+                        unitPrice: 15000.00
+                        subtotal: 15000.00
+                    createdAt: "2024-03-15T10:00:00Z"
+                    updatedAt: "2024-03-15T10:00:00Z"
+                page: 0
+                size: 20
+                totalElements: 1
+                totalPages: 1
+        "400":
+          description: Solicitud invalida
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "500":
+          description: Error interno del servidor
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+    post:
+      operationId: createGwInvoice
+      summary: Crear factura
+      description: Crea una nueva factura en estado DRAFT.
+      tags:
+        - GwInvoices
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateGwInvoiceRequest"
+            example:
+              policyId: "a1b2c3d4-e5f6-7890-abcd-ef1234567890"
+              customerId: "c1d2e3f4-a5b6-7890-cdef-123456789abc"
+              dueDate: "2024-04-15"
+              items:
+                - description: "Prima mensual - Seguro Auto"
+                  quantity: 1
+                  unitPrice: 15000.00
+      responses:
+        "201":
+          description: Factura creada exitosamente
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GwInvoice"
+        "400":
+          description: Solicitud invalida
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "500":
+          description: Error interno del servidor
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /api/v1/gw-invoices/{invoiceId}:
+    get:
+      operationId: getGwInvoiceById
+      summary: Obtener factura por ID
+      tags:
+        - GwInvoices
+      parameters:
+        - name: invoiceId
+          in: path
+          required: true
+          description: UUID de la factura
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Factura encontrada
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GwInvoice"
+        "404":
+          description: Factura no encontrada
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "500":
+          description: Error interno del servidor
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+    patch:
+      operationId: updateGwInvoice
+      summary: Actualizar factura (estado, pago)
+      description: Permite actualizar el estado y/o monto pagado de una factura.
+      tags:
+        - GwInvoices
+      parameters:
+        - name: invoiceId
+          in: path
+          required: true
+          description: UUID de la factura
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateGwInvoiceRequest"
+            example:
+              status: PAID
+              paidAmount: 15000.00
+      responses:
+        "200":
+          description: Factura actualizada exitosamente
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GwInvoice"
+        "400":
+          description: Solicitud invalida
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Factura no encontrada
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "409":
+          description: Transicion de estado no permitida
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              example:
+                error: INVALID_STATE_TRANSITION
+                message: "Cannot transition from CANCELLED to PAID"
+                timestamp: "2024-03-15T10:00:00Z"
+                path: /api/v1/gw-invoices/f1a2b3c4-d5e6-7890-abcd-1234567890ab
+        "500":
+          description: Error interno del servidor
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+components:
+  schemas:
+    GwInvoiceStatus:
+      type: string
+      enum:
+        - DRAFT
+        - ISSUED
+        - SENT
+        - PAID
+        - OVERDUE
+        - CANCELLED
+        - CREDITED
+      description: |
+        Estado del ciclo de vida de la factura en BillingCenter.
+        - DRAFT: Borrador, pendiente de emision
+        - ISSUED: Emitida
+        - SENT: Enviada al cliente
+        - PAID: Pagada
+        - OVERDUE: Vencida (no pagada en fecha)
+        - CANCELLED: Cancelada (estado final)
+        - CREDITED: Nota de credito aplicada (estado final)
+
+    GwInvoice:
+      type: object
+      required:
+        - invoiceId
+        - invoiceNumber
+        - policyId
+        - customerId
+        - status
+        - totalAmount
+        - paidAmount
+        - currency
+        - dueDate
+        - items
+        - createdAt
+        - updatedAt
+      properties:
+        invoiceId:
+          type: string
+          format: uuid
+          description: Identificador unico de la factura
+          example: "f1a2b3c4-d5e6-7890-abcd-1234567890ab"
+        invoiceNumber:
+          type: string
+          description: Numero de factura legible
+          example: "INV-2024-000001"
+        policyId:
+          type: string
+          format: uuid
+          description: UUID de la poliza asociada
+          example: "a1b2c3d4-e5f6-7890-abcd-ef1234567890"
+        customerId:
+          type: string
+          format: uuid
+          description: UUID del cliente
+          example: "c1d2e3f4-a5b6-7890-cdef-123456789abc"
+        status:
+          $ref: "#/components/schemas/GwInvoiceStatus"
+        totalAmount:
+          type: number
+          format: double
+          description: Monto total de la factura
+          example: 15000.00
+        paidAmount:
+          type: number
+          format: double
+          description: Monto pagado hasta el momento
+          default: 0
+          example: 0.00
+        currency:
+          type: string
+          description: Codigo de moneda ISO 4217
+          default: "MXN"
+          example: "MXN"
+        dueDate:
+          type: string
+          format: date
+          description: Fecha de vencimiento
+          example: "2024-04-15"
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/GwInvoiceItem"
+          description: Lineas de detalle de la factura
+        createdAt:
+          type: string
+          format: date-time
+          description: Fecha de creacion del registro
+          example: "2024-03-15T10:00:00Z"
+        updatedAt:
+          type: string
+          format: date-time
+          description: Fecha de ultima actualizacion
+          example: "2024-03-15T10:00:00Z"
+
+    GwInvoiceItem:
+      type: object
+      required:
+        - description
+        - quantity
+        - unitPrice
+        - subtotal
+      properties:
+        description:
+          type: string
+          description: Descripcion del concepto
+          example: "Prima mensual - Seguro Auto"
+        quantity:
+          type: integer
+          minimum: 1
+          description: Cantidad de unidades
+          example: 1
+        unitPrice:
+          type: number
+          format: double
+          minimum: 0.01
+          description: Precio unitario
+          example: 15000.00
+        subtotal:
+          type: number
+          format: double
+          description: Subtotal (quantity x unitPrice)
+          example: 15000.00
+
+    CreateGwInvoiceRequest:
+      type: object
+      required:
+        - policyId
+        - customerId
+        - dueDate
+        - items
+      properties:
+        policyId:
+          type: string
+          format: uuid
+          description: UUID de la poliza asociada
+        customerId:
+          type: string
+          format: uuid
+          description: UUID del cliente
+        dueDate:
+          type: string
+          format: date
+          description: Fecha de vencimiento
+        items:
+          type: array
+          minItems: 1
+          items:
+            $ref: "#/components/schemas/CreateGwInvoiceItemRequest"
+
+    CreateGwInvoiceItemRequest:
+      type: object
+      required:
+        - description
+        - quantity
+        - unitPrice
+      properties:
+        description:
+          type: string
+          description: Descripcion del concepto
+        quantity:
+          type: integer
+          minimum: 1
+          description: Cantidad de unidades
+        unitPrice:
+          type: number
+          format: double
+          minimum: 0.01
+          description: Precio unitario
+
+    UpdateGwInvoiceRequest:
+      type: object
+      properties:
+        status:
+          $ref: "#/components/schemas/GwInvoiceStatus"
+        paidAmount:
+          type: number
+          format: double
+          minimum: 0
+          description: Monto pagado
+
+    PaginatedGwInvoiceList:
+      type: object
+      required:
+        - content
+        - page
+        - size
+        - totalElements
+        - totalPages
+      properties:
+        content:
+          type: array
+          items:
+            $ref: "#/components/schemas/GwInvoice"
+        page:
+          type: integer
+          example: 0
+        size:
+          type: integer
+          example: 20
+        totalElements:
+          type: integer
+          format: int64
+          example: 5
+        totalPages:
+          type: integer
+          example: 1
+
+    ErrorResponse:
+      type: object
+      required:
+        - error
+        - message
+        - timestamp
+        - path
+      properties:
+        error:
+          type: string
+          example: "VALIDATION_ERROR"
+        message:
+          type: string
+          example: "policyId is required"
+        timestamp:
+          type: string
+          format: date-time
+          example: "2024-03-15T10:00:00Z"
+        path:
+          type: string
+          example: "/api/v1/gw-invoices"
+        details:
+          type: array
+          items:
+            type: string

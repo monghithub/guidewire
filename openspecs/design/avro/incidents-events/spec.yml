@@ -1,0 +1,110 @@
+##############################################################################
+# SPEC: AVRO Schemas — Eventos de Incidencias
+# Issue: #40
+##############################################################################
+
+metadata:
+  name: avro-incidents-events
+  type: design
+  subtype: avro
+  issue: 40
+  labels: [design, avro, kafka]
+  status: pending
+  priority: high
+  depends_on: []
+
+description: >
+  Schemas AVRO para los eventos de incidencias/siniestros
+  publicados en Kafka. Originados desde ClaimCenter.
+
+schemas:
+  - name: IncidentCreated
+    file: IncidentCreated.avsc
+    namespace: com.guidewire.events.incidents
+    topic: incidents.incident-created
+    register_in: apicurio (grupo: guidewire, artifact: IncidentCreated)
+    fields:
+      - name: eventId
+        type: string
+        doc: UUID único del evento
+      - name: eventTimestamp
+        type: long
+        logicalType: timestamp-millis
+      - name: incidentId
+        type: string
+        doc: UUID de la incidencia
+      - name: claimId
+        type: string
+        doc: UUID del siniestro en ClaimCenter
+      - name: claimNumber
+        type: string
+        doc: Número de siniestro legible
+      - name: policyId
+        type: string
+        doc: UUID de la póliza asociada
+      - name: customerId
+        type: string
+        doc: UUID del cliente
+      - name: priority
+        type:
+          type: enum
+          name: Priority
+          symbols: [LOW, MEDIUM, HIGH, CRITICAL]
+        default: MEDIUM
+      - name: description
+        type: string
+        doc: Descripción del siniestro
+      - name: claimedAmount
+        type: bytes
+        logicalType: decimal
+        precision: 10
+        scale: 2
+      - name: incidentDate
+        type: int
+        logicalType: date
+      - name: source
+        type: string
+        default: "ClaimCenter"
+
+  - name: IncidentStatusChanged
+    file: IncidentStatusChanged.avsc
+    namespace: com.guidewire.events.incidents
+    topic: incidents.incident-status-changed
+    register_in: apicurio (grupo: guidewire, artifact: IncidentStatusChanged)
+    fields:
+      - name: eventId
+        type: string
+      - name: eventTimestamp
+        type: long
+        logicalType: timestamp-millis
+      - name: incidentId
+        type: string
+      - name: claimId
+        type: string
+      - name: previousStatus
+        type:
+          type: enum
+          name: IncidentStatus
+          symbols: [OPEN, IN_PROGRESS, RESOLVED, CLOSED, ESCALATED]
+      - name: newStatus
+        type: IncidentStatus
+      - name: assignedTo
+        type: ["null", "string"]
+        default: null
+      - name: changedBy
+        type: string
+      - name: reason
+        type: ["null", "string"]
+        default: null
+
+code_generation:
+  tool: avro-maven-plugin
+  output: Clases Java generadas (SpecificRecord)
+  package: com.guidewire.events.incidents
+
+acceptance_criteria:
+  - Los .avsc son JSON válidos
+  - Registrados en Apicurio bajo grupo "guidewire"
+  - Incluyen claimId para trazabilidad con ClaimCenter
+  - Priority como enum AVRO
+  - Generación de código Java sin errores

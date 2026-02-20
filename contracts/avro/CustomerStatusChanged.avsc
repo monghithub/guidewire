@@ -1,0 +1,53 @@
+{
+  "type": "record",
+  "name": "CustomerStatusChanged",
+  "namespace": "com.guidewire.events.customers",
+  "doc": "Evento emitido cuando cambia el estado de un cliente. Publicado en el topic customers.customer-status-changed.",
+  "fields": [
+    {
+      "name": "eventId",
+      "type": "string",
+      "doc": "UUID unico del evento"
+    },
+    {
+      "name": "eventTimestamp",
+      "type": {
+        "type": "long",
+        "logicalType": "timestamp-millis"
+      },
+      "doc": "Momento de emision del evento (milisegundos desde epoch)"
+    },
+    {
+      "name": "customerId",
+      "type": "string",
+      "doc": "UUID del cliente"
+    },
+    {
+      "name": "previousStatus",
+      "type": {
+        "type": "enum",
+        "name": "CustomerStatus",
+        "namespace": "com.guidewire.events.customers",
+        "doc": "Estados posibles de un cliente",
+        "symbols": ["ACTIVE", "INACTIVE", "SUSPENDED", "BLOCKED"]
+      },
+      "doc": "Estado anterior del cliente"
+    },
+    {
+      "name": "newStatus",
+      "type": "CustomerStatus",
+      "doc": "Nuevo estado del cliente"
+    },
+    {
+      "name": "changedBy",
+      "type": "string",
+      "doc": "Usuario o sistema que realizo el cambio"
+    },
+    {
+      "name": "reason",
+      "type": ["null", "string"],
+      "default": null,
+      "doc": "Motivo del cambio de estado"
+    }
+  ]
+}

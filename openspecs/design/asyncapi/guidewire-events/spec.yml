@@ -1,0 +1,138 @@
+##############################################################################
+# SPEC: AsyncAPI — Eventos de Guidewire
+# Issue: #38
+##############################################################################
+
+metadata:
+  name: asyncapi-guidewire-events
+  type: design
+  subtype: asyncapi
+  issue: 38
+  labels: [design, asyncapi, guidewire]
+  status: pending
+  priority: high
+  depends_on:
+    - design/avro/billing-events
+    - design/avro/incidents-events
+    - design/avro/customers-events
+
+description: >
+  Especificación AsyncAPI 3.0 que documenta todos los canales
+  de eventos Kafka del ecosistema Guidewire. Referencia los
+  schemas AVRO registrados en Apicurio.
+
+specification:
+  format: AsyncAPI 3.0
+  file: guidewire-events-asyncapi.yml
+  register_in: apicurio (grupo: guidewire-asyncapi)
+
+  info:
+    title: Guidewire Events
+    version: "1.0.0"
+    description: Eventos asincrónicos del ecosistema de integración Guidewire
+
+  servers:
+    kafka:
+      host: kafka:9092
+      protocol: kafka
+      description: Broker Kafka (KRaft mode)
+
+  channels:
+    # --- Billing ---
+    billing-invoice-created:
+      address: billing.invoice-created
+      description: Emitido cuando se crea una factura en BillingCenter
+      messages:
+        InvoiceCreated:
+          schema_ref: avro/InvoiceCreated.avsc
+          content_type: application/avro
+      producers: [camel-gateway]
+      consumers: [billing-service]
+
+    billing-invoice-status-changed:
+      address: billing.invoice-status-changed
+      description: Emitido cuando cambia el estado de una factura
+      messages:
+        InvoiceStatusChanged:
+          schema_ref: avro/InvoiceStatusChanged.avsc
+          content_type: application/avro
+      producers: [camel-gateway]
+      consumers: [billing-service]
+
+    # --- Incidents ---
+    incidents-incident-created:
+      address: incidents.incident-created
+      description: Emitido cuando se abre un siniestro en ClaimCenter
+      messages:
+        IncidentCreated:
+          schema_ref: avro/IncidentCreated.avsc
+          content_type: application/avro
+      producers: [camel-gateway]
+      consumers: [incidents-service, drools-engine]
+
+    incidents-incident-status-changed:
+      address: incidents.incident-status-changed
+      description: Emitido cuando cambia el estado de un siniestro
+      messages:
+        IncidentStatusChanged:
+          schema_ref: avro/IncidentStatusChanged.avsc
+          content_type: application/avro
+      producers: [camel-gateway]
+      consumers: [incidents-service]
+
+    # --- Customers ---
+    customers-customer-registered:
+      address: customers.customer-registered
+      description: Emitido cuando se registra un nuevo cliente
+      messages:
+        CustomerRegistered:
+          schema_ref: avro/CustomerRegistered.avsc
+          content_type: application/avro
+      producers: [camel-gateway]
+      consumers: [customers-service, billing-service, incidents-service]
+
+    customers-customer-status-changed:
+      address: customers.customer-status-changed
+      description: Emitido cuando cambia el estado de un cliente
+      messages:
+        CustomerStatusChanged:
+          schema_ref: avro/CustomerStatusChanged.avsc
+          content_type: application/avro
+      producers: [camel-gateway]
+      consumers: [customers-service]
+
+    # --- DLQ ---
+    dlq-errors:
+      address: dlq.errors
+      description: Dead Letter Queue para mensajes que fallaron procesamiento
+      messages:
+        ErrorEnvelope:
+          content_type: application/json
+          description: >
+            Wrapper con el mensaje original, error, timestamp,
+            topic de origen y número de reintentos.
+      producers: [camel-gateway, billing-service, incidents-service, customers-service]
+      consumers: [monitoring]
+
+  kafka_config:
+    consumer:
+      auto_offset_reset: earliest
+      enable_auto_commit: false
+      group_id_pattern: "{service-name}-group"
+    producer:
+      acks: all
+      retries: 3
+      key_serializer: org.apache.kafka.common.serialization.StringSerializer
+      value_serializer: io.apicurio.registry.serde.avro.AvroKafkaSerializer
+
+tools:
+  design: AsyncAPI Studio
+  validation: Spectral (asyncapi ruleset)
+  mocking: Microcks
+
+acceptance_criteria:
+  - La spec AsyncAPI 3.0 es válida
+  - Registrada en Apicurio bajo guidewire-asyncapi
+  - Todos los 7 canales documentados con producers y consumers
+  - Referencias a schemas AVRO correctas
+  - Microcks puede generar mocks desde la spec

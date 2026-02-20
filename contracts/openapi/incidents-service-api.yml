@@ -1,0 +1,447 @@
+openapi: "3.1.0"
+info:
+  title: Incidents Microservice API
+  version: "1.0.0"
+  description: |
+    API REST del microservicio de incidencias.
+
+    Gestiona incidencias derivadas de siniestros de ClaimCenter,
+    alimentadas por eventos Kafka. El campo `sourceEvent` permite
+    trazar el origen del evento Kafka que creo la incidencia.
+
+    ## Transiciones de estado permitidas
+
+    | Estado actual | Estados siguientes permitidos   |
+    |---------------|--------------------------------|
+    | OPEN          | IN_PROGRESS, ESCALATED, CLOSED |
+    | IN_PROGRESS   | RESOLVED, ESCALATED            |
+    | ESCALATED     | IN_PROGRESS, RESOLVED          |
+    | RESOLVED      | CLOSED                         |
+    | CLOSED        | _(estado final)_               |
+  contact:
+    name: Incidents Microservice Team
+  license:
+    name: Apache 2.0
+    url: https://www.apache.org/licenses/LICENSE-2.0
+
+servers:
+  - url: http://localhost:8084
+    description: Local development server
+
+paths:
+  /api/v1/incidents:
+    get:
+      operationId: listIncidents
+      summary: Listar incidencias
+      description: Retorna una lista paginada de incidencias con filtros opcionales.
+      tags:
+        - Incidents
+      parameters:
+        - name: status
+          in: query
+          required: false
+          description: Filtrar por estado de la incidencia
+          schema:
+            $ref: "#/components/schemas/IncidentStatus"
+        - name: priority
+          in: query
+          required: false
+          description: Filtrar por prioridad
+          schema:
+            $ref: "#/components/schemas/IncidentPriority"
+        - name: claimId
+          in: query
+          required: false
+          description: Filtrar por ID del siniestro
+          schema:
+            type: string
+            format: uuid
+        - name: customerId
+          in: query
+          required: false
+          description: Filtrar por ID del cliente
+          schema:
+            type: string
+            format: uuid
+        - name: page
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 0
+            default: 0
+        - name: size
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+      responses:
+        "200":
+          description: Lista paginada de incidencias
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PaginatedIncidentList"
+              example:
+                content:
+                  - incidentId: "b1c2d3e4-f5a6-7890-bcde-f12345678901"
+                    claimId: "d4e5f6a7-b8c9-0123-4567-890abcdef012"
+                    customerId: "c1d2e3f4-a5b6-7890-cdef-123456789abc"
+                    status: OPEN
+                    priority: HIGH
+                    title: "Siniestro vehicular - Investigacion requerida"
+                    description: "Colision vehicular reportada en autopista Mexico-Puebla km 45. Requiere investigacion de campo."
+                    assignedTo: null
+                    resolution: null
+                    sourceEvent: "evt-d4e5f6a7-b8c9-0123-4567-000000000001"
+                    createdAt: "2024-03-16T09:30:00Z"
+                    updatedAt: "2024-03-16T09:30:00Z"
+                page: 0
+                size: 20
+                totalElements: 1
+                totalPages: 1
+        "400":
+          description: Solicitud invalida
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "500":
+          description: Error interno del servidor
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+    post:
+      operationId: createIncident
+      summary: Crear incidencia
+      description: |
+        Crea una nueva incidencia en estado OPEN.
+        Normalmente invocado por el consumer de Kafka al recibir un evento
+        IncidentCreated desde ClaimCenter.
+      tags:
+        - Incidents
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateIncidentRequest"
+            example:
+              claimId: "d4e5f6a7-b8c9-0123-4567-890abcdef012"
+              customerId: "c1d2e3f4-a5b6-7890-cdef-123456789abc"
+              title: "Siniestro vehicular - Investigacion requerida"
+              description: "Colision vehicular reportada en autopista Mexico-Puebla km 45. Requiere investigacion de campo."
+              priority: HIGH
+      responses:
+        "201":
+          description: Incidencia creada exitosamente
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Incident"
+        "400":
+          description: Solicitud invalida
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              example:
+                error: VALIDATION_ERROR
+                message: "title must be at least 5 characters"
+                timestamp: "2024-03-16T09:30:00Z"
+                path: /api/v1/incidents
+        "500":
+          description: Error interno del servidor
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /api/v1/incidents/{incidentId}:
+    get:
+      operationId: getIncidentById
+      summary: Obtener incidencia por ID
+      tags:
+        - Incidents
+      parameters:
+        - name: incidentId
+          in: path
+          required: true
+          description: UUID de la incidencia
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Incidencia encontrada
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Incident"
+        "404":
+          description: Incidencia no encontrada
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "500":
+          description: Error interno del servidor
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+    patch:
+      operationId: updateIncident
+      summary: Actualizar incidencia
+      description: Permite actualizar el estado, prioridad, asignacion y resolucion de una incidencia.
+      tags:
+        - Incidents
+      parameters:
+        - name: incidentId
+          in: path
+          required: true
+          description: UUID de la incidencia
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateIncidentRequest"
+            example:
+              status: IN_PROGRESS
+              assignedTo: "ajustador.garcia"
+      responses:
+        "200":
+          description: Incidencia actualizada exitosamente
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Incident"
+        "400":
+          description: Solicitud invalida
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Incidencia no encontrada
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "409":
+          description: Transicion de estado no permitida
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              example:
+                error: INVALID_STATE_TRANSITION
+                message: "Cannot transition from CLOSED to IN_PROGRESS"
+                timestamp: "2024-03-16T09:30:00Z"
+                path: /api/v1/incidents/b1c2d3e4-f5a6-7890-bcde-f12345678901
+        "500":
+          description: Error interno del servidor
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+components:
+  schemas:
+    IncidentStatus:
+      type: string
+      enum:
+        - OPEN
+        - IN_PROGRESS
+        - RESOLVED
+        - CLOSED
+        - ESCALATED
+      description: |
+        Estado del ciclo de vida de la incidencia.
+        - OPEN: Incidencia abierta, pendiente de atencion
+        - IN_PROGRESS: En proceso de atencion
+        - RESOLVED: Resuelta, pendiente de cierre
+        - CLOSED: Cerrada (estado final)
+        - ESCALATED: Escalada a nivel superior
+
+    IncidentPriority:
+      type: string
+      enum:
+        - LOW
+        - MEDIUM
+        - HIGH
+        - CRITICAL
+      description: Nivel de prioridad de la incidencia
+
+    Incident:
+      type: object
+      required:
+        - incidentId
+        - claimId
+        - customerId
+        - status
+        - priority
+        - title
+        - description
+        - createdAt
+        - updatedAt
+      properties:
+        incidentId:
+          type: string
+          format: uuid
+          description: Identificador unico de la incidencia
+          example: "b1c2d3e4-f5a6-7890-bcde-f12345678901"
+        claimId:
+          type: string
+          format: uuid
+          description: UUID del siniestro en ClaimCenter
+          example: "d4e5f6a7-b8c9-0123-4567-890abcdef012"
+        customerId:
+          type: string
+          format: uuid
+          description: UUID del cliente
+          example: "c1d2e3f4-a5b6-7890-cdef-123456789abc"
+        status:
+          $ref: "#/components/schemas/IncidentStatus"
+        priority:
+          $ref: "#/components/schemas/IncidentPriority"
+        title:
+          type: string
+          description: Titulo corto de la incidencia
+          example: "Siniestro vehicular - Investigacion requerida"
+        description:
+          type: string
+          description: Descripcion detallada de la incidencia
+          example: "Colision vehicular reportada en autopista Mexico-Puebla km 45. Requiere investigacion de campo."
+        assignedTo:
+          type:
+            - string
+            - "null"
+          description: Persona asignada a la incidencia
+          example: "ajustador.garcia"
+        resolution:
+          type:
+            - string
+            - "null"
+          description: Descripcion de la resolucion (cuando status es RESOLVED o CLOSED)
+          example: "Investigacion completada. Dano total confirmado."
+        sourceEvent:
+          type:
+            - string
+            - "null"
+          description: ID del evento Kafka que origino esta incidencia (trazabilidad)
+          example: "evt-d4e5f6a7-b8c9-0123-4567-000000000001"
+        createdAt:
+          type: string
+          format: date-time
+          description: Fecha de creacion del registro
+          example: "2024-03-16T09:30:00Z"
+        updatedAt:
+          type: string
+          format: date-time
+          description: Fecha de ultima actualizacion
+          example: "2024-03-16T09:30:00Z"
+
+    CreateIncidentRequest:
+      type: object
+      required:
+        - claimId
+        - customerId
+        - title
+        - description
+      properties:
+        claimId:
+          type: string
+          format: uuid
+          description: UUID del siniestro en ClaimCenter
+        customerId:
+          type: string
+          format: uuid
+          description: UUID del cliente
+        title:
+          type: string
+          minLength: 5
+          description: Titulo de la incidencia (minimo 5 caracteres)
+        description:
+          type: string
+          minLength: 10
+          description: Descripcion detallada (minimo 10 caracteres)
+        priority:
+          $ref: "#/components/schemas/IncidentPriority"
+
+    UpdateIncidentRequest:
+      type: object
+      properties:
+        status:
+          $ref: "#/components/schemas/IncidentStatus"
+        priority:
+          $ref: "#/components/schemas/IncidentPriority"
+        assignedTo:
+          type: string
+          description: Persona asignada a la incidencia
+        resolution:
+          type: string
+          description: Descripcion de la resolucion
+
+    PaginatedIncidentList:
+      type: object
+      required:
+        - content
+        - page
+        - size
+        - totalElements
+        - totalPages
+      properties:
+        content:
+          type: array
+          items:
+            $ref: "#/components/schemas/Incident"
+        page:
+          type: integer
+          example: 0
+        size:
+          type: integer
+          example: 20
+        totalElements:
+          type: integer
+          format: int64
+          example: 12
+        totalPages:
+          type: integer
+          example: 1
+
+    ErrorResponse:
+      type: object
+      required:
+        - error
+        - message
+        - timestamp
+        - path
+      properties:
+        error:
+          type: string
+          example: "VALIDATION_ERROR"
+        message:
+          type: string
+          example: "title must be at least 5 characters"
+        timestamp:
+          type: string
+          format: date-time
+          example: "2024-03-16T09:30:00Z"
+        path:
+          type: string
+          example: "/api/v1/incidents"
+        details:
+          type: array
+          items:
+            type: string

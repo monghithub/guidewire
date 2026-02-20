@@ -1,0 +1,74 @@
+# -*- mode: ruby -*-
+# vi: set ft=ruby :
+#
+# Vagrantfile for Guidewire Integration POC Lab
+# Creates a libvirt/KVM VM with Podman for running the full service stack.
+#
+# Usage:
+#   vagrant up        - Create and provision the VM
+#   vagrant ssh       - SSH into the VM
+#   vagrant halt      - Stop the VM (data persists)
+#   vagrant destroy   - Remove the VM completely
+#
+
+Vagrant.configure("2") do |config|
+  config.vm.box = "generic/ubuntu2404"
+  config.vm.hostname = "lab-guidewire"
+
+  # ---------------------------------------------------------------------------
+  # Provider: libvirt/KVM
+  # ---------------------------------------------------------------------------
+  config.vm.provider :libvirt do |libvirt|
+    libvirt.memory = 20480       # 20 GB RAM
+    libvirt.cpus = 8
+    libvirt.machine_virtual_size = 80   # 80 GB disk
+    libvirt.driver = "kvm"
+    libvirt.nested = true
+  end
+
+  # ---------------------------------------------------------------------------
+  # Network: private network with static IP
+  # ---------------------------------------------------------------------------
+  config.vm.network "private_network", ip: "192.168.56.10"
+
+  # ---------------------------------------------------------------------------
+  # Port forwarding: all services accessible from the host
+  # ---------------------------------------------------------------------------
+  # 3Scale API Gateway
+  config.vm.network "forwarded_port", guest: 8000, host: 8000, host_ip: "0.0.0.0"  # API proxy
+  config.vm.network "forwarded_port", guest: 8001, host: 8001, host_ip: "0.0.0.0"  # Management API
+
+  # Apicurio Registry
+  config.vm.network "forwarded_port", guest: 8081, host: 8081, host_ip: "0.0.0.0"
+
+  # Microservices
+  config.vm.network "forwarded_port", guest: 8082, host: 8082, host_ip: "0.0.0.0"  # Billing Service
+  config.vm.network "forwarded_port", guest: 8083, host: 8083, host_ip: "0.0.0.0"  # Camel Gateway
+  config.vm.network "forwarded_port", guest: 8084, host: 8084, host_ip: "0.0.0.0"  # Incidents Service
+  config.vm.network "forwarded_port", guest: 8085, host: 8085, host_ip: "0.0.0.0"  # Customers Service
+  config.vm.network "forwarded_port", guest: 8086, host: 8086, host_ip: "0.0.0.0"  # Drools KIE Server
+
+  # ActiveMQ Artemis
+  config.vm.network "forwarded_port", guest: 8161, host: 8161, host_ip: "0.0.0.0"  # Hawtio Console
+  config.vm.network "forwarded_port", guest: 61616, host: 61616, host_ip: "0.0.0.0" # AMQP/JMS
+
+  # Kafka & Kafdrop
+  config.vm.network "forwarded_port", guest: 9000, host: 9000, host_ip: "0.0.0.0"  # Kafdrop UI
+  config.vm.network "forwarded_port", guest: 9092, host: 9092, host_ip: "0.0.0.0"  # Kafka Broker
+
+  # PostgreSQL
+  config.vm.network "forwarded_port", guest: 15432, host: 15432, host_ip: "0.0.0.0"
+
+  # ---------------------------------------------------------------------------
+  # Synced folder: host project dir -> VM
+  # ---------------------------------------------------------------------------
+  config.vm.synced_folder ".", "/home/vagrant/lab-guidewire", type: "rsync",
+    rsync__exclude: [".git/", "node_modules/", "target/", ".vagrant/"],
+    rsync__auto: true
+
+  # ---------------------------------------------------------------------------
+  # Provisioning: base setup (runs once on first 'vagrant up')
+  # ---------------------------------------------------------------------------
+  config.vm.provision "shell", path: "provision/setup.sh", privileged: true
+
+end

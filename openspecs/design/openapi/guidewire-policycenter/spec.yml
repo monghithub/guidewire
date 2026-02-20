@@ -1,0 +1,159 @@
+##############################################################################
+# SPEC: OpenAPI — Guidewire PolicyCenter
+# Issue: #35
+##############################################################################
+
+metadata:
+  name: openapi-guidewire-policycenter
+  type: design
+  subtype: openapi
+  issue: 35
+  labels: [design, openapi, guidewire]
+  status: pending
+  priority: high
+  depends_on: []
+
+description: >
+  Especificación OpenAPI 3.1 para las APIs REST de PolicyCenter
+  (Guidewire). Define el contrato para gestión del ciclo de vida
+  de pólizas: cotización, emisión, renovación, cancelación.
+
+specification:
+  format: OpenAPI 3.1
+  file: policycenter-api.yml
+  base_path: /api/v1/policies
+  register_in: apicurio (grupo: guidewire-openapi)
+
+  info:
+    title: Guidewire PolicyCenter API
+    version: "1.0.0"
+    description: API REST para gestión de pólizas de seguros
+
+  endpoints:
+    - method: GET
+      path: /policies
+      summary: Listar pólizas
+      query_params:
+        - name: status
+          type: string
+          enum: [QUOTED, ISSUED, ACTIVE, EXPIRED, CANCELLED]
+        - name: customerId
+          type: string
+          format: uuid
+        - name: page
+          type: integer
+          default: 0
+        - name: size
+          type: integer
+          default: 20
+      response: PaginatedPolicyList
+
+    - method: GET
+      path: /policies/{policyId}
+      summary: Obtener póliza por ID
+      response: Policy
+
+    - method: POST
+      path: /policies
+      summary: Crear nueva póliza (cotización)
+      request: CreatePolicyRequest
+      response: Policy
+      status: 201
+
+    - method: PATCH
+      path: /policies/{policyId}
+      summary: Actualizar póliza (cambio de estado, datos)
+      request: UpdatePolicyRequest
+      response: Policy
+
+  models:
+    Policy:
+      properties:
+        policyId:
+          type: string
+          format: uuid
+        policyNumber:
+          type: string
+          example: "POL-2024-000001"
+        customerId:
+          type: string
+          format: uuid
+        productType:
+          type: string
+          enum: [AUTO, HOME, LIFE, HEALTH, COMMERCIAL]
+        status:
+          type: string
+          enum: [QUOTED, ISSUED, ACTIVE, EXPIRED, CANCELLED]
+        effectiveDate:
+          type: string
+          format: date
+        expirationDate:
+          type: string
+          format: date
+        premiumAmount:
+          type: number
+          format: decimal
+        currency:
+          type: string
+          default: "MXN"
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    CreatePolicyRequest:
+      required: [customerId, productType, effectiveDate, expirationDate, premiumAmount]
+      properties:
+        customerId:
+          type: string
+          format: uuid
+        productType:
+          type: string
+          enum: [AUTO, HOME, LIFE, HEALTH, COMMERCIAL]
+        effectiveDate:
+          type: string
+          format: date
+        expirationDate:
+          type: string
+          format: date
+        premiumAmount:
+          type: number
+          minimum: 0.01
+
+    UpdatePolicyRequest:
+      properties:
+        status:
+          type: string
+          enum: [QUOTED, ISSUED, ACTIVE, EXPIRED, CANCELLED]
+        premiumAmount:
+          type: number
+          minimum: 0.01
+
+  status_transitions:
+    QUOTED: [ISSUED, CANCELLED]
+    ISSUED: [ACTIVE, CANCELLED]
+    ACTIVE: [EXPIRED, CANCELLED]
+    EXPIRED: []        # estado final
+    CANCELLED: []      # estado final
+
+  error_responses:
+    400: Solicitud inválida (validación fallida)
+    404: Póliza no encontrada
+    409: Transición de estado no permitida
+    500: Error interno del servidor
+
+code_generation:
+  tool: openapi-generator-maven-plugin
+  language: java
+  library: spring
+  output: Interfaces Java con anotaciones Spring MVC
+  package: com.guidewire.policycenter.api
+
+acceptance_criteria:
+  - La spec OpenAPI es válida (pasa validación Spectral)
+  - Está registrada en Apicurio bajo guidewire-openapi
+  - El generador de código produce interfaces Java compilables
+  - Todos los endpoints están documentados con ejemplos
+  - Las transiciones de estado son explícitas y validables

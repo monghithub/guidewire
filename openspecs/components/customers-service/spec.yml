@@ -1,0 +1,137 @@
+##############################################################################
+# SPEC: Microservicio de Clientes (Node.js / TypeScript)
+# Issues: #62, #63, #64, #65
+##############################################################################
+
+metadata:
+  name: customers-service
+  type: component
+  issues: [62, 63, 64, 65]
+  labels: [feature, customers, node.js, backend]
+  status: pending
+  priority: high
+  depends_on:
+    - infra/postgres
+    - infra/kafka
+    - infra/apicurio
+    - design/openapi/customers-service
+    - design/avro/customers-events
+
+description: >
+  Microservicio de clientes implementado con Node.js y TypeScript.
+  Demuestra diversidad tecnológica del ecosistema (polyglot).
+  Gestiona registro y estado de clientes de seguros.
+
+technology:
+  runtime: Node.js 20 LTS
+  framework: Express.js 4.x
+  language: TypeScript 5.x
+  orm: Prisma ORM
+  database: PostgreSQL 16
+  kafka_client: kafkajs
+  build: npm
+  image_name: guidewire-poc/customers-service
+
+project:
+  name: customers-service
+  package_manager: npm
+
+submodules:
+  setup:
+    issue: 62
+    description: >
+      Proyecto Node.js/TypeScript base con Express, Prisma, KafkaJS.
+      Configuración de TypeScript estricta. ESLint + Prettier.
+    deliverables:
+      - package.json
+      - tsconfig.json
+      - .eslintrc.js
+      - Dockerfile (multi-stage build)
+      - src/index.ts (entry point)
+      - src/config/index.ts (env vars)
+
+  database:
+    issue: 63
+    description: Schema Prisma para modelo de clientes
+    prisma_schema:
+      models:
+        - name: Customer
+          fields:
+            - { name: id, type: String, attributes: ["@id", "@default(uuid())"] }
+            - { name: firstName, type: String }
+            - { name: lastName, type: String }
+            - { name: email, type: String, attributes: ["@unique"] }
+            - { name: phone, type: "String?" }
+            - { name: documentType, type: DocumentType }
+            - { name: documentNumber, type: String }
+            - { name: status, type: CustomerStatus, default: ACTIVE }
+            - { name: street, type: "String?" }
+            - { name: city, type: "String?" }
+            - { name: state, type: "String?" }
+            - { name: zipCode, type: "String?" }
+            - { name: country, type: String, default: "MX" }
+            - { name: sourceEvent, type: "String?" }
+            - { name: createdAt, type: DateTime, default: now() }
+            - { name: updatedAt, type: DateTime, attributes: ["@updatedAt"] }
+          constraints:
+            - "@@unique([documentType, documentNumber])"
+            - "@@index([email])"
+            - "@@index([status])"
+
+      enums:
+        - name: DocumentType
+          values: [RFC, CURP, INE, PASSPORT]
+        - name: CustomerStatus
+          values: [ACTIVE, INACTIVE, SUSPENDED, BLOCKED]
+
+    migrations:
+      tool: prisma migrate
+      command: npx prisma migrate dev
+
+  api:
+    issue: 64
+    description: >
+      API REST CRUD con Express.js + Zod para validación.
+      Tipos generados desde OpenAPI con openapi-typescript.
+    layers:
+      - Router (Express routes)
+      - Controller (request handling)
+      - Service (business logic)
+      - Repository (Prisma client)
+      - Validators (Zod schemas)
+    validations:
+      - email formato válido y único
+      - documentNumber único por documentType
+      - firstName y lastName requeridos
+      - Transiciones de estado válidas
+
+  kafka_consumer:
+    issue: 65
+    description: >
+      Consumer Kafka via KafkaJS.
+      Deserialización AVRO con @kafkajs/confluent-schema-registry
+      apuntando a Apicurio (compatible).
+    consumers:
+      - topic: customers.customer-registered
+        group: customers-service-group
+        action: Crear/actualizar cliente desde evento
+      - topic: customers.customer-status-changed
+        group: customers-service-group
+        action: Actualizar estado del cliente
+    config:
+      client_id: customers-service
+      apicurio_url: http://apicurio:8080/apis/registry/v2
+
+networking:
+  port: 8085
+
+acceptance_criteria:
+  - El servicio arranca y se conecta a PostgreSQL y Kafka
+  - Prisma migrate crea las tablas automáticamente
+  - CRUD REST funciona según spec OpenAPI
+  - Email único validado (409 en duplicado)
+  - Documento único por tipo validado
+  - Búsqueda parcial por nombre funciona
+  - Consumer Kafka procesa eventos CustomerRegistered
+  - Consumer Kafka procesa eventos CustomerStatusChanged
+  - TypeScript compilación sin errores

@@ -1,0 +1,69 @@
+{
+  "type": "record",
+  "name": "CustomerRegistered",
+  "namespace": "com.guidewire.events.customers",
+  "doc": "Evento emitido cuando se registra un nuevo cliente. Publicado en el topic customers.customer-registered. Consumido por customers-service, billing-service e incidents-service.",
+  "fields": [
+    {
+      "name": "eventId",
+      "type": "string",
+      "doc": "UUID unico del evento"
+    },
+    {
+      "name": "eventTimestamp",
+      "type": {
+        "type": "long",
+        "logicalType": "timestamp-millis"
+      },
+      "doc": "Momento de emision del evento (milisegundos desde epoch)"
+    },
+    {
+      "name": "customerId",
+      "type": "string",
+      "doc": "UUID del cliente"
+    },
+    {
+      "name": "firstName",
+      "type": "string",
+      "doc": "Nombre del cliente"
+    },
+    {
+      "name": "lastName",
+      "type": "string",
+      "doc": "Apellidos del cliente"
+    },
+    {
+      "name": "email",
+      "type": "string",
+      "doc": "Correo electronico del cliente"
+    },
+    {
+      "name": "phone",
+      "type": ["null", "string"],
+      "default": null,
+      "doc": "Numero de telefono del cliente"
+    },
+    {
+      "name": "documentType",
+      "type": {
+        "type": "enum",
+        "name": "DocumentType",
+        "namespace": "com.guidewire.events.customers",
+        "doc": "Tipo de documento de identidad",
+        "symbols": ["RFC", "CURP", "INE", "PASSPORT"]
+      },
+      "doc": "Tipo de documento de identidad del cliente"
+    },
+    {
+      "name": "documentNumber",
+      "type": "string",
+      "doc": "Numero de documento de identidad"
+    },
+    {
+      "name": "source",
+      "type": "string",
+      "default": "PolicyCenter",
+      "doc": "Sistema donde se origino el registro del cliente"
+    }
+  ]
+}

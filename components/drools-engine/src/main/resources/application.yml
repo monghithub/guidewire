@@ -1,0 +1,47 @@
+server:
+  port: ${SERVER_PORT:8086}
+
+spring:
+  application:
+    name: drools-engine
+  datasource:
+    url: ${DB_URL:jdbc:postgresql://localhost:5432/drools_audit}
+    username: ${DB_USERNAME:drools}
+    password: ${DB_PASSWORD:drools}
+    driver-class-name: org.postgresql.Driver
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: false
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+        format_sql: true
+
+drools:
+  rules:
+    path: rules/
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,prometheus,info,metrics
+  endpoint:
+    health:
+      show-details: always
+      probes:
+        enabled: true
+  metrics:
+    tags:
+      application: ${spring.application.name}
+
+logging:
+  pattern:
+    console: >-
+      {"timestamp":"%d{yyyy-MM-dd'T'HH:mm:ss.SSSZ}","level":"%level","logger":"%logger{36}","message":"%msg","thread":"%thread"}%n
+  level:
+    root: INFO
+    com.guidewire.rules: DEBUG
+    org.drools: INFO
+    org.kie: INFO

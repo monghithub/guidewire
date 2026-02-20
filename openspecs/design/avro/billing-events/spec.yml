@@ -1,0 +1,108 @@
+##############################################################################
+# SPEC: AVRO Schemas — Eventos de Facturación
+# Issue: #39
+##############################################################################
+
+metadata:
+  name: avro-billing-events
+  type: design
+  subtype: avro
+  issue: 39
+  labels: [design, avro, kafka]
+  status: pending
+  priority: high
+  depends_on: []
+
+description: >
+  Schemas AVRO para los eventos de facturación publicados
+  en Kafka. Registrados en Apicurio bajo el grupo "guidewire".
+  Se usan para serialización/deserialización binaria.
+
+schemas:
+  - name: InvoiceCreated
+    file: InvoiceCreated.avsc
+    namespace: com.guidewire.events.billing
+    topic: billing.invoice-created
+    register_in: apicurio (grupo: guidewire, artifact: InvoiceCreated)
+    fields:
+      - name: eventId
+        type: string
+        doc: UUID único del evento
+      - name: eventTimestamp
+        type: long
+        logicalType: timestamp-millis
+        doc: Momento de emisión del evento
+      - name: invoiceId
+        type: string
+        doc: UUID de la factura creada
+      - name: invoiceNumber
+        type: string
+        doc: Número de factura legible
+      - name: policyId
+        type: string
+        doc: UUID de la póliza asociada
+      - name: customerId
+        type: string
+        doc: UUID del cliente
+      - name: totalAmount
+        type: bytes
+        logicalType: decimal
+        precision: 10
+        scale: 2
+        doc: Monto total de la factura
+      - name: currency
+        type: string
+        default: "MXN"
+      - name: dueDate
+        type: int
+        logicalType: date
+        doc: Fecha de vencimiento
+      - name: source
+        type: string
+        default: "BillingCenter"
+        doc: Sistema origen del evento
+
+  - name: InvoiceStatusChanged
+    file: InvoiceStatusChanged.avsc
+    namespace: com.guidewire.events.billing
+    topic: billing.invoice-status-changed
+    register_in: apicurio (grupo: guidewire, artifact: InvoiceStatusChanged)
+    fields:
+      - name: eventId
+        type: string
+      - name: eventTimestamp
+        type: long
+        logicalType: timestamp-millis
+      - name: invoiceId
+        type: string
+      - name: invoiceNumber
+        type: string
+      - name: previousStatus
+        type:
+          type: enum
+          name: InvoiceStatus
+          symbols: [DRAFT, ISSUED, SENT, PAID, OVERDUE, CANCELLED, CREDITED]
+      - name: newStatus
+        type: InvoiceStatus
+      - name: changedBy
+        type: string
+        doc: Usuario o sistema que realizó el cambio
+      - name: reason
+        type: ["null", "string"]
+        default: null
+        doc: Motivo del cambio de estado
+
+code_generation:
+  tool: avro-maven-plugin
+  output: Clases Java generadas (SpecificRecord)
+  package: com.guidewire.events.billing
+  config:
+    stringType: String
+    fieldVisibility: PRIVATE
+
+acceptance_criteria:
+  - Los .avsc son JSON válidos con schema AVRO
+  - Registrados en Apicurio bajo grupo "guidewire"
+  - El plugin Maven genera clases Java sin errores
+  - Las clases generadas se serializan/deserializan correctamente
+  - Los tipos lógicos (decimal, timestamp, date) funcionan

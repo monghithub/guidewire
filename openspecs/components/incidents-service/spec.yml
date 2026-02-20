@@ -1,0 +1,121 @@
+##############################################################################
+# SPEC: Microservicio de Incidencias (Quarkus)
+# Issues: #58, #59, #60, #61
+##############################################################################
+
+metadata:
+  name: incidents-service
+  type: component
+  issues: [58, 59, 60, 61]
+  labels: [feature, incidents, quarkus, backend]
+  status: pending
+  priority: high
+  depends_on:
+    - infra/postgres
+    - infra/kafka
+    - infra/apicurio
+    - design/openapi/incidents-service
+    - design/avro/incidents-events
+
+description: >
+  Microservicio de incidencias implementado con Quarkus.
+  Gestiona incidencias derivadas de siniestros de ClaimCenter,
+  alimentadas por eventos Kafka. GraalVM native-image ready.
+
+technology:
+  runtime: Java 21
+  framework: Quarkus 3.8.x
+  orm: Hibernate ORM with Panache
+  database: PostgreSQL 16
+  migration: Flyway
+  build: Maven
+  image_name: guidewire-poc/incidents-service
+  native_ready: true
+
+project:
+  group_id: com.guidewire.incidents
+  artifact_id: incidents-service
+  package: com.guidewire.incidents
+
+submodules:
+  setup:
+    issue: 58
+    description: >
+      Proyecto Quarkus base con dependencias RESTEasy, Panache,
+      SmallRye Reactive Messaging (Kafka), AVRO.
+    deliverables:
+      - pom.xml (Quarkus BOM + extensions)
+      - application.properties
+      - Dockerfile.jvm + Dockerfile.native (opcional)
+      - IncidentsServiceApplication.java
+
+  database:
+    issue: 59
+    description: Esquema de base de datos
+    tables:
+      - name: incidents
+        columns:
+          - { name: id, type: UUID, pk: true, default: gen_random_uuid() }
+          - { name: claim_id, type: UUID, nullable: false }
+          - { name: customer_id, type: UUID, nullable: false }
+          - { name: status, type: VARCHAR(20), nullable: false, default: "'OPEN'" }
+          - { name: priority, type: VARCHAR(10), nullable: false, default: "'MEDIUM'" }
+          - { name: title, type: VARCHAR(255), nullable: false }
+          - { name: description, type: TEXT, nullable: false }
+          - { name: assigned_to, type: VARCHAR(100), nullable: true }
+          - { name: resolution, type: TEXT, nullable: true }
+          - { name: source_event, type: VARCHAR(255), nullable: true }
+          - { name: created_at, type: TIMESTAMP, default: NOW() }
+          - { name: updated_at, type: TIMESTAMP, default: NOW() }
+        indices:
+          - { columns: [claim_id] }
+          - { columns: [customer_id] }
+          - { columns: [status] }
+          - { columns: [priority] }
+          - { columns: [created_at] }
+    migrations:
+      - V1__create_incidents_table.sql
+
+  api:
+    issue: 60
+    description: >
+      API REST CRUD con JAX-RS (RESTEasy Reactive).
+      Generada desde OpenAPI spec con Quarkus OpenAPI generator.
+    layers:
+      - Resource (JAX-RS endpoints)
+      - Service (lógica de negocio)
+      - Repository (Panache Repository)
+      - Entity (Panache Entity)
+      - Mapper (MapStruct)
+    validations:
+      - title minLength 5
+      - description minLength 10
+      - Transiciones de estado válidas
+
+  kafka_consumer:
+    issue: 61
+    description: >
+      Consumer Kafka via SmallRye Reactive Messaging.
+      Deserialización AVRO con Apicurio.
+    consumers:
+      - topic: incidents.incident-created
+        channel: incident-created-in
+        action: Crear incidencia desde evento de ClaimCenter
+      - topic: customers.customer-registered
+        channel: customer-registered-in
+        action: Registrar referencia de cliente
+    config:
+      connector: smallrye-kafka
+      apicurio_url: http://apicurio:8080/apis/registry/v2
+
+networking:
+  port: 8084
+
+acceptance_criteria:
+  - El servicio arranca (JVM mode) y se conecta a PostgreSQL y Kafka
+  - Migraciones Flyway crean la tabla automáticamente
+  - CRUD REST funciona según spec OpenAPI
+  - Filtros por status, priority, claimId funcionan
+  - Consumer Kafka procesa eventos IncidentCreated
+  - Transiciones de estado validadas
+  - Hot-reload funciona en modo dev (quarkus:dev)

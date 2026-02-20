@@ -1,0 +1,71 @@
+{
+  "type": "record",
+  "name": "InvoiceCreated",
+  "namespace": "com.guidewire.events.billing",
+  "doc": "Evento emitido cuando se crea una factura en BillingCenter. Publicado en el topic billing.invoice-created.",
+  "fields": [
+    {
+      "name": "eventId",
+      "type": "string",
+      "doc": "UUID unico del evento"
+    },
+    {
+      "name": "eventTimestamp",
+      "type": {
+        "type": "long",
+        "logicalType": "timestamp-millis"
+      },
+      "doc": "Momento de emision del evento (milisegundos desde epoch)"
+    },
+    {
+      "name": "invoiceId",
+      "type": "string",
+      "doc": "UUID de la factura creada"
+    },
+    {
+      "name": "invoiceNumber",
+      "type": "string",
+      "doc": "Numero de factura legible (ej: INV-2024-000001)"
+    },
+    {
+      "name": "policyId",
+      "type": "string",
+      "doc": "UUID de la poliza asociada"
+    },
+    {
+      "name": "customerId",
+      "type": "string",
+      "doc": "UUID del cliente"
+    },
+    {
+      "name": "totalAmount",
+      "type": {
+        "type": "bytes",
+        "logicalType": "decimal",
+        "precision": 10,
+        "scale": 2
+      },
+      "doc": "Monto total de la factura"
+    },
+    {
+      "name": "currency",
+      "type": "string",
+      "default": "MXN",
+      "doc": "Codigo de moneda ISO 4217"
+    },
+    {
+      "name": "dueDate",
+      "type": {
+        "type": "int",
+        "logicalType": "date"
+      },
+      "doc": "Fecha de vencimiento (dias desde epoch)"
+    },
+    {
+      "name": "source",
+      "type": "string",
+      "default": "BillingCenter",
+      "doc": "Sistema origen del evento"
+    }
+  ]
+}

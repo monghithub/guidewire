@@ -1,0 +1,93 @@
+##############################################################################
+# SPEC: AVRO Schemas — Eventos de Clientes
+# Issue: #41
+##############################################################################
+
+metadata:
+  name: avro-customers-events
+  type: design
+  subtype: avro
+  issue: 41
+  labels: [design, avro, kafka]
+  status: pending
+  priority: high
+  depends_on: []
+
+description: >
+  Schemas AVRO para los eventos de clientes publicados en Kafka.
+  Consumidos por múltiples servicios (billing, incidents, customers).
+
+schemas:
+  - name: CustomerRegistered
+    file: CustomerRegistered.avsc
+    namespace: com.guidewire.events.customers
+    topic: customers.customer-registered
+    register_in: apicurio (grupo: guidewire, artifact: CustomerRegistered)
+    fields:
+      - name: eventId
+        type: string
+        doc: UUID único del evento
+      - name: eventTimestamp
+        type: long
+        logicalType: timestamp-millis
+      - name: customerId
+        type: string
+        doc: UUID del cliente
+      - name: firstName
+        type: string
+      - name: lastName
+        type: string
+      - name: email
+        type: string
+      - name: phone
+        type: ["null", "string"]
+        default: null
+      - name: documentType
+        type:
+          type: enum
+          name: DocumentType
+          symbols: [RFC, CURP, INE, PASSPORT]
+      - name: documentNumber
+        type: string
+      - name: source
+        type: string
+        default: "PolicyCenter"
+        doc: Sistema donde se originó el registro
+
+  - name: CustomerStatusChanged
+    file: CustomerStatusChanged.avsc
+    namespace: com.guidewire.events.customers
+    topic: customers.customer-status-changed
+    register_in: apicurio (grupo: guidewire, artifact: CustomerStatusChanged)
+    fields:
+      - name: eventId
+        type: string
+      - name: eventTimestamp
+        type: long
+        logicalType: timestamp-millis
+      - name: customerId
+        type: string
+      - name: previousStatus
+        type:
+          type: enum
+          name: CustomerStatus
+          symbols: [ACTIVE, INACTIVE, SUSPENDED, BLOCKED]
+      - name: newStatus
+        type: CustomerStatus
+      - name: changedBy
+        type: string
+      - name: reason
+        type: ["null", "string"]
+        default: null
+
+code_generation:
+  tool: avro-maven-plugin
+  output: Clases Java generadas (SpecificRecord)
+  package: com.guidewire.events.customers
+
+acceptance_criteria:
+  - Los .avsc son JSON válidos
+  - Registrados en Apicurio bajo grupo "guidewire"
+  - CustomerRegistered consumido por 3 servicios (cross-domain)
+  - DocumentType como enum AVRO
+  - Generación de código Java sin errores

@@ -1,0 +1,111 @@
+##############################################################################
+# SPEC: Kafka (Red Hat AMQ Streams)
+# Issue: #29
+##############################################################################
+
+metadata:
+  name: kafka
+  type: infra
+  issue: 29
+  labels: [infra, kafka]
+  status: pending
+  priority: critical
+  depends_on: []
+
+description: >
+  Despliegue de Apache Kafka en modo KRaft (sin ZooKeeper) como backbone
+  de la arquitectura event-driven. Todos los eventos de Guidewire
+  (pólizas, siniestros, facturación) fluyen por Kafka.
+
+technology:
+  product: Apache Kafka
+  enterprise_name: Red Hat AMQ Streams
+  version: "3.7.x"
+  mode: KRaft (sin ZooKeeper)
+  image: apache/kafka:3.7.0
+
+configuration:
+  broker:
+    listeners:
+      - name: PLAINTEXT
+        port: 9092
+        protocol: PLAINTEXT
+    log_retention_hours: 168  # 7 días
+    num_partitions: 3
+    default_replication_factor: 1  # POC, en producción >= 3
+    auto_create_topics: false
+    min_insync_replicas: 1
+
+  topics:
+    - name: billing.invoice-created
+      partitions: 3
+      replication_factor: 1
+      description: Evento emitido cuando se crea una factura en BillingCenter
+
+    - name: billing.invoice-status-changed
+      partitions: 3
+      replication_factor: 1
+      description: Evento emitido cuando cambia el estado de una factura
+
+    - name: incidents.incident-created
+      partitions: 3
+      replication_factor: 1
+      description: Evento emitido cuando se crea una incidencia desde ClaimCenter
+
+    - name: incidents.incident-status-changed
+      partitions: 3
+      replication_factor: 1
+      description: Evento emitido cuando cambia el estado de una incidencia
+
+    - name: customers.customer-registered
+      partitions: 3
+      replication_factor: 1
+      description: Evento emitido cuando se registra un nuevo cliente
+
+    - name: customers.customer-status-changed
+      partitions: 3
+      replication_factor: 1
+      description: Evento emitido cuando cambia el estado de un cliente
+
+    - name: dlq.errors
+      partitions: 1
+      replication_factor: 1
+      description: Dead Letter Queue para mensajes fallidos
+      retention_ms: 2592000000  # 30 días
+
+  monitoring:
+    tool: Kafdrop
+    image: obsidiandynamics/kafdrop:4.0.1
+    port: 9000
+    description: UI web para inspeccionar topics, consumers y mensajes
+
+networking:
+  ports:
+    - host: 9092
+      container: 9092
+      description: Kafka broker
+    - host: 9000
+      container: 9000
+      description: Kafdrop UI
+
+resources:
+  memory: 1.5GB
+  cpu: 1
+
+runtime:
+  engine: Podman
+  orchestration: Podman Compose
+  vm: Vagrant + libvirt/KVM
+
+healthcheck:
+  command: kafka-broker-api-versions --bootstrap-server localhost:9092
+  interval: 30s
+  timeout: 10s
+  retries: 5
+
+acceptance_criteria:
+  - Kafka arranca en modo KRaft sin ZooKeeper
+  - Los 7 topics se crean automáticamente al iniciar
+  - Kafdrop muestra todos los topics y permite inspeccionar mensajes
+  - Producers pueden publicar y consumers pueden consumir mensajes
+  - La retención de mensajes es de 7 días (30 para DLQ)

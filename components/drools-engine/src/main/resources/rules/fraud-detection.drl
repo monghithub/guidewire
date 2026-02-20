@@ -1,0 +1,57 @@
+package com.guidewire.rules.fraud;
+
+import com.guidewire.rules.model.ClaimFact;
+import java.math.BigDecimal;
+
+rule "SuspiciousAmount_Critical"
+    salience 100
+    when
+        $claim : ClaimFact(claimedAmount > 1000000)
+    then
+        $claim.setRiskLevel("CRITICAL");
+        $claim.addFlaggedReason("Claimed amount exceeds 1,000,000 MXN - CRITICAL threshold");
+        update($claim);
+end
+
+rule "HighAmountClaim"
+    salience 90
+    when
+        $claim : ClaimFact(claimedAmount > 500000, riskLevel == null || riskLevel != "CRITICAL")
+    then
+        $claim.setRiskLevel("HIGH");
+        $claim.addFlaggedReason("Claimed amount exceeds 500,000 MXN - HIGH risk threshold");
+        update($claim);
+end
+
+rule "NewCustomerImmediateClaim"
+    salience 80
+    when
+        $claim : ClaimFact(daysSinceRegistration() <= 30)
+    then
+        if ($claim.getRiskLevel() == null || "LOW".equals($claim.getRiskLevel()) || "MEDIUM".equals($claim.getRiskLevel())) {
+            $claim.setRiskLevel("HIGH");
+        }
+        $claim.addFlaggedReason("Claim filed within 30 days of customer registration");
+        update($claim);
+end
+
+rule "FrequentClaimant"
+    salience 70
+    when
+        $claim : ClaimFact(claimCount > 3)
+    then
+        if ($claim.getRiskLevel() == null || "LOW".equals($claim.getRiskLevel())) {
+            $claim.setRiskLevel("MEDIUM");
+        }
+        $claim.addFlaggedReason("Customer has more than 3 claims in the last 12 months");
+        update($claim);
+end
+
+rule "DefaultLowRisk"
+    salience 10
+    when
+        $claim : ClaimFact(riskLevel == null)
+    then
+        $claim.setRiskLevel("LOW");
+        update($claim);
+end

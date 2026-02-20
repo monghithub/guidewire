@@ -1,0 +1,197 @@
+##############################################################################
+# SPEC: Apache Camel Integration Gateway
+# Issues: #45, #46, #47, #48, #49, #50, #51
+##############################################################################
+
+metadata:
+  name: camel-integration-gateway
+  type: component
+  issues: [45, 46, 47, 48, 49, 50, 51]
+  labels: [feature, camel, integration]
+  status: pending
+  priority: critical
+  depends_on:
+    - infra/kafka
+    - infra/apicurio
+    - infra/activemq
+    - design/openapi/guidewire-policycenter
+    - design/openapi/guidewire-claimcenter
+    - design/openapi/guidewire-billingcenter
+    - design/asyncapi/guidewire-events
+    - design/avro/billing-events
+    - design/avro/incidents-events
+    - design/avro/customers-events
+
+description: >
+  Gateway de integración central basado en Apache Camel.
+  Actúa como mediador entre Guidewire (SOAP/REST) y el ecosistema
+  de microservicios. Implementa patrones EIP: Message Translator,
+  Content-Based Router, Protocol Bridge, Dead Letter Channel.
+
+technology:
+  runtime: Java 21
+  framework: Spring Boot 3.3.x
+  integration: Apache Camel 4.x
+  build: Maven
+  image_name: guidewire-poc/camel-gateway
+
+project:
+  group_id: com.guidewire.integration
+  artifact_id: camel-gateway
+  package: com.guidewire.integration.gateway
+
+dependencies:
+  - camel-spring-boot-starter
+  - camel-kafka
+  - camel-rest
+  - camel-jackson
+  - camel-avro
+  - camel-cxf (SOAP)
+  - camel-http
+  - camel-bean
+  - camel-micrometer
+  - apicurio-registry-serdes-avro-serde
+  - spring-boot-starter-actuator
+
+submodules:
+  setup:
+    issue: 45
+    description: >
+      Proyecto base Maven con todas las dependencias.
+      application.yml con configuración de Kafka, Apicurio, ActiveMQ.
+      Dockerfile multi-stage para build optimizado.
+    deliverables:
+      - pom.xml con dependencias
+      - application.yml
+      - Dockerfile
+      - CamelGatewayApplication.java
+
+  routes_soap:
+    issue: 46
+    description: >
+      Rutas CXF para consumir APIs SOAP de Guidewire (legacy).
+      Endpoints WSDL para PolicyCenter, ClaimCenter, BillingCenter.
+      Marshalling XML con JAXB.
+    routes:
+      - name: PolicyCenterSoapRoute
+        from: cxf:bean:policyCenterEndpoint
+        to: direct:policy-processing
+      - name: ClaimCenterSoapRoute
+        from: cxf:bean:claimCenterEndpoint
+        to: direct:claim-processing
+      - name: BillingCenterSoapRoute
+        from: cxf:bean:billingCenterEndpoint
+        to: direct:billing-processing
+
+  routes_rest:
+    issue: 47
+    description: >
+      Rutas REST para consumir/exponer APIs REST de Guidewire.
+      Configuración SSL/TLS, headers de autenticación.
+      Latencia objetivo < 500ms.
+    routes:
+      - name: PolicyCenterRestRoute
+        from: rest:get:/api/v1/policies
+        to: http:mock-guidewire:8082/api/v1/policies  # mock en POC
+      - name: ClaimCenterRestRoute
+        from: rest:get:/api/v1/claims
+        to: http:mock-guidewire:8082/api/v1/claims
+      - name: BillingCenterRestRoute
+        from: rest:get:/api/v1/gw-invoices
+        to: http:mock-guidewire:8082/api/v1/gw-invoices
+    config:
+      rest_port: 8083
+      context_path: /api/v1
+      binding_mode: json
+      enable_cors: true
+
+  transformations:
+    issue: 48
+    description: >
+      Transformaciones bidireccionales SOAP/XML <-> REST/JSON.
+      Implementa EIP Message Translator y Content-Based Router.
+    patterns:
+      - name: Message Translator
+        description: Convierte entre formatos XML y JSON
+        implementation: Jackson + JAXB processors
+      - name: Content-Based Router
+        description: Enruta según tipo de operación o dominio
+        implementation: Camel choice/when/otherwise
+      - name: Error Handler
+        description: Manejo centralizado de errores con logging
+        implementation: onException + Dead Letter Channel
+
+  kafka_producer:
+    issue: 49
+    description: >
+      Publicación de eventos a Kafka con serialización AVRO
+      y registro en Apicurio.
+    routes:
+      - name: PublishInvoiceCreatedRoute
+        from: direct:invoice-created
+        to: kafka:billing.invoice-created
+        serializer: KafkaAvroSerializer
+      - name: PublishIncidentCreatedRoute
+        from: direct:incident-created
+        to: kafka:incidents.incident-created
+      - name: PublishCustomerRegisteredRoute
+        from: direct:customer-registered
+        to: kafka:customers.customer-registered
+    config:
+      apicurio_url: http://apicurio:8080/apis/registry/v2
+      acks: all
+      retries: 3
+
+  kafka_consumer:
+    issue: 50
+    description: >
+      Consumo de eventos desde Kafka y enrutamiento a microservicios.
+      Dead Letter Channel con backoff exponencial para errores.
+    routes:
+      - name: ConsumeAndRouteRoute
+        from: kafka:billing.invoice-created
+        to: http:billing-service:8082/api/v1/invoices
+        error_handling:
+          max_retries: 3
+          backoff: exponential
+          dlq: kafka:dlq.errors
+    config:
+      auto_offset_reset: earliest
+      enable_auto_commit: false
+      group_id: camel-gateway-group
+
+  observability:
+    issue: 51
+    description: >
+      Métricas, logs estructurados y tracing distribuido.
+    features:
+      - name: Métricas (Micrometer + Prometheus)
+        endpoint: /actuator/prometheus
+        metrics:
+          - camel.exchanges.total
+          - camel.exchanges.failed
+          - camel.route.latency
+      - name: Logging (JSON estructurado)
+        format: JSON
+        fields: [timestamp, level, route, correlationId, duration]
+      - name: Tracing (Jaeger/OpenTelemetry)
+        propagation: W3C TraceContext
+      - name: Health Checks
+        endpoints:
+          - /actuator/health/liveness
+          - /actuator/health/readiness
+
+networking:
+  port: 8083
+  management_port: 8083
+
+acceptance_criteria:
+  - El gateway arranca y se conecta a Kafka, Apicurio y ActiveMQ
+  - Las rutas REST exponen los endpoints de Guidewire (mock)
+  - Las transformaciones SOAP/XML <-> REST/JSON funcionan
+  - Los eventos se publican en Kafka con AVRO válido
+  - Los eventos se consumen y enrutan a microservicios
+  - DLQ captura mensajes fallidos después de 3 reintentos
+  - Métricas Prometheus disponibles en /actuator/prometheus
+  - Health checks responden correctamente
+  - Latencia < 500ms para rutas REST síncronas

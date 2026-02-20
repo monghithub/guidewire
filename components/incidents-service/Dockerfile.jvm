@@ -1,0 +1,38 @@
+# Stage 1: Build
+FROM eclipse-temurin:21-jdk-alpine AS build
+
+WORKDIR /app
+
+COPY pom.xml .
+COPY src ./src
+
+RUN apk add --no-cache maven && \
+    mvn clean package -DskipTests -q
+
+# Stage 2: Runtime
+FROM eclipse-temurin:21-jre-alpine
+
+ARG JAVA_PACKAGE=java-21-openjdk-headless
+ARG RUN_JAVA_VERSION=1.3.8
+
+ENV LANGUAGE='en_US:en'
+
+RUN addgroup -S appgroup && adduser -S appuser -G appgroup
+
+WORKDIR /app
+
+COPY --from=build /app/target/quarkus-app/lib/ /app/lib/
+COPY --from=build /app/target/quarkus-app/*.jar /app/
+COPY --from=build /app/target/quarkus-app/app/ /app/app/
+COPY --from=build /app/target/quarkus-app/quarkus/ /app/quarkus/
+
+RUN chown -R appuser:appgroup /app
+
+USER appuser
+
+EXPOSE 8084
+
+ENV JAVA_OPTS_APPEND="-Dquarkus.http.host=0.0.0.0 -Djava.util.logging.manager=org.jboss.logmanager.LogManager"
+ENV JAVA_APP_JAR="/app/quarkus-run.jar"
+
+ENTRYPOINT ["java", "-jar", "/app/quarkus-run.jar"]

@@ -1,0 +1,87 @@
+{
+  "type": "record",
+  "name": "IncidentCreated",
+  "namespace": "com.guidewire.events.incidents",
+  "doc": "Evento emitido cuando se abre un siniestro en ClaimCenter. Publicado en el topic incidents.incident-created.",
+  "fields": [
+    {
+      "name": "eventId",
+      "type": "string",
+      "doc": "UUID unico del evento"
+    },
+    {
+      "name": "eventTimestamp",
+      "type": {
+        "type": "long",
+        "logicalType": "timestamp-millis"
+      },
+      "doc": "Momento de emision del evento (milisegundos desde epoch)"
+    },
+    {
+      "name": "incidentId",
+      "type": "string",
+      "doc": "UUID de la incidencia"
+    },
+    {
+      "name": "claimId",
+      "type": "string",
+      "doc": "UUID del siniestro en ClaimCenter"
+    },
+    {
+      "name": "claimNumber",
+      "type": "string",
+      "doc": "Numero de siniestro legible (ej: CLM-2024-000001)"
+    },
+    {
+      "name": "policyId",
+      "type": "string",
+      "doc": "UUID de la poliza asociada"
+    },
+    {
+      "name": "customerId",
+      "type": "string",
+      "doc": "UUID del cliente"
+    },
+    {
+      "name": "priority",
+      "type": {
+        "type": "enum",
+        "name": "Priority",
+        "namespace": "com.guidewire.events.incidents",
+        "doc": "Nivel de prioridad de la incidencia",
+        "symbols": ["LOW", "MEDIUM", "HIGH", "CRITICAL"]
+      },
+      "default": "MEDIUM",
+      "doc": "Prioridad de la incidencia"
+    },
+    {
+      "name": "description",
+      "type": "string",
+      "doc": "Descripcion del siniestro"
+    },
+    {
+      "name": "claimedAmount",
+      "type": {
+        "type": "bytes",
+        "logicalType": "decimal",
+        "precision": 10,
+        "scale": 2
+      },
+      "doc": "Monto reclamado por el asegurado"
+    },
+    {
+      "name": "incidentDate",
+      "type": {
+        "type": "int",
+        "logicalType": "date"
+      },
+      "doc": "Fecha en que ocurrio el siniestro (dias desde epoch)"
+    },
+    {
+      "name": "source",
+      "type": "string",
+      "default": "ClaimCenter",
+      "doc": "Sistema origen del evento"
+    }
+  ]
+}

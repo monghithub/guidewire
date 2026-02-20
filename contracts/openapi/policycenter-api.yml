@@ -1,0 +1,457 @@
+openapi: "3.1.0"
+info:
+  title: Guidewire PolicyCenter API
+  version: "1.0.0"
+  description: |
+    API REST para gestion de polizas de seguros en Guidewire PolicyCenter.
+
+    Gestiona el ciclo de vida completo de polizas: cotizacion, emision,
+    renovacion y cancelacion.
+
+    ## Transiciones de estado permitidas
+
+    | Estado actual | Estados siguientes permitidos   |
+    |---------------|--------------------------------|
+    | QUOTED        | ISSUED, CANCELLED              |
+    | ISSUED        | ACTIVE, CANCELLED              |
+    | ACTIVE        | EXPIRED, CANCELLED             |
+    | EXPIRED       | _(estado final)_               |
+    | CANCELLED     | _(estado final)_               |
+
+    Cualquier transicion fuera de esta tabla retornara un error `409 Conflict`.
+  contact:
+    name: Guidewire Integration Team
+  license:
+    name: Apache 2.0
+    url: https://www.apache.org/licenses/LICENSE-2.0
+
+servers:
+  - url: http://localhost:8080
+    description: Local development server
+
+paths:
+  /api/v1/policies:
+    get:
+      operationId: listPolicies
+      summary: Listar polizas
+      description: Retorna una lista paginada de polizas con filtros opcionales.
+      tags:
+        - Policies
+      parameters:
+        - name: status
+          in: query
+          required: false
+          description: Filtrar por estado de la poliza
+          schema:
+            $ref: "#/components/schemas/PolicyStatus"
+        - name: customerId
+          in: query
+          required: false
+          description: Filtrar por ID del cliente
+          schema:
+            type: string
+            format: uuid
+        - name: page
+          in: query
+          required: false
+          description: Numero de pagina (base 0)
+          schema:
+            type: integer
+            minimum: 0
+            default: 0
+        - name: size
+          in: query
+          required: false
+          description: Cantidad de elementos por pagina
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+      responses:
+        "200":
+          description: Lista paginada de polizas
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PaginatedPolicyList"
+              example:
+                content:
+                  - policyId: "a1b2c3d4-e5f6-7890-abcd-ef1234567890"
+                    policyNumber: "POL-2024-000001"
+                    customerId: "c1d2e3f4-a5b6-7890-cdef-123456789abc"
+                    productType: AUTO
+                    status: ACTIVE
+                    effectiveDate: "2024-01-15"
+                    expirationDate: "2025-01-15"
+                    premiumAmount: 15000.00
+                    currency: MXN
+                    createdAt: "2024-01-10T08:30:00Z"
+                    updatedAt: "2024-01-15T10:00:00Z"
+                page: 0
+                size: 20
+                totalElements: 1
+                totalPages: 1
+        "400":
+          description: Solicitud invalida (validacion fallida)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "500":
+          description: Error interno del servidor
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+    post:
+      operationId: createPolicy
+      summary: Crear nueva poliza (cotizacion)
+      description: Crea una nueva poliza en estado QUOTED.
+      tags:
+        - Policies
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreatePolicyRequest"
+            example:
+              customerId: "c1d2e3f4-a5b6-7890-cdef-123456789abc"
+              productType: AUTO
+              effectiveDate: "2024-06-01"
+              expirationDate: "2025-06-01"
+              premiumAmount: 18500.50
+      responses:
+        "201":
+          description: Poliza creada exitosamente
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Policy"
+              example:
+                policyId: "a1b2c3d4-e5f6-7890-abcd-ef1234567890"
+                policyNumber: "POL-2024-000002"
+                customerId: "c1d2e3f4-a5b6-7890-cdef-123456789abc"
+                productType: AUTO
+                status: QUOTED
+                effectiveDate: "2024-06-01"
+                expirationDate: "2025-06-01"
+                premiumAmount: 18500.50
+                currency: MXN
+                createdAt: "2024-05-20T14:30:00Z"
+                updatedAt: "2024-05-20T14:30:00Z"
+        "400":
+          description: Solicitud invalida (validacion fallida)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              example:
+                error: VALIDATION_ERROR
+                message: "premiumAmount must be greater than 0.01"
+                timestamp: "2024-05-20T14:30:00Z"
+                path: /api/v1/policies
+        "500":
+          description: Error interno del servidor
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /api/v1/policies/{policyId}:
+    get:
+      operationId: getPolicyById
+      summary: Obtener poliza por ID
+      tags:
+        - Policies
+      parameters:
+        - name: policyId
+          in: path
+          required: true
+          description: UUID de la poliza
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Poliza encontrada
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Policy"
+        "404":
+          description: Poliza no encontrada
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              example:
+                error: NOT_FOUND
+                message: "Policy with ID a1b2c3d4-e5f6-7890-abcd-ef1234567890 not found"
+                timestamp: "2024-05-20T14:30:00Z"
+                path: /api/v1/policies/a1b2c3d4-e5f6-7890-abcd-ef1234567890
+        "500":
+          description: Error interno del servidor
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+    patch:
+      operationId: updatePolicy
+      summary: Actualizar poliza (cambio de estado, datos)
+      description: |
+        Permite actualizar el estado y/o datos de una poliza.
+        Las transiciones de estado deben seguir las reglas definidas.
+        Ver la tabla de transiciones en la descripcion general de la API.
+      tags:
+        - Policies
+      parameters:
+        - name: policyId
+          in: path
+          required: true
+          description: UUID de la poliza
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdatePolicyRequest"
+            example:
+              status: ISSUED
+              premiumAmount: 19000.00
+      responses:
+        "200":
+          description: Poliza actualizada exitosamente
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Policy"
+        "400":
+          description: Solicitud invalida (validacion fallida)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Poliza no encontrada
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "409":
+          description: Transicion de estado no permitida
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              example:
+                error: INVALID_STATE_TRANSITION
+                message: "Cannot transition from EXPIRED to ACTIVE"
+                timestamp: "2024-05-20T14:30:00Z"
+                path: /api/v1/policies/a1b2c3d4-e5f6-7890-abcd-ef1234567890
+        "500":
+          description: Error interno del servidor
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+components:
+  schemas:
+    PolicyStatus:
+      type: string
+      enum:
+        - QUOTED
+        - ISSUED
+        - ACTIVE
+        - EXPIRED
+        - CANCELLED
+      description: |
+        Estado del ciclo de vida de la poliza.
+        - QUOTED: Cotizacion creada, pendiente de emision
+        - ISSUED: Poliza emitida, pendiente de activacion
+        - ACTIVE: Poliza vigente
+        - EXPIRED: Poliza vencida (estado final)
+        - CANCELLED: Poliza cancelada (estado final)
+
+    ProductType:
+      type: string
+      enum:
+        - AUTO
+        - HOME
+        - LIFE
+        - HEALTH
+        - COMMERCIAL
+      description: Tipo de producto de seguro
+
+    Policy:
+      type: object
+      required:
+        - policyId
+        - policyNumber
+        - customerId
+        - productType
+        - status
+        - effectiveDate
+        - expirationDate
+        - premiumAmount
+        - currency
+        - createdAt
+        - updatedAt
+      properties:
+        policyId:
+          type: string
+          format: uuid
+          description: Identificador unico de la poliza
+          example: "a1b2c3d4-e5f6-7890-abcd-ef1234567890"
+        policyNumber:
+          type: string
+          description: Numero de poliza legible
+          example: "POL-2024-000001"
+        customerId:
+          type: string
+          format: uuid
+          description: UUID del cliente titular de la poliza
+          example: "c1d2e3f4-a5b6-7890-cdef-123456789abc"
+        productType:
+          $ref: "#/components/schemas/ProductType"
+        status:
+          $ref: "#/components/schemas/PolicyStatus"
+        effectiveDate:
+          type: string
+          format: date
+          description: Fecha de inicio de vigencia
+          example: "2024-01-15"
+        expirationDate:
+          type: string
+          format: date
+          description: Fecha de fin de vigencia
+          example: "2025-01-15"
+        premiumAmount:
+          type: number
+          format: double
+          description: Monto de la prima del seguro
+          example: 15000.00
+        currency:
+          type: string
+          description: Codigo de moneda ISO 4217
+          default: "MXN"
+          example: "MXN"
+        createdAt:
+          type: string
+          format: date-time
+          description: Fecha de creacion del registro
+          example: "2024-01-10T08:30:00Z"
+        updatedAt:
+          type: string
+          format: date-time
+          description: Fecha de ultima actualizacion
+          example: "2024-01-15T10:00:00Z"
+
+    CreatePolicyRequest:
+      type: object
+      required:
+        - customerId
+        - productType
+        - effectiveDate
+        - expirationDate
+        - premiumAmount
+      properties:
+        customerId:
+          type: string
+          format: uuid
+          description: UUID del cliente titular
+        productType:
+          $ref: "#/components/schemas/ProductType"
+        effectiveDate:
+          type: string
+          format: date
+          description: Fecha de inicio de vigencia
+        expirationDate:
+          type: string
+          format: date
+          description: Fecha de fin de vigencia
+        premiumAmount:
+          type: number
+          format: double
+          minimum: 0.01
+          description: Monto de la prima (debe ser mayor a 0)
+
+    UpdatePolicyRequest:
+      type: object
+      properties:
+        status:
+          $ref: "#/components/schemas/PolicyStatus"
+        premiumAmount:
+          type: number
+          format: double
+          minimum: 0.01
+          description: Nuevo monto de prima
+
+    PaginatedPolicyList:
+      type: object
+      required:
+        - content
+        - page
+        - size
+        - totalElements
+        - totalPages
+      properties:
+        content:
+          type: array
+          items:
+            $ref: "#/components/schemas/Policy"
+        page:
+          type: integer
+          description: Numero de pagina actual (base 0)
+          example: 0
+        size:
+          type: integer
+          description: Elementos por pagina
+          example: 20
+        totalElements:
+          type: integer
+          format: int64
+          description: Total de elementos
+          example: 42
+        totalPages:
+          type: integer
+          description: Total de paginas
+          example: 3
+
+    ErrorResponse:
+      type: object
+      required:
+        - error
+        - message
+        - timestamp
+        - path
+      properties:
+        error:
+          type: string
+          description: Codigo de error
+          example: "VALIDATION_ERROR"
+        message:
+          type: string
+          description: Mensaje descriptivo del error
+          example: "premiumAmount must be greater than 0.01"
+        timestamp:
+          type: string
+          format: date-time
+          description: Momento en que ocurrio el error
+          example: "2024-05-20T14:30:00Z"
+        path:
+          type: string
+          description: Ruta del request que genero el error
+          example: "/api/v1/policies"
+        details:
+          type: array
+          items:
+            type: string
+          description: Lista de detalles adicionales del error
