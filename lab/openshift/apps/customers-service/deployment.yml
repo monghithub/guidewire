@@ -28,7 +28,7 @@ spec:
               value: "postgresql://customers_user:customers123@postgres.guidewire-infra.svc.cluster.local:5432/customers"
             - name: KAFKA_BROKERS
               value: "kafka-cluster-kafka-bootstrap.guidewire-infra.svc.cluster.local:9092"
-            - name: APICURIO_URL
+            - name: APICURIO_REGISTRY_URL
               value: "http://apicurio-registry.guidewire-infra.svc.cluster.local:8080/apis/registry/v2"
           resources:
             requests:

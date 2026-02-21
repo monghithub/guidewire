@@ -75,8 +75,23 @@ public class IncidentService {
                 .build();
     }
 
-    @Transactional
     public IncidentResponse update(UUID id, UpdateIncidentRequest request) {
+        UpdateResult result = doUpdate(id, request);
+
+        if (result.statusChanged) {
+            incidentEventProducer.publishStatusChanged(
+                    result.incident,
+                    result.previousStatus,
+                    "incidents-service",
+                    request.getResolution()
+            );
+        }
+
+        return incidentMapper.toResponse(result.incident);
+    }
+
+    @Transactional
+    UpdateResult doUpdate(UUID id, UpdateIncidentRequest request) {
         Incident incident = incidentRepository.findByIdOptional(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Incident", id));
 
@@ -116,15 +131,18 @@ public class IncidentService {
 
         incidentRepository.persist(incident);
 
-        if (statusChanged) {
-            incidentEventProducer.publishStatusChanged(
-                    incident,
-                    previousStatus,
-                    "incidents-service",
-                    request.getResolution()
-            );
-        }
+        return new UpdateResult(incident, previousStatus, statusChanged);
+    }
 
-        return incidentMapper.toResponse(incident);
+    static class UpdateResult {
+        final Incident incident;
+        final IncidentStatus previousStatus;
+        final boolean statusChanged;
+
+        UpdateResult(Incident incident, IncidentStatus previousStatus, boolean statusChanged) {
+            this.incident = incident;
+            this.previousStatus = previousStatus;
+            this.statusChanged = statusChanged;
+        }
     }
 }
