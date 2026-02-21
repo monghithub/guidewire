@@ -116,7 +116,7 @@ public class KafkaConsumerRoute extends RouteBuilder {
                 .to("micrometer:counter:events_consumed?tags=topic=customers.customer-registered")
                 .setHeader(Exchange.HTTP_METHOD, constant("POST"))
                 .setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
-                .to("http:customer-service:8084/api/v1/customers?bridgeEndpoint=true&throwExceptionOnFailure=true")
+                .to("http:customers-service:8085/api/v1/customers?bridgeEndpoint=true&throwExceptionOnFailure=true")
                 .log("Customer event routed successfully [key=${header.kafka.KEY}]");
     }
 }

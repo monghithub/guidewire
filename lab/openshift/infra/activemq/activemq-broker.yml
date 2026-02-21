@@ -9,7 +9,7 @@ metadata:
 spec:
   deploymentPlan:
     size: 1
-    image: placeholder
+    image: quay.io/artemiscloud/activemq-artemis-broker-kubernetes:artemis.2.33.0
     requireLogin: true
     persistenceEnabled: false
     messageMigration: false

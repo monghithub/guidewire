@@ -24,6 +24,10 @@ data:
     REVOKE ALL ON DATABASE apicurio FROM PUBLIC;
     REVOKE ALL ON DATABASE billing FROM PUBLIC;
     REVOKE ALL ON DATABASE incidents FROM PUBLIC;
+    CREATE USER drools_user WITH PASSWORD 'drools123';
+    CREATE DATABASE drools_audit OWNER drools_user;
+    GRANT ALL PRIVILEGES ON DATABASE drools_audit TO drools_user;
+    REVOKE ALL ON DATABASE drools_audit FROM PUBLIC;
     REVOKE ALL ON DATABASE customers FROM PUBLIC;
     \connect apicurio
     CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
@@ -37,3 +41,6 @@ data:
     \connect customers
     CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
     GRANT ALL ON SCHEMA public TO customers_user;
+    \connect drools_audit
+    CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
+    GRANT ALL ON SCHEMA public TO drools_user;

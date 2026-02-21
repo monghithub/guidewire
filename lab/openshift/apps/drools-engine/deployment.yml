@@ -23,6 +23,13 @@ spec:
           ports:
             - containerPort: 8086
               protocol: TCP
+          env:
+            - name: DB_URL
+              value: "jdbc:postgresql://postgres.guidewire-infra.svc.cluster.local:5432/drools_audit"
+            - name: DB_USERNAME
+              value: "drools_user"
+            - name: DB_PASSWORD
+              value: "drools123"
           resources:
             requests:
               cpu: 100m
@@ -32,13 +39,13 @@ spec:
               memory: 512Mi
           readinessProbe:
             httpGet:
-              path: /q/health/ready
+              path: /actuator/health/readiness
               port: 8086
             initialDelaySeconds: 30
             periodSeconds: 10
           livenessProbe:
             httpGet:
-              path: /q/health/live
+              path: /actuator/health/liveness
               port: 8086
             initialDelaySeconds: 60
             periodSeconds: 15
