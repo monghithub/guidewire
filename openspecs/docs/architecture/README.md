@@ -1,52 +1,52 @@
-# Architecture Documentation
+# Documentacion de Arquitectura
 
-Guidewire Integration POC -- Architecture reference for the insurance integration platform.
+> [Volver a OpenSpecs](../../README.md) · [Volver al README principal](../../../README.md)
+
+Referencia arquitectonica de la plataforma de integracion Guidewire.
 
 ---
 
-## Table of Contents
+## Tabla de Contenidos
 
-1. [Architecture Overview](#architecture-overview)
-2. [Component Interaction Diagram](#component-interaction-diagram)
+1. [Vision General](#vision-general)
+2. [Diagrama de Componentes](#diagrama-de-componentes)
 3. [Componentes del Sistema](#componentes-del-sistema)
-   - [Servicios de Aplicacion](#servicios-de-aplicacion-namespace-guidewire-apps)
-   - [Infraestructura](#infraestructura-namespace-guidewire-infra)
-4. [Data Flow Diagrams](#data-flow-diagrams)
-5. [Architecture Decision Records (ADRs)](#architecture-decision-records-adrs)
-6. [Technology Stack Summary](#technology-stack-summary)
+4. [Flujos de Datos](#flujos-de-datos)
+5. [Decisiones de Arquitectura (ADRs)](#decisiones-de-arquitectura-adrs)
+6. [Stack Tecnologico](#stack-tecnologico)
 
 ---
 
-## Architecture Overview
+## Vision General
 
-This POC demonstrates integration patterns for **Guidewire InsuranceSuite** (PolicyCenter, ClaimCenter, BillingCenter) using a polyglot microservices architecture with event-driven communication.
+Este POC demuestra patrones de integracion para **Guidewire InsuranceSuite** (PolicyCenter, ClaimCenter, BillingCenter) usando una arquitectura de microservicios poliglota con comunicacion orientada a eventos.
 
-The system follows these architectural principles:
+Principios arquitectonicos:
 
-- **API-First / Contract-Driven**: All interfaces defined via OpenAPI 3.1, AsyncAPI 3.0, and AVRO schemas before implementation
-- **Event-Driven Architecture (EDA)**: Apache Kafka as the event backbone for asynchronous, decoupled communication
-- **Polyglot Microservices**: Each service chooses the best technology for its domain
-- **Infrastructure as Code**: Reproducible lab environment via Red Hat OpenShift Local (CRC) + Kubernetes manifests
+- **API-First / Contract-Driven**: Todas las interfaces definidas via OpenAPI 3.1, AsyncAPI 3.0 y schemas AVRO antes de implementar
+- **Arquitectura Orientada a Eventos (EDA)**: Apache Kafka como backbone de eventos para comunicacion asincrona y desacoplada
+- **Microservicios Poliglota**: Cada servicio elige la tecnologia optima para su dominio
+- **Infraestructura como Codigo**: Entorno reproducible via Red Hat OpenShift Local (CRC) + manifiestos Kubernetes
 
 ---
 
-## Component Interaction Diagram
+## Diagrama de Componentes
 
 ```mermaid
 graph TD
-    consumers["External Consumers"]
+    consumers["Consumidores Externos"]
     consumers --> threescale
 
     threescale["3Scale API Gateway — APIcast<br/>:8000 / :8001"]
     threescale --> camel
 
-    camel["Camel Gateway<br/>Apache Camel 4 + Spring Boot :8083<br/>Routes: PolicyCenter SOAP · ClaimCenter REST · BillingCenter REST"]
+    camel["Camel Gateway<br/>Apache Camel 4 + Spring Boot :8083<br/>Rutas: PolicyCenter SOAP · ClaimCenter REST · BillingCenter REST"]
     camel --> gwmock
     camel --> drools
     camel --> kafka
 
     gwmock["Guidewire Mock APIs<br/>Policy / Claim / Billing"]
-    drools["Drools Rules Engine :8086<br/>Validation · Fraud · Routing"]
+    drools["Drools Rules Engine :8086<br/>Validacion · Fraude · Enrutamiento"]
 
     kafka["Apache Kafka — KRaft :9092<br/>Topics: billing.invoice-created · billing.invoice-status-changed<br/>incidents.incident-created · incidents.incident-status-changed<br/>customers.customer-registered · customers.customer-status-changed<br/>policies.policy-events · events.unclassified · dlq.errors"]
 
@@ -65,7 +65,6 @@ graph TD
     pg["PostgreSQL :15432<br/>billing_db · incidents_db · customers_db · drools_audit · apicurio"]
 
     apicurio["Apicurio Schema Registry :8081"]
-    activemq["ActiveMQ Artemis :61616 / :8161"]
     kafdrop["Kafdrop — Kafka UI :9000"]
 ```
 
@@ -73,13 +72,13 @@ graph TD
 
 ## Componentes del Sistema
 
-El POC se compone de **5 servicios de aplicacion** y **6 componentes de infraestructura**, desplegados en dos namespaces separados de OpenShift.
+El POC se compone de **5 servicios de aplicacion** y **5 componentes de infraestructura**, desplegados en dos namespaces separados de OpenShift.
 
 ### Servicios de Aplicacion (namespace: guidewire-apps)
 
 #### [Camel Gateway](../components/camel-gateway/README.md) — Hub de Integracion
 
-El punto de entrada al ecosistema. Apache Camel 4 actua como mediador de protocolos entre los sistemas Guidewire (SOAP/REST) y la arquitectura interna basada en eventos. Implementa los Enterprise Integration Patterns (EIP) clasicos: Content-Based Router, Message Translator, Dead Letter Channel y Wire Tap. Expone endpoints CXF para PolicyCenter, ClaimCenter y BillingCenter, transforma los mensajes a formato AVRO y los publica en los topics Kafka correspondientes. Antes de publicar, invoca al Drools Engine para enriquecer los eventos con reglas de negocio.
+Punto de entrada al ecosistema. Apache Camel 4 actua como mediador de protocolos entre los sistemas Guidewire (SOAP/REST) y la arquitectura interna basada en eventos. Implementa los Enterprise Integration Patterns (EIP): Content-Based Router, Message Translator, Dead Letter Channel y Wire Tap. Expone endpoints CXF para PolicyCenter, ClaimCenter y BillingCenter, transforma los mensajes a formato AVRO y los publica en los topics Kafka correspondientes.
 
 - **Stack**: Java 21, Spring Boot 3.3, Apache Camel 4.4
 - **Puerto**: 8083
@@ -87,7 +86,7 @@ El punto de entrada al ecosistema. Apache Camel 4 actua como mediador de protoco
 
 #### [Drools Engine](../components/drools-engine/README.md) — Motor de Reglas de Negocio
 
-Centraliza las reglas de negocio del dominio asegurador en archivos DRL declarativos. Expone 4 conjuntos de reglas via REST: deteccion de fraude (evalua riesgo por monto, frecuencia y antiguedad del cliente), validacion de polizas (limites y elegibilidad), calculo de comisiones (por producto y canal) y enrutamiento de siniestros (asigna equipos segun prioridad y monto). Cada evaluacion se registra en una base de datos de auditoria.
+Centraliza las reglas de negocio del dominio asegurador en archivos DRL declarativos. Expone 4 conjuntos de reglas via REST: deteccion de fraude, validacion de polizas, calculo de comisiones y enrutamiento de siniestros. Cada evaluacion se registra en una base de datos de auditoria.
 
 - **Stack**: Java 21, Spring Boot 3.3, Drools 8
 - **Puerto**: 8086
@@ -95,7 +94,7 @@ Centraliza las reglas de negocio del dominio asegurador en archivos DRL declarat
 
 #### [Billing Service](../components/billing-service/README.md) — Gestion de Facturacion
 
-Microservicio de facturacion que gestiona el ciclo de vida completo de las facturas: creacion, transiciones de estado y consulta. Las facturas se crean principalmente desde eventos Kafka (originados en Camel Gateway) y progresan a traves de una maquina de estados (PENDING -> PROCESSING -> COMPLETED/FAILED/CANCELLED). Cada transicion de estado publica un evento AVRO serializado con schema de Apicurio.
+Microservicio de facturacion que gestiona el ciclo de vida completo de las facturas. Las facturas se crean desde eventos Kafka y progresan a traves de una maquina de estados (PENDING -> PROCESSING -> COMPLETED/FAILED/CANCELLED). Cada transicion publica un evento AVRO.
 
 - **Stack**: Java 21, Spring Boot 3.3, JPA/Hibernate, Spring Kafka
 - **Puerto**: 8082
@@ -103,7 +102,7 @@ Microservicio de facturacion que gestiona el ciclo de vida completo de las factu
 
 #### [Incidents Service](../components/incidents-service/README.md) — Gestion de Siniestros
 
-Microservicio cloud-native para la gestion de incidencias/siniestros. Demuestra el uso de Quarkus como alternativa a Spring Boot, con Panache ORM (simplificacion de JPA) y SmallRye Reactive Messaging para Kafka. Los siniestros siguen un ciclo de vida OPEN -> IN_PROGRESS -> RESOLVED -> CLOSED, con posibilidad de escalamiento (ESCALATED). Cada cambio de estado emite un evento a Kafka.
+Microservicio cloud-native para incidencias/siniestros. Demuestra Quarkus como alternativa a Spring Boot, con Panache ORM y SmallRye Reactive Messaging para Kafka. Los siniestros siguen el ciclo OPEN -> IN_PROGRESS -> RESOLVED -> CLOSED.
 
 - **Stack**: Java 21, Quarkus 3.8, Hibernate Panache, SmallRye Reactive Messaging
 - **Puerto**: 8084
@@ -111,7 +110,7 @@ Microservicio cloud-native para la gestion de incidencias/siniestros. Demuestra 
 
 #### [Customers Service](../components/customers-service/README.md) — Gestion de Clientes
 
-Microservicio poliglota que demuestra que la arquitectura contract-driven permite usar tecnologias fuera del ecosistema JVM. Gestiona el registro y ciclo de vida de clientes (ACTIVE/INACTIVE/SUSPENDED/BLOCKED). Usa Prisma como ORM (migraciones declarativas, type-safety) y KafkaJS para la integracion con el bus de eventos. Valida todas las entradas con Zod schemas.
+Microservicio poliglota que demuestra interoperabilidad fuera del ecosistema JVM. Gestiona el registro y ciclo de vida de clientes (ACTIVE/INACTIVE/SUSPENDED/BLOCKED). Usa Prisma como ORM y KafkaJS para eventos.
 
 - **Stack**: Node.js 20, TypeScript, Express 4, Prisma ORM, KafkaJS
 - **Puerto**: 8085
@@ -119,55 +118,46 @@ Microservicio poliglota que demuestra que la arquitectura contract-driven permit
 
 ### Infraestructura (namespace: guidewire-infra)
 
-#### [Apache Kafka](../infra/kafka/README.md) — Event Backbone
+#### [Apache Kafka](../infra/kafka/README.md) — Backbone de Eventos
 
-El bus de eventos central de la arquitectura. Opera en modo KRaft (sin ZooKeeper) gestionado por el operador Strimzi. Mantiene 9 topics organizados por dominio: billing (2), incidents (2), customers (2), policies (1), eventos sin clasificar (1) y dead-letter queue (1). Todos los mensajes se serializan en formato AVRO con schemas gobernados por Apicurio. Retencion de 7 dias por defecto.
+Bus de eventos central. Opera en modo KRaft (sin ZooKeeper) gestionado por Strimzi. 9 topics organizados por dominio con serializacion AVRO. Retencion de 7 dias por defecto.
 
 - **Stack**: Apache Kafka 4.0 (Strimzi v0.50.0, KafkaNodePool CRD)
 - **Puerto**: 9092
 
 #### [PostgreSQL](../infra/postgres/README.md) — Base de Datos Relacional
 
-Instancia compartida de PostgreSQL que implementa el patron database-per-service a nivel logico. Contiene 5 bases de datos aisladas (billing, incidents, customers, drools_audit, apicurio), cada una con su usuario y permisos dedicados. Las migraciones se gestionan por cada servicio (JPA auto-DDL, Prisma, Hibernate).
+Instancia compartida que implementa el patron database-per-service a nivel logico. 5 bases de datos aisladas (billing, incidents, customers, drools_audit, apicurio).
 
 - **Stack**: PostgreSQL 16 Alpine
 - **Puerto**: 5432 (interno), 15432 (expuesto)
 
 #### [Apicurio Schema Registry](../infra/apicurio/README.md) — Gobernanza de Schemas
 
-Registro centralizado de schemas que garantiza la compatibilidad de los contratos de eventos. Almacena los 6 schemas AVRO, los 6 specs OpenAPI y el spec AsyncAPI en grupos de artefactos separados. Aplica politica de compatibilidad FULL (forward + backward) para evitar roturas entre productores y consumidores. Los serializadores Kafka de cada servicio consultan el registry en tiempo de ejecucion.
+Registro centralizado de schemas que garantiza la compatibilidad de los contratos de eventos. Almacena 6 schemas AVRO, 8 specs OpenAPI y 1 spec AsyncAPI. Aplica compatibilidad FULL.
 
 - **Stack**: Apicurio Service Registry 2.5.11 (backend PostgreSQL)
 - **Puerto**: 8081
 
-#### [Apache ActiveMQ Artemis](../infra/activemq/README.md) — Mensajeria JMS
-
-Broker de mensajeria para patrones punto-a-punto y request/reply con sistemas legacy que usan JMS/AMQP. Complementa a Kafka (que es para event streaming). Define 3 colas: solicitudes de facturacion desde claims, alertas de fraude y notificaciones salientes. El Camel Gateway lo utiliza para comunicacion sincrona con BillingCenter.
-
-- **Stack**: Apache ActiveMQ Artemis 2.33 (operador AMQ Broker)
-- **Puerto**: 61616 (AMQP), 8161 (consola Hawtio)
-
 #### [3Scale API Gateway](../infra/threescale/README.md) — Gestion de APIs
 
-Gateway de API empresarial que protege todos los endpoints publicos. Implementa autenticacion por API Key (header `X-API-Key`), rate limiting diferenciado por servicio (100-200 req/min) y enrutamiento a los backends. Configurado en modo standalone (sin base de datos) con configuracion declarativa JSON.
+Gateway empresarial que protege todos los endpoints publicos. Autenticacion por API Key, rate limiting diferenciado (100-200 req/min) y enrutamiento a backends.
 
 - **Stack**: Red Hat 3Scale APIcast
 - **Puerto**: 8000 (proxy), 8001 (management)
 
-#### [Kafdrop](../infra/kafka/README.md#kafdrop) — UI de Kafka
+#### [Kafdrop](../infra/kafka/README.md#monitoreo--kafdrop) — UI de Kafka
 
-Interfaz web para inspeccion de topics, consumer groups y mensajes de Kafka. Permite verificar visualmente que los eventos se estan produciendo y consumiendo correctamente durante el desarrollo y las pruebas E2E.
+Interfaz web para inspeccion de topics, consumer groups y mensajes de Kafka.
 
 - **Stack**: Kafdrop 4.0.1
 - **Puerto**: 9000
 
 ---
 
-## Data Flow Diagrams
+## Flujos de Datos
 
-### Flow 1: Policy Creation and Billing
-
-This flow demonstrates how a policy created in PolicyCenter triggers invoice creation in the billing microservice.
+### Flujo 1: Creacion de Poliza y Facturacion
 
 ```mermaid
 sequenceDiagram
@@ -177,17 +167,17 @@ sequenceDiagram
     participant KF as Kafka
     participant BS as Billing Service
 
-    PC->>CG: SOAP/REST request
-    CG->>DR: Validate policy
-    DR-->>CG: Validation result
-    Note over CG: [if valid] Transform SOAP to AVRO
-    CG->>KF: Produce billing.invoice-created
+    PC->>CG: Peticion SOAP/REST
+    CG->>DR: Validar poliza
+    DR-->>CG: Resultado de validacion
+    Note over CG: [si valida] Transformar SOAP a AVRO
+    CG->>KF: Producir billing.invoice-created
     CG-->>PC: HTTP 201
-    KF->>BS: Consume event
-    Note over BS: Create invoice (status: PENDING)<br/>Store in PostgreSQL
+    KF->>BS: Consumir evento
+    Note over BS: Crear factura (estado: PENDING)<br/>Guardar en PostgreSQL
 ```
 
-#### Invoice State Machine
+#### Maquina de Estados — Facturas
 
 ```mermaid
 stateDiagram-v2
@@ -201,9 +191,7 @@ stateDiagram-v2
     CANCELLED --> [*]
 ```
 
-### Flow 2: Claim Processing and Incident Management
-
-This flow shows how a claim from ClaimCenter creates an incident, goes through fraud detection rules, and progresses through the incident lifecycle.
+### Flujo 2: Procesamiento de Siniestros
 
 ```mermaid
 sequenceDiagram
@@ -213,17 +201,17 @@ sequenceDiagram
     participant KF as Kafka
     participant IS as Incidents Service
 
-    CC->>CG: REST POST claim
-    CG->>DR: Evaluate fraud + routing rules
-    DR-->>CG: Priority + flags
-    Note over CG: Transform to AVRO<br/>Enrich with priority
-    CG->>KF: Produce incidents.incident-created
+    CC->>CG: POST claim (REST)
+    CG->>DR: Evaluar fraude + enrutamiento
+    DR-->>CG: Prioridad + flags
+    Note over CG: Transformar a AVRO<br/>Enriquecer con prioridad
+    CG->>KF: Producir incidents.incident-created
     CG-->>CC: HTTP 201
-    KF->>IS: Consume event
-    Note over IS: Create incident (status: OPEN)<br/>Store in PostgreSQL
+    KF->>IS: Consumir evento
+    Note over IS: Crear incidencia (estado: OPEN)<br/>Guardar en PostgreSQL
 ```
 
-#### Incident State Machine
+#### Maquina de Estados — Incidencias
 
 ```mermaid
 stateDiagram-v2
@@ -238,9 +226,7 @@ stateDiagram-v2
     CLOSED --> [*]
 ```
 
-### Flow 3: Customer Registration (Cross-Domain)
-
-This flow illustrates customer registration and how the event is consumed by multiple services for cross-domain data synchronization.
+### Flujo 3: Registro de Cliente (Cross-Domain)
 
 ```mermaid
 sequenceDiagram
@@ -252,22 +238,22 @@ sequenceDiagram
     participant IS as Incidents Service
 
     Client->>CG: POST customer
-    CG->>KF: Produce customers.customer-registered
+    CG->>KF: Producir customers.customer-registered
     CG-->>Client: HTTP 201
 
     par customers-svc-group
-        KF->>CS: Consume event
-        Note over CS: Register customer (ACTIVE)<br/>Store in PostgreSQL
+        KF->>CS: Consumir evento
+        Note over CS: Registrar cliente (ACTIVE)<br/>Guardar en PostgreSQL
     and billing-svc-group
-        KF->>BS: Consume event
-        Note over BS: Cache customer ref<br/>for invoice linking
+        KF->>BS: Consumir evento
+        Note over BS: Cache referencia cliente<br/>para enlazar facturas
     and incidents-svc-group
-        KF->>IS: Consume event
-        Note over IS: Cache customer ref<br/>for incident linking
+        KF->>IS: Consumir evento
+        Note over IS: Cache referencia cliente<br/>para enlazar incidencias
     end
 ```
 
-#### Customer State Machine
+#### Maquina de Estados — Clientes
 
 ```mermaid
 stateDiagram-v2
@@ -283,172 +269,152 @@ stateDiagram-v2
 
 ---
 
-## Architecture Decision Records (ADRs)
+## Decisiones de Arquitectura (ADRs)
 
-### ADR-001: API-First / Contract-Driven Development
+### ADR-001: Desarrollo API-First / Contract-Driven
 
-**Status**: Accepted
+**Estado**: Aceptada
 
-**Context**: The integration between Guidewire InsuranceSuite and internal microservices requires well-defined interfaces. Teams working on different services need stable contracts to develop in parallel without tight coupling.
+**Contexto**: La integracion entre Guidewire InsuranceSuite y los microservicios internos requiere interfaces bien definidas. Los equipos necesitan contratos estables para desarrollar en paralelo sin acoplamiento.
 
-**Decision**: Adopt API-First development where all interfaces (REST APIs, async events, data schemas) are defined as machine-readable contracts (OpenAPI 3.1, AsyncAPI 3.0, Apache AVRO) before any implementation begins. Contracts live in the `contracts/` directory and serve as the single source of truth.
+**Decision**: Adoptar desarrollo API-First donde todas las interfaces (APIs REST, eventos asincronos, schemas de datos) se definen como contratos legibles por maquina (OpenAPI 3.1, AsyncAPI 3.0, Apache AVRO) antes de cualquier implementacion.
 
-**Consequences**:
-- Positive: Parallel team development is possible from day one
-- Positive: Contract validation can be automated in CI/CD (Spectral, AsyncAPI CLI)
-- Positive: Code generation from contracts reduces boilerplate and drift
-- Positive: Apicurio Schema Registry enforces AVRO schema compatibility at runtime
-- Negative: Upfront design effort is higher
-- Negative: Contract changes require coordination across teams
-
----
-
-### ADR-002: Red Hat OpenShift Local (CRC) over Vagrant + Podman Compose
-
-**Status**: Accepted (supersedes original ADR-002: Podman over Docker)
-
-**Context**: The POC needs a local development environment that closely mirrors production OpenShift. The original approach used Vagrant + libvirt/KVM to create a VM running Podman Compose. While functional, this added an extra virtualization layer and didn't exercise Kubernetes/OpenShift primitives (Operators, Routes, Services, BuildConfigs).
-
-**Decision**: Use Red Hat OpenShift Local (CRC) as the local development platform. CRC runs a single-node OpenShift 4.x cluster with full Kubernetes API, Operator Lifecycle Manager, and enterprise features. Podman Compose is retained as a legacy alternative.
-
-**Consequences**:
-- Positive: Real OpenShift environment matches production (Operators, Routes, RBAC, SCC)
-- Positive: Strimzi, AMQ Broker, and Apicurio operators manage infrastructure lifecycle
-- Positive: Cross-namespace service discovery via Kubernetes DNS
-- Positive: BuildConfig + ImageStream provide native container build pipeline
-- Positive: No extra VM layer -- CRC manages its own lightweight VM
-- Negative: CRC requires a free Red Hat account for pull secret
-- Negative: Higher resource baseline (~9GB RAM minimum for CRC itself)
-- Negative: Operator startup can be slow on first deployment
+**Consecuencias**:
+- Positivo: Desarrollo paralelo posible desde el dia uno
+- Positivo: Validacion de contratos automatizable en CI/CD (Spectral, AsyncAPI CLI)
+- Positivo: Generacion de codigo desde contratos reduce boilerplate y drift
+- Positivo: Apicurio Schema Registry aplica compatibilidad AVRO en runtime
+- Negativo: Mayor esfuerzo de diseno inicial
+- Negativo: Cambios de contrato requieren coordinacion entre equipos
 
 ---
 
-### ADR-003: Apache Kafka over RabbitMQ
+### ADR-002: Red Hat OpenShift Local (CRC) en lugar de Vagrant + Podman Compose
 
-**Status**: Accepted
+**Estado**: Aceptada (reemplaza ADR-002 original: Podman sobre Docker)
 
-**Context**: The system needs an event backbone for asynchronous communication between the Camel Gateway and downstream microservices. The events represent domain state changes (invoices, incidents, customers) that may need replay, auditing, and multi-consumer patterns.
+**Contexto**: El POC necesita un entorno local que replique produccion con OpenShift. El enfoque original con Vagrant + Podman Compose no ejercitaba primitivas Kubernetes/OpenShift (Operators, Routes, Services, BuildConfigs).
 
-**Decision**: Use Apache Kafka (in KRaft mode, without ZooKeeper) as the primary event streaming platform. Use AVRO serialization with Apicurio Schema Registry for schema governance.
+**Decision**: Usar Red Hat OpenShift Local (CRC) como plataforma de desarrollo local.
 
-**Consequences**:
-- Positive: Kafka provides durable, ordered, replayable event log -- essential for event sourcing patterns
-- Positive: Multiple consumer groups can independently consume the same events (fan-out)
-- Positive: KRaft mode eliminates ZooKeeper dependency, simplifying operations
-- Positive: AVRO + Schema Registry enables schema evolution with backward/forward compatibility
-- Positive: Kafka is the industry standard for event-driven architectures at scale
-- Positive: Kafdrop provides a web UI for topic inspection and debugging
-- Negative: Higher operational complexity compared to RabbitMQ for simple pub/sub
-- Negative: KRaft is relatively newer (GA since Kafka 3.3) compared to ZooKeeper mode
-- Negative: AVRO serialization adds complexity vs plain JSON
-
-**Note**: ActiveMQ Artemis is also included in the stack for JMS-based messaging with legacy systems that require point-to-point or traditional request/reply patterns.
+**Consecuencias**:
+- Positivo: Entorno real OpenShift (Operators, Routes, RBAC, SCC)
+- Positivo: Strimzi y Apicurio via OLM gestionan el ciclo de vida de infraestructura
+- Positivo: Service discovery cross-namespace via DNS Kubernetes
+- Positivo: BuildConfig + ImageStream proporcionan pipeline nativo de builds
+- Negativo: CRC requiere cuenta Red Hat gratuita para el pull secret
+- Negativo: Baseline de recursos alto (~9GB RAM minimo para CRC)
 
 ---
 
-### ADR-004: Polyglot Microservices
+### ADR-003: Apache Kafka como backbone de eventos
 
-**Status**: Accepted
+**Estado**: Aceptada
 
-**Context**: The POC needs to demonstrate that microservices in an insurance integration platform can use different technology stacks while maintaining interoperability through well-defined contracts and Kafka events.
+**Contexto**: El sistema necesita un backbone de eventos para comunicacion asincrona entre el Camel Gateway y los microservicios downstream. Los eventos representan cambios de estado de dominio que pueden necesitar replay, auditoria y patrones multi-consumidor.
 
-**Decision**: Implement microservices using three different technology stacks:
-- **Billing Service**: Java 21 + Spring Boot 3.3 (mainstream enterprise framework)
-- **Incidents Service**: Java 21 + Quarkus 3.8 (cloud-native, fast startup, low memory)
-- **Customers Service**: Node.js 20 + TypeScript + Express (non-JVM alternative)
-- **Camel Gateway**: Java 21 + Spring Boot 3.3 + Apache Camel 4 (integration patterns)
-- **Drools Engine**: Java 21 + Spring Boot 3.3 + Drools 8 (business rules)
+**Decision**: Usar Apache Kafka en modo KRaft (sin ZooKeeper) con serializacion AVRO y Apicurio Schema Registry para gobernanza de schemas. Guidewire Cloud Platform usa Kafka nativamente (Application Events Service, Integration Gateway, Data Platform), por lo que Kafka es la eleccion natural.
 
-**Consequences**:
-- Positive: Demonstrates true microservice independence -- each team can pick their best tool
-- Positive: Proves that API-First contracts enable technology heterogeneity
-- Positive: Quarkus demonstrates cloud-native Java benefits (fast boot, low RSS)
-- Positive: Node.js shows that non-JVM services integrate seamlessly via Kafka + REST
-- Positive: Validates the contract-driven approach across language boundaries
-- Negative: Broader skill set required from the team
-- Negative: Shared tooling (monitoring, logging, tracing) must be language-agnostic
-- Negative: Each service has its own build pipeline and dependency management
+**Consecuencias**:
+- Positivo: Log de eventos durable, ordenado y replayable
+- Positivo: Multiples consumer groups consumen los mismos eventos independientemente (fan-out)
+- Positivo: KRaft elimina la dependencia de ZooKeeper
+- Positivo: AVRO + Schema Registry habilita evolucion de schemas con compatibilidad
+- Negativo: Mayor complejidad operacional que alternativas simples de pub/sub
+- Negativo: Serializacion AVRO anade complejidad vs JSON plano
 
 ---
 
-### ADR-005: AVRO over Protobuf / JSON Schema for Event Serialization
+### ADR-004: Microservicios Poliglota
 
-**Status**: Accepted
+**Estado**: Aceptada
 
-**Context**: Kafka events need a serialization format that supports schema evolution, is compact on the wire, and integrates well with the chosen Schema Registry (Apicurio).
+**Contexto**: El POC debe demostrar que los microservicios pueden usar diferentes stacks tecnologicos manteniendo interoperabilidad a traves de contratos bien definidos.
 
-**Decision**: Use Apache AVRO as the serialization format for all Kafka events. Schemas are stored in `contracts/avro/` and registered in Apicurio Schema Registry.
+**Decision**: Implementar microservicios con tres stacks diferentes:
+- **Billing Service**: Java 21 + Spring Boot 3.3 (framework enterprise mainstream)
+- **Incidents Service**: Java 21 + Quarkus 3.8 (cloud-native, arranque rapido, bajo consumo)
+- **Customers Service**: Node.js 20 + TypeScript + Express (alternativa no-JVM)
+- **Camel Gateway**: Java 21 + Spring Boot 3.3 + Apache Camel 4 (patrones de integracion)
+- **Drools Engine**: Java 21 + Spring Boot 3.3 + Drools 8 (reglas de negocio)
 
-**Consequences**:
-- Positive: AVRO is the de facto standard in the Kafka ecosystem
-- Positive: Native support in Apicurio Schema Registry (compatibility checks, versioning)
-- Positive: Binary encoding is compact and efficient
-- Positive: Schema evolution rules (backward, forward, full) are well-defined
-- Positive: Both Java (Camel, Spring Kafka) and Node.js (kafkajs + schema-registry) have mature AVRO support
-- Negative: AVRO schemas are more verbose than Protobuf definitions
-- Negative: Debugging binary messages requires schema-aware tooling (Kafdrop with registry integration)
-- Negative: Schema registry becomes a critical infrastructure dependency
-
----
-
-### ADR-006: 3Scale API Gateway over Kong / Traefik
-
-**Status**: Accepted
-
-**Context**: The POC needs an API Gateway for rate limiting, authentication, and API management. The target enterprise environment uses Red Hat middleware.
-
-**Decision**: Use Red Hat 3Scale (APIcast) as the API Gateway, configured declaratively via JSON.
-
-**Consequences**:
-- Positive: Full alignment with Red Hat enterprise stack (OpenShift, Fuse, AMQ)
-- Positive: APIcast supports declarative configuration (no database required for POC)
-- Positive: Production-grade API management features (rate limiting, analytics, developer portal)
-- Positive: Demonstrates enterprise API governance patterns
-- Negative: Heavier footprint than lightweight alternatives (Traefik, Envoy)
-- Negative: Less community documentation compared to Kong or Traefik
-- Negative: APIcast configuration model is specific to 3Scale
+**Consecuencias**:
+- Positivo: Demuestra independencia real de microservicios
+- Positivo: Prueba que los contratos API-First habilitan heterogeneidad tecnologica
+- Positivo: Node.js demuestra que servicios no-JVM se integran via Kafka + REST
+- Negativo: Se requiere un conjunto mas amplio de habilidades
+- Negativo: Cada servicio tiene su propio pipeline de build y gestion de dependencias
 
 ---
 
-### ADR-007: Apache Camel as Integration Gateway
+### ADR-005: AVRO para serializacion de eventos
 
-**Status**: Accepted
+**Estado**: Aceptada
 
-**Context**: Integration with Guidewire requires protocol mediation (SOAP to REST), message transformation, content-based routing, and error handling. These are classic Enterprise Integration Patterns (EIP).
+**Contexto**: Los eventos Kafka necesitan un formato de serializacion que soporte evolucion de schemas, sea compacto en la red e integre bien con Apicurio.
 
-**Decision**: Use Apache Camel 4 (embedded in Spring Boot) as the integration gateway layer between external Guidewire systems and internal Kafka topics.
+**Decision**: Usar Apache AVRO como formato de serializacion para todos los eventos Kafka. Los schemas se almacenan en `contracts/avro/` y se registran en Apicurio.
 
-**Consequences**:
-- Positive: Camel implements 60+ Enterprise Integration Patterns natively
-- Positive: Built-in support for SOAP, REST, Kafka, JMS, and hundreds of other protocols
-- Positive: Spring Boot integration provides familiar configuration and management
-- Positive: Strong alignment with Red Hat Fuse / Camel K for production deployment
-- Positive: Route definitions are declarative and testable
-- Negative: Camel has a steep learning curve for developers unfamiliar with EIP
-- Negative: Debugging complex routes with multiple transformations can be challenging
-- Negative: Adds an additional service to the deployment topology
+**Consecuencias**:
+- Positivo: AVRO es el estandar de facto en el ecosistema Kafka
+- Positivo: Soporte nativo en Apicurio (validacion de compatibilidad, versionado)
+- Positivo: Codificacion binaria compacta y eficiente
+- Negativo: Schemas AVRO son mas verbosos que definiciones Protobuf
+- Negativo: Schema registry se convierte en dependencia critica de infraestructura
 
 ---
 
-## Technology Stack Summary
+### ADR-006: 3Scale API Gateway
 
-| Layer               | Technology                  | Version | Purpose                                      |
-|---------------------|-----------------------------|---------|----------------------------------------------|
-| Platform            | Red Hat OpenShift Local (CRC) | 4.x   | Single-node OpenShift cluster                 |
-| Orchestration       | Kubernetes / OpenShift      | 4.x     | Pod scheduling, service discovery, routes     |
-| API Gateway         | Red Hat 3Scale (APIcast)    | latest  | Rate limiting, auth, API management           |
-| Integration         | Apache Camel 4              | 4.4     | EIP, protocol mediation, routing              |
-| Event Streaming     | Apache Kafka (KRaft)        | 4.0     | Event backbone, durable log (Strimzi v0.50.0) |
-| JMS Messaging       | Apache ActiveMQ Artemis     | 2.33    | Point-to-point messaging, legacy integration  |
-| Rules Engine        | Drools 8                    | 8.x     | Business rules, fraud detection, validation   |
-| Schema Registry     | Apicurio Service Registry   | 2.5     | AVRO schema governance, compatibility checks  |
-| Database            | PostgreSQL                  | 16      | Relational storage for all microservices      |
-| Java Runtime        | Eclipse Temurin             | 21      | LTS Java distribution                         |
-| Node.js Runtime     | Node.js LTS                 | 20      | JavaScript/TypeScript runtime                 |
-| Java Framework 1    | Spring Boot                 | 3.3     | Billing, Camel Gateway, Drools                |
-| Java Framework 2    | Quarkus                     | 3.8     | Incidents Service (cloud-native)              |
-| Node.js Framework   | Express 4 + TypeScript      | 4.x     | Customers Service                             |
-| API Specs           | OpenAPI 3.1                 | 3.1     | REST API contracts                            |
-| Event Specs         | AsyncAPI 3.0                | 3.0     | Async event contracts                         |
-| Serialization       | Apache AVRO                 | 1.9+    | Kafka message serialization                   |
-| Kafka UI            | Kafdrop                     | 4.0     | Topic inspection, message browsing            |
+**Estado**: Aceptada
+
+**Contexto**: El POC necesita un API Gateway para rate limiting, autenticacion y gestion de APIs. El entorno objetivo usa middleware Red Hat.
+
+**Decision**: Usar Red Hat 3Scale (APIcast) como API Gateway, configurado declarativamente via JSON.
+
+**Consecuencias**:
+- Positivo: Alineacion con el stack enterprise Red Hat (OpenShift, Fuse, AMQ)
+- Positivo: APIcast soporta configuracion declarativa (sin base de datos para POC)
+- Positivo: Funcionalidades de gestion de APIs enterprise (rate limiting, analytics)
+- Negativo: Footprint mayor que alternativas ligeras (Traefik, Envoy)
+
+---
+
+### ADR-007: Apache Camel como Gateway de Integracion
+
+**Estado**: Aceptada
+
+**Contexto**: La integracion con Guidewire requiere mediacion de protocolos (SOAP a REST), transformacion de mensajes, enrutamiento basado en contenido y manejo de errores. Son patrones clasicos de Enterprise Integration Patterns (EIP).
+
+**Decision**: Usar Apache Camel 4 (embebido en Spring Boot) como capa de integracion entre los sistemas Guidewire y los topics Kafka internos.
+
+**Consecuencias**:
+- Positivo: Camel implementa 60+ Enterprise Integration Patterns nativamente
+- Positivo: Soporte nativo para SOAP, REST, Kafka y cientos de otros protocolos
+- Positivo: Definiciones de rutas declarativas y testeables
+- Positivo: Alineacion con Red Hat Fuse / Camel K para despliegue en produccion
+- Negativo: Curva de aprendizaje pronunciada para desarrolladores sin experiencia EIP
+
+---
+
+## Stack Tecnologico
+
+| Capa | Tecnologia | Version | Proposito |
+|------|-----------|---------|-----------|
+| Plataforma | Red Hat OpenShift Local (CRC) | 4.x | Cluster OpenShift single-node |
+| Orquestacion | Kubernetes / OpenShift | 4.x | Scheduling de pods, service discovery, routes |
+| API Gateway | Red Hat 3Scale (APIcast) | latest | Rate limiting, autenticacion, gestion de APIs |
+| Integracion | Apache Camel 4 | 4.4 | EIP, mediacion de protocolos, enrutamiento |
+| Event Streaming | Apache Kafka (KRaft) | 4.0 | Backbone de eventos, log durable (Strimzi v0.50.0) |
+| Motor de Reglas | Drools 8 | 8.x | Reglas de negocio, deteccion de fraude, validacion |
+| Schema Registry | Apicurio Service Registry | 2.5 | Gobernanza de schemas AVRO, validacion de compatibilidad |
+| Base de Datos | PostgreSQL | 16 | Almacenamiento relacional para todos los microservicios |
+| Runtime Java | Eclipse Temurin | 21 | Distribucion LTS de Java |
+| Runtime Node.js | Node.js LTS | 20 | Runtime JavaScript/TypeScript |
+| Framework Java 1 | Spring Boot | 3.3 | Billing, Camel Gateway, Drools |
+| Framework Java 2 | Quarkus | 3.8 | Incidents Service (cloud-native) |
+| Framework Node.js | Express 4 + TypeScript | 4.x | Customers Service |
+| Specs API | OpenAPI 3.1 | 3.1 | Contratos REST |
+| Specs Eventos | AsyncAPI 3.0 | 3.0 | Contratos de eventos asincronos |
+| Serializacion | Apache AVRO | 1.9+ | Serializacion de mensajes Kafka |
+| UI Kafka | Kafdrop | 4.0 | Inspeccion de topics y mensajes |

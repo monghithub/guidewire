@@ -1,5 +1,7 @@
 # Apicurio Service Registry — Documentación
 
+> [Volver a OpenSpecs](../../../README.md) · [Volver al README principal](../../../../README.md)
+
 ## Descripción
 
 Registro centralizado de contratos y esquemas del ecosistema Guidewire.
@@ -291,3 +293,12 @@ curl -sk "$APICURIO/search/artifacts?labels=type:avro&labels=domain:billing"
 - [spec.yml](../../../infra/apicurio/spec.yml)
 - Issue: [#30](../../../../issues/30)
 - CI/CD: [#88](../../../../issues/88)
+
+---
+
+## Documentación relacionada
+
+- [Kafka](../kafka/README.md) — Broker de eventos cuyo serde se integra con Apicurio
+- [Contratos OpenAPI](../../../../contracts/openapi/) — Specs REST registradas en el registry
+- [Contratos AVRO](../../../../contracts/avro/) — Schemas Avro registrados en el registry
+- [Contratos AsyncAPI](../../../../contracts/asyncapi/) — Spec de eventos Kafka registrada en el registry

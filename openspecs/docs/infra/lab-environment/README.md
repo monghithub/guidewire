@@ -1,6 +1,8 @@
-# Lab Environment — Documentacion
+# Lab Environment — Documentación
 
-## Descripcion
+> [Volver a OpenSpecs](../../../README.md) · [Volver al README principal](../../../../README.md)
+
+## Descripción
 
 Entorno de laboratorio sobre CRC (OpenShift Local). Dos namespaces organizan el stack: `guidewire-infra` para infraestructura (PostgreSQL, Kafka, ActiveMQ, Apicurio, 3Scale, Kafdrop) y `guidewire-apps` para los microservicios de negocio. Todo se despliega con manifiestos Kubernetes nativos via `oc apply`.
 
@@ -157,3 +159,9 @@ lab/openshift/
 
 - [spec.yml](../../../infra/lab-environment/spec.yml)
 - Issue: [#34](../../../../issues/34)
+
+---
+
+## Documentación relacionada
+
+- [UNINSTALL.md](../../../../../lab/openshift/UNINSTALL.md) — Guía de desinstalación del entorno OpenShift

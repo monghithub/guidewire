@@ -1,5 +1,7 @@
 # Billing Service — Documentación
 
+> [Volver a OpenSpecs](../../README.md) · [Volver al README principal](../../../../README.md)
+
 ## Descripción
 
 Microservicio de facturación implementado con Spring Boot 3.3. Gestiona facturas internas alimentadas por eventos de Guidewire BillingCenter via Kafka.
@@ -106,6 +108,12 @@ stateDiagram-v2
 - `totalAmount` debe ser > 0
 - Al menos un item requerido
 - Transiciones de estado validadas (409 si inválida)
+
+## Documentacion relacionada
+
+- [Kafka](../../infra/kafka/README.md)
+- [OpenAPI](../../design/openapi/README.md)
+- [AVRO](../../design/avro/README.md)
 
 ## Spec de referencia
 

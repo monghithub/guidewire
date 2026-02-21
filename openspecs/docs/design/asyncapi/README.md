@@ -1,5 +1,7 @@
 # AsyncAPI Spec — Documentación
 
+> [Volver a OpenSpecs](../../../README.md) · [Volver al README principal](../../../../../README.md)
+
 ## Descripción
 
 Especificación AsyncAPI 3.0 que documenta todos los canales de eventos Kafka del ecosistema Guidewire. Referencia los schemas AVRO registrados en Apicurio.
@@ -76,3 +78,9 @@ Todos los mensajes usan serialización **AVRO binaria** con schema ID resuelto d
 
 - [spec.yml](../../../design/asyncapi/guidewire-events/spec.yml)
 - Issue: [#38](../../../../issues/38)
+
+## Documentacion relacionada
+
+- [Kafka](../../infra/kafka/README.md)
+- [AVRO Schemas](../avro/README.md)
+- [OpenAPI Specs](../openapi/README.md)

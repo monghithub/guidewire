@@ -1,5 +1,7 @@
 # Integración y Testing E2E — Documentación
 
+> [Volver a OpenSpecs](../../README.md) · [Volver al README principal](../../../README.md)
+
 ## 3Scale API Registration
 
 Registro de las 6 APIs en el gateway 3Scale:
@@ -75,3 +77,8 @@ newman run contracts/postman/guidewire-e2e.postman_collection.json \
 - [3Scale Registration spec.yml](../../integration/threescale-registration/spec.yml)
 - [Postman E2E spec.yml](../../integration/postman-e2e/spec.yml)
 - Issues: [#66](../../../issues/66), [#67](../../../issues/67)
+
+## Documentacion relacionada
+
+- [3Scale API Management](../infra/3scale/README.md)
+- [DevOps / CI-CD](../devops/README.md)

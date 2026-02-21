@@ -1,5 +1,7 @@
 # Drools Rules Engine — Documentación
 
+> [Volver a OpenSpecs](../../README.md) · [Volver al README principal](../../../../README.md)
+
 ## Descripción
 
 Motor de reglas de negocio basado en Drools 8.x. Evalúa reglas de fraude, validaciones de pólizas, cálculo de comisiones y enrutamiento de incidencias. Invocado por Camel Gateway via REST.
@@ -142,6 +144,11 @@ El Drools Engine utiliza una base de datos PostgreSQL para almacenar el audit tr
 | JDBC URL | `jdbc:postgresql://postgres.guidewire-infra.svc.cluster.local:5432/drools_audit` |
 
 La base se crea automáticamente en el init script de PostgreSQL (`configmap-init-db.yml`).
+
+## Documentacion relacionada
+
+- [Camel Integration Gateway](../camel-gateway/README.md)
+- [OpenAPI](../../design/openapi/README.md)
 
 ## Spec de referencia
 

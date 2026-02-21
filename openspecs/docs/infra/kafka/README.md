@@ -1,5 +1,7 @@
 # Apache Kafka (KRaft) — Documentación
 
+> [Volver a OpenSpecs](../../../README.md) · [Volver al README principal](../../../../README.md)
+
 ## Descripción
 
 Broker de eventos en modo **KRaft** (sin ZooKeeper). Actúa como backbone de la arquitectura event-driven (EDA). Todos los eventos del ecosistema Guidewire fluyen por Kafka.
@@ -153,3 +155,11 @@ oc exec -n guidewire-infra kafka-cluster-kafka-pool-0 -- bin/kafka-consumer-grou
 
 - [spec.yml](../../../infra/kafka/spec.yml)
 - Issue: [#29](../../../../issues/29)
+
+---
+
+## Documentación relacionada
+
+- [Apicurio Service Registry](../apicurio/README.md) — Registro de schemas Avro usado por los productores/consumidores Kafka
+- [Camel Gateway](../../components/camel-gateway/README.md) — Gateway de integración que produce eventos a Kafka
+- [Arquitectura](../../architecture/README.md) — Visión general de la arquitectura event-driven

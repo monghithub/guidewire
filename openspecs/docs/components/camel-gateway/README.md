@@ -1,5 +1,7 @@
 # Camel Integration Gateway — Documentación
 
+> [Volver a OpenSpecs](../../README.md) · [Volver al README principal](../../../../README.md)
+
 ## Descripción
 
 Gateway de integración central basado en Apache Camel 4.x + Spring Boot 3.3. Actúa como mediador entre Guidewire (SOAP/REST) y el ecosistema de microservicios. Implementa patrones EIP.
@@ -119,7 +121,7 @@ oc start-build camel-gateway --from-dir=components/camel-gateway -n guidewire-ap
 
 ## Dependencias
 
-Requiere: Kafka, Apicurio, ActiveMQ (deben estar healthy antes de arrancar).
+Requiere: Kafka, Apicurio (deben estar healthy antes de arrancar).
 
 ### Dependencias Maven relevantes
 
@@ -127,6 +129,12 @@ Requiere: Kafka, Apicurio, ActiveMQ (deben estar healthy antes de arrancar).
 - `camel-cxf-soap-starter` — endpoints SOAP/CXF
 - `camel-xslt-starter` — transformaciones XSLT
 - `camel-kafka-starter` — productor/consumidor Kafka
+
+## Documentacion relacionada
+
+- [Kafka](../../infra/kafka/README.md)
+- [Drools Engine](../drools-engine/README.md)
+- [OpenAPI](../../design/openapi/README.md)
 
 ## Spec de referencia
 

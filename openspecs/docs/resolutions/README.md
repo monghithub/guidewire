@@ -1,5 +1,7 @@
 # Documentos de Resolucion
 
+> [Volver a OpenSpecs](../../README.md) · [Volver al README principal](../../../README.md)
+
 Guias paso a paso para resolver las issues del proyecto.
 
 ## Issues #70-#75: Funcionalidad y CI/CD

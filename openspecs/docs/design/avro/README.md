@@ -1,5 +1,7 @@
 # AVRO Schemas — Documentación
 
+> [Volver a OpenSpecs](../../../README.md) · [Volver al README principal](../../../../../README.md)
+
 ## Descripción
 
 6 schemas AVRO (.avsc) para los eventos publicados en Kafka. Registrados en Apicurio bajo el grupo "guidewire". Se usan para serialización/deserialización binaria con type-safety.
@@ -88,3 +90,9 @@ graph LR
 - [Billing Events spec.yml](../../../design/avro/billing-events/spec.yml)
 - [Incidents Events spec.yml](../../../design/avro/incidents-events/spec.yml)
 - [Customers Events spec.yml](../../../design/avro/customers-events/spec.yml)
+
+## Documentacion relacionada
+
+- [Kafka](../../infra/kafka/README.md)
+- [AsyncAPI Spec](../asyncapi/README.md)
+- [Apicurio Service Registry](../../infra/apicurio/README.md)

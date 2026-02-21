@@ -1,5 +1,7 @@
 # Customers Service — Documentación
 
+> [Volver a OpenSpecs](../../README.md) · [Volver al README principal](../../../../README.md)
+
 ## Descripción
 
 Microservicio de clientes implementado con Node.js 20 y TypeScript. Demuestra la capacidad polyglot del ecosistema de microservicios. Gestiona registro y estado de clientes de seguros.
@@ -162,6 +164,12 @@ RUN chmod -R g+rwX /app && chgrp -R 0 /app
 ### .dockerignore
 
 El archivo `.dockerignore` **no** excluye `tsconfig.json` ni `prisma/` ya que ambos son necesarios durante el build.
+
+## Documentacion relacionada
+
+- [Kafka](../../infra/kafka/README.md)
+- [OpenAPI](../../design/openapi/README.md)
+- [AVRO](../../design/avro/README.md)
 
 ## Spec de referencia
 

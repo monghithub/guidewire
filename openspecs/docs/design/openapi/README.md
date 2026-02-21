@@ -1,5 +1,7 @@
 # OpenAPI Specs — Documentación
 
+> [Volver a OpenSpecs](../../../README.md) · [Volver al README principal](../../../../../README.md)
+
 ## Descripción
 
 6 especificaciones OpenAPI 3.1 que definen los contratos REST del ecosistema. Se diseñan primero (API-First) y se usa generación de código para crear stubs.
@@ -85,7 +87,7 @@ spectral lint contracts/openapi/*.yml
 
 ## Registro en Apicurio
 
-Las specs se registran en el grupo `guidewire-openapi` de Apicurio Service Registry.
+Los specs se registran en Apicurio por servicio (ej: `guidewire.billing-service`, `guidewire.customers-service`). Ver [Apicurio docs](../../infra/apicurio/README.md).
 
 ## Specs de referencia
 
@@ -95,3 +97,9 @@ Las specs se registran en el grupo `guidewire-openapi` de Apicurio Service Regis
 - [Billing Service spec.yml](../../../design/openapi/billing-service/spec.yml)
 - [Incidents Service spec.yml](../../../design/openapi/incidents-service/spec.yml)
 - [Customers Service spec.yml](../../../design/openapi/customers-service/spec.yml)
+
+## Documentacion relacionada
+
+- [Apicurio Service Registry](../../infra/apicurio/README.md)
+- [AsyncAPI Spec](../asyncapi/README.md)
+- [AVRO Schemas](../avro/README.md)

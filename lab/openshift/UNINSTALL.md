@@ -1,5 +1,7 @@
 # Desinstalación y limpieza de CRC (OpenShift Local)
 
+> [Volver al README principal](../../README.md) · [INSTALL.md](../../openspecs/docs/infra/lab-environment/INSTALL.md)
+
 Este documento recoge todos los cambios realizados en el sistema host durante la
 instalación y configuración de CRC, para poder revertirlos limpiamente.
 

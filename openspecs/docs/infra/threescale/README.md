@@ -1,5 +1,7 @@
 # 3Scale API Gateway — Documentación
 
+> [Volver a OpenSpecs](../../../README.md) · [Volver al README principal](../../../../README.md)
+
 ## Descripción
 
 API Gateway empresarial que expone todas las APIs del ecosistema. Gestiona autenticación (API Key), rate limiting, CORS y routing hacia los servicios internos.
@@ -93,3 +95,9 @@ graph LR
 
 - [spec.yml](../../../infra/threescale/spec.yml)
 - Issue: [#31](../../../../issues/31)
+
+---
+
+## Documentación relacionada
+
+- [Integración](../../integration/README.md) — Flujos de integración que pasan por el API Gateway

@@ -1,5 +1,7 @@
 # PostgreSQL — Documentación
 
+> [Volver a OpenSpecs](../../../README.md) · [Volver al README principal](../../../../README.md)
+
 ## Descripción
 
 Instancia PostgreSQL 16 compartida que aloja 5 bases de datos lógicas, una por cada servicio que requiere persistencia. Se respeta el patrón **database-per-service**: cada servicio tiene su propia base de datos y usuario con permisos aislados.

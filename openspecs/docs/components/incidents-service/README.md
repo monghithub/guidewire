@@ -1,5 +1,7 @@
 # Incidents Service — Documentación
 
+> [Volver a OpenSpecs](../../README.md) · [Volver al README principal](../../../../README.md)
+
 ## Descripción
 
 Microservicio de incidencias implementado con Quarkus 3.8. Gestiona incidencias derivadas de siniestros de ClaimCenter, alimentadas por eventos Kafka.
@@ -105,6 +107,12 @@ stateDiagram-v2
 | Config | `application.yml` | `application.properties` |
 | Dev mode | `mvn spring-boot:run` | `mvn quarkus:dev` (hot reload) |
 | Native | No | Si (GraalVM) |
+
+## Documentacion relacionada
+
+- [Kafka](../../infra/kafka/README.md)
+- [OpenAPI](../../design/openapi/README.md)
+- [AVRO](../../design/avro/README.md)
 
 ## Spec de referencia
 
