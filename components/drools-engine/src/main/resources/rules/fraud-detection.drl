@@ -7,150 +7,152 @@ import java.math.BigDecimal;
 // FRAUD DETECTION RULES
 // Evaluates claims for suspicious patterns and assigns risk levels + fraud score
 // Score range: 0 (clean) to 100 (highly suspicious)
+//
+// Strategy: Score accumulation rules use direct setters only (no update/modify).
+// They are all activated at insert time based on input fields (claimedAmount,
+// daysSinceRegistration, claimCount, etc.) and fire in salience order.
+// A single AssignRiskLevel rule fires last (salience 1) and reads the final
+// fraudScore directly from the Java object in its THEN block.
 // =============================================================================
 
 // --- Amount-based rules ---
 
 rule "SuspiciousAmount_Critical"
     salience 100
+
     when
         $claim : ClaimFact(claimedAmount > 1000000)
     then
-        $claim.setFraudScore($claim.getFraudScore() + 40);
+        $claim.setFraudScore($claim.getFraudScore() + 70);
         $claim.addFlaggedReason("Claimed amount exceeds 1,000,000 MXN - CRITICAL threshold");
-        update($claim);
+
 end
 
 rule "HighAmountClaim"
     salience 95
+
     when
         $claim : ClaimFact(claimedAmount > 500000, claimedAmount <= 1000000)
     then
         $claim.setFraudScore($claim.getFraudScore() + 25);
         $claim.addFlaggedReason("Claimed amount exceeds 500,000 MXN - HIGH risk threshold");
-        update($claim);
+
 end
 
 rule "MediumAmountClaim"
     salience 90
+
     when
         $claim : ClaimFact(claimedAmount > 200000, claimedAmount <= 500000)
     then
         $claim.setFraudScore($claim.getFraudScore() + 10);
         $claim.addFlaggedReason("Claimed amount exceeds 200,000 MXN - elevated amount");
-        update($claim);
+
 end
 
 // --- Temporal pattern rules ---
 
 rule "NewCustomerImmediateClaim"
     salience 80
+
     when
         $claim : ClaimFact(daysSinceRegistration() <= 30)
     then
         $claim.setFraudScore($claim.getFraudScore() + 30);
         $claim.addFlaggedReason("Claim filed within 30 days of customer registration - suspicious timing");
-        update($claim);
+
 end
 
 rule "RecentCustomerClaim"
     salience 75
+
     when
         $claim : ClaimFact(daysSinceRegistration() > 30, daysSinceRegistration() <= 90)
     then
         $claim.setFraudScore($claim.getFraudScore() + 15);
         $claim.addFlaggedReason("Claim filed within 90 days of customer registration - watch pattern");
-        update($claim);
+
 end
 
 // --- Frequency-based rules ---
 
 rule "FrequentClaimant_Extreme"
     salience 70
+
     when
         $claim : ClaimFact(claimCount > 5)
     then
         $claim.setFraudScore($claim.getFraudScore() + 35);
         $claim.addFlaggedReason("Customer has more than 5 claims in the last 12 months - repeat pattern");
-        update($claim);
+
 end
 
 rule "FrequentClaimant_High"
     salience 65
+
     when
         $claim : ClaimFact(claimCount > 3, claimCount <= 5)
     then
         $claim.setFraudScore($claim.getFraudScore() + 20);
         $claim.addFlaggedReason("Customer has more than 3 claims in the last 12 months");
-        update($claim);
+
 end
 
 // --- Pattern matching rules ---
 
 rule "TheftWithoutPoliceReport"
     salience 60
+
     when
         $claim : ClaimFact(claimType == "THEFT", hasPoliceReport == false)
     then
         $claim.setFraudScore($claim.getFraudScore() + 25);
         $claim.addFlaggedReason("Theft claim filed without a police report");
-        update($claim);
+
 end
 
 rule "HighAmountNoWitnesses"
     salience 55
+
     when
         $claim : ClaimFact(claimedAmount > 300000, hasWitnesses == false, claimType != "FLOOD")
     then
         $claim.setFraudScore($claim.getFraudScore() + 15);
         $claim.addFlaggedReason("High-value claim with no witnesses");
-        update($claim);
+
 end
 
 rule "NewCustomerHighAmountTheft"
     salience 50
+
     when
         $claim : ClaimFact(daysSinceRegistration() <= 60, claimedAmount > 500000, claimType == "THEFT")
     then
         $claim.setFraudScore($claim.getFraudScore() + 20);
         $claim.addFlaggedReason("COMPOUND: New customer + high amount + theft = elevated risk pattern");
-        update($claim);
+
 end
 
 // --- Risk level assignment based on cumulative fraud score ---
+// Single rule that reads the final score from the Java object after all
+// accumulation rules have fired. Uses Java if/else in the THEN block to
+// avoid depending on Rete-cached fraudScore values in the WHEN clause.
 
-rule "AssignRiskLevel_Critical"
-    salience 5
-    when
-        $claim : ClaimFact(fraudScore >= 70, riskLevel == null)
-    then
-        $claim.setRiskLevel("CRITICAL");
-        update($claim);
-end
+rule "AssignRiskLevel"
+    salience 1
 
-rule "AssignRiskLevel_High"
-    salience 4
     when
-        $claim : ClaimFact(fraudScore >= 40, fraudScore < 70, riskLevel == null)
+        $claim : ClaimFact(riskLevel == null)
     then
-        $claim.setRiskLevel("HIGH");
-        update($claim);
-end
+        int score = $claim.getFraudScore();
+        if (score >= 70) {
+            $claim.setRiskLevel("CRITICAL");
+        } else if (score >= 40) {
+            $claim.setRiskLevel("HIGH");
+        } else if (score >= 20) {
+            $claim.setRiskLevel("MEDIUM");
+        } else {
+            $claim.setRiskLevel("LOW");
+        }
 
-rule "AssignRiskLevel_Medium"
-    salience 3
-    when
-        $claim : ClaimFact(fraudScore >= 20, fraudScore < 40, riskLevel == null)
-    then
-        $claim.setRiskLevel("MEDIUM");
-        update($claim);
-end
-
-rule "AssignRiskLevel_Low"
-    salience 2
-    when
-        $claim : ClaimFact(fraudScore < 20, riskLevel == null)
-    then
-        $claim.setRiskLevel("LOW");
-        update($claim);
 end

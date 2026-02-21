@@ -7,182 +7,222 @@ import java.math.BigDecimal;
 // INCIDENT ROUTING RULES
 // Determines incident priority, team assignment, SLA, and escalation
 // based on severity, amount, customer tier, and product type
+//
+// Strategy:
+// - Rules that set assignedTeam use modify() so lower-salience rules
+//   checking assignedTeam == null see the change and don't fire.
+// - Rules that set slaHours use modify() so lower-salience SLA rules
+//   checking slaHours == 0 see the change and don't fire.
+// - When a rule sets BOTH assignedTeam AND slaHours, it uses a single modify()
+//   to avoid multiple re-evaluation cycles.
+// - VIP escalation (escalated, escalationReason) uses direct setters --
+//   no downstream condition depends on these fields.
+// - addRoutingNote() just accumulates list entries -- no modify needed.
 // =============================================================================
 
 // --- VIP customer escalation (highest priority) ---
 
 rule "VipCustomerEscalation"
     salience 200
+
     when
         $routing : IncidentRoutingFact(customerTier == "VIP")
     then
         $routing.setEscalated(true);
         $routing.setEscalationReason("VIP customer - automatic escalation");
         $routing.addRoutingNote("VIP customer flagged for priority handling");
-        update($routing);
+
 end
 
 rule "VipCustomerSlaOverride"
     salience 195
+
     when
         $routing : IncidentRoutingFact(customerTier == "VIP", slaHours == 0)
     then
-        $routing.setSlaHours(4);
+        modify($routing) { setSlaHours(4) }
         $routing.addRoutingNote("VIP SLA override: 4-hour response time");
-        update($routing);
+
 end
 
 // --- Priority + severity based team assignment ---
 
 rule "CriticalSeverityCatastrophic"
     salience 150
+
     when
         $routing : IncidentRoutingFact(priority == "CRITICAL", severity == "CATASTROPHIC",
                                        assignedTeam == null)
     then
-        $routing.setAssignedTeam("executive-adjusters");
-        $routing.setSlaHours(2);
+        modify($routing) {
+            setAssignedTeam("executive-adjusters"),
+            setSlaHours(2)
+        }
         $routing.setEscalated(true);
         $routing.setEscalationReason("CRITICAL priority with CATASTROPHIC severity");
         $routing.addRoutingNote("Routed to executive adjusters - maximum severity incident");
-        update($routing);
+
 end
 
 rule "CriticalToSeniorAdjusters"
     salience 140
+
     when
         $routing : IncidentRoutingFact(priority == "CRITICAL", assignedTeam == null)
     then
-        $routing.setAssignedTeam("senior-adjusters");
         if ($routing.getSlaHours() == 0) {
-            $routing.setSlaHours(4);
+            modify($routing) {
+                setAssignedTeam("senior-adjusters"),
+                setSlaHours(4)
+            }
+        } else {
+            modify($routing) { setAssignedTeam("senior-adjusters") }
         }
         $routing.addRoutingNote("Routed to senior adjusters - CRITICAL priority");
-        update($routing);
+
 end
 
 rule "HighAmountToSpecialist"
     salience 130
+
     when
         $routing : IncidentRoutingFact(claimedAmount > 1000000, assignedTeam == null)
     then
-        $routing.setAssignedTeam("specialist");
         if ($routing.getSlaHours() == 0) {
-            $routing.setSlaHours(8);
+            modify($routing) {
+                setAssignedTeam("specialist"),
+                setSlaHours(8)
+            }
+        } else {
+            modify($routing) { setAssignedTeam("specialist") }
         }
         $routing.setEscalated(true);
         $routing.setEscalationReason("Claimed amount exceeds 1,000,000 MXN");
         $routing.addRoutingNote("Routed to specialist team - high value claim");
-        update($routing);
+
 end
 
 rule "HighPriorityToSenior"
     salience 120
+
     when
         $routing : IncidentRoutingFact(priority == "HIGH", assignedTeam == null)
     then
-        $routing.setAssignedTeam("senior-adjusters");
         if ($routing.getSlaHours() == 0) {
-            $routing.setSlaHours(8);
+            modify($routing) {
+                setAssignedTeam("senior-adjusters"),
+                setSlaHours(8)
+            }
+        } else {
+            modify($routing) { setAssignedTeam("senior-adjusters") }
         }
         $routing.addRoutingNote("Routed to senior adjusters - HIGH priority");
-        update($routing);
+
 end
 
 // --- Severity-based SLA when not already set ---
 
 rule "MajorSeveritySla"
     salience 110
+
     when
         $routing : IncidentRoutingFact(severity == "MAJOR", slaHours == 0)
     then
-        $routing.setSlaHours(12);
+        modify($routing) { setSlaHours(12) }
         $routing.addRoutingNote("MAJOR severity - 12-hour SLA applied");
-        update($routing);
+
 end
 
 rule "ModerateSeveritySla"
     salience 105
+
     when
         $routing : IncidentRoutingFact(severity == "MODERATE", slaHours == 0)
     then
-        $routing.setSlaHours(24);
+        modify($routing) { setSlaHours(24) }
         $routing.addRoutingNote("MODERATE severity - 24-hour SLA applied");
-        update($routing);
+
 end
 
 rule "MinorSeveritySla"
     salience 100
+
     when
         $routing : IncidentRoutingFact(severity == "MINOR", slaHours == 0)
     then
-        $routing.setSlaHours(48);
+        modify($routing) { setSlaHours(48) }
         $routing.addRoutingNote("MINOR severity - 48-hour SLA applied");
-        update($routing);
+
 end
 
 // --- Product-type based routing ---
 
 rule "CommercialToCommercialTeam"
     salience 70
+
     when
         $routing : IncidentRoutingFact(productType == "COMMERCIAL", assignedTeam == null)
     then
-        $routing.setAssignedTeam("commercial-adjusters");
+        modify($routing) { setAssignedTeam("commercial-adjusters") }
         $routing.addRoutingNote("Routed to commercial adjusters - COMMERCIAL product");
-        update($routing);
+
 end
 
 rule "LifeToLifeClaimsTeam"
     salience 70
+
     when
         $routing : IncidentRoutingFact(productType == "LIFE", assignedTeam == null)
     then
-        $routing.setAssignedTeam("life-claims-team");
+        modify($routing) { setAssignedTeam("life-claims-team") }
         $routing.addRoutingNote("Routed to life claims team - LIFE product");
-        update($routing);
+
 end
 
 rule "HealthToHealthClaimsTeam"
     salience 70
+
     when
         $routing : IncidentRoutingFact(productType == "HEALTH", assignedTeam == null)
     then
-        $routing.setAssignedTeam("health-claims-team");
+        modify($routing) { setAssignedTeam("health-claims-team") }
         $routing.addRoutingNote("Routed to health claims team - HEALTH product");
-        update($routing);
+
 end
 
 // --- Premium customer boost ---
 
 rule "PremiumCustomerSlaBoost"
     salience 50
+
     when
         $routing : IncidentRoutingFact(customerTier == "PREMIUM", slaHours > 8)
     then
         $routing.setSlaHours((int)($routing.getSlaHours() * 0.75));
         $routing.addRoutingNote("Premium customer SLA boost: reduced to " + $routing.getSlaHours() + " hours");
-        update($routing);
+
 end
 
 // --- Default fallbacks ---
 
 rule "DefaultToStandardAdjusters"
     salience 10
+
     when
         $routing : IncidentRoutingFact(assignedTeam == null)
     then
-        $routing.setAssignedTeam("standard-adjusters");
+        modify($routing) { setAssignedTeam("standard-adjusters") }
         $routing.addRoutingNote("Routed to standard adjusters - default assignment");
-        update($routing);
+
 end
 
 rule "DefaultSla"
     salience 5
+
     when
         $routing : IncidentRoutingFact(slaHours == 0)
     then
-        $routing.setSlaHours(48);
+        modify($routing) { setSlaHours(48) }
         $routing.addRoutingNote("Default 48-hour SLA applied");
-        update($routing);
+
 end

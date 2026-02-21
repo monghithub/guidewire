@@ -26,7 +26,7 @@ public class RulesService {
         KieSession kieSession = kieContainer.newKieSession();
         try {
             kieSession.insert(claimFact);
-            int rulesFired = kieSession.fireAllRules();
+            int rulesFired = kieSession.fireAllRules(100);
             log.info("Fraud rules fired: {} for claim: {}", rulesFired, claimFact.getClaimId());
         } finally {
             kieSession.dispose();
@@ -39,7 +39,7 @@ public class RulesService {
         KieSession kieSession = kieContainer.newKieSession();
         try {
             kieSession.insert(policyFact);
-            int rulesFired = kieSession.fireAllRules();
+            int rulesFired = kieSession.fireAllRules(100);
             log.info("Policy validation rules fired: {} for policy: {}", rulesFired, policyFact.getPolicyId());
         } finally {
             kieSession.dispose();
@@ -52,7 +52,7 @@ public class RulesService {
         KieSession kieSession = kieContainer.newKieSession();
         try {
             kieSession.insert(commissionFact);
-            int rulesFired = kieSession.fireAllRules();
+            int rulesFired = kieSession.fireAllRules(100);
             log.info("Commission rules fired: {} for product: {}", rulesFired, commissionFact.getProductType());
         } finally {
             kieSession.dispose();
@@ -65,7 +65,7 @@ public class RulesService {
         KieSession kieSession = kieContainer.newKieSession();
         try {
             kieSession.insert(routingFact);
-            int rulesFired = kieSession.fireAllRules();
+            int rulesFired = kieSession.fireAllRules(100);
             log.info("Routing rules fired: {} for priority: {}", rulesFired, routingFact.getPriority());
         } finally {
             kieSession.dispose();
