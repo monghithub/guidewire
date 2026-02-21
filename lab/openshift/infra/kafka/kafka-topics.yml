@@ -86,6 +86,34 @@ spec:
 apiVersion: kafka.strimzi.io/v1beta2
 kind: KafkaTopic
 metadata:
+  name: policies.policy-events
+  namespace: guidewire-infra
+  labels:
+    strimzi.io/cluster: kafka-cluster
+    app.kubernetes.io/part-of: guidewire-poc
+spec:
+  partitions: 3
+  replicas: 1
+  config:
+    retention.ms: 604800000
+---
+apiVersion: kafka.strimzi.io/v1beta2
+kind: KafkaTopic
+metadata:
+  name: events.unclassified
+  namespace: guidewire-infra
+  labels:
+    strimzi.io/cluster: kafka-cluster
+    app.kubernetes.io/part-of: guidewire-poc
+spec:
+  partitions: 1
+  replicas: 1
+  config:
+    retention.ms: 2592000000
+---
+apiVersion: kafka.strimzi.io/v1beta2
+kind: KafkaTopic
+metadata:
   name: dlq.errors
   namespace: guidewire-infra
   labels:

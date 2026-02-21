@@ -28,7 +28,7 @@ spec:
               value: "kafka-cluster-kafka-bootstrap.guidewire-infra.svc.cluster.local:9092"
             - name: APICURIO_URL
               value: "http://apicurio-registry.guidewire-infra.svc.cluster.local:8080/apis/registry/v2"
-            - name: ACTIVEMQ_URL
+            - name: ACTIVEMQ_BROKER_URL
               value: "tcp://activemq-broker-hdls-svc.guidewire-infra.svc.cluster.local:61616"
             - name: ACTIVEMQ_USER
               value: "admin"
