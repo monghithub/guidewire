@@ -1,6 +1,33 @@
 # Guidewire Integration POC
 
-POC de arquitectura de integración para **Guidewire InsuranceSuite**. Demuestra patrones SOA/MSA/EDA con API-First, contract-driven development y stack enterprise Red Hat sobre un laboratorio aislado con Red Hat OpenShift Local (CRC).
+POC de arquitectura de integracion para **Guidewire InsuranceSuite**. Demuestra patrones SOA/MSA/EDA con API-First, contract-driven development y stack enterprise Red Hat sobre un laboratorio aislado con Red Hat OpenShift Local (CRC).
+
+## Que hace cada componente
+
+El sistema se compone de **5 microservicios** y **6 componentes de infraestructura**:
+
+### Microservicios
+
+| Componente | Para que sirve |
+|-----------|----------------|
+| **[Camel Gateway](openspecs/docs/components/camel-gateway/README.md)** | Hub de integracion. Recibe peticiones SOAP/REST de los sistemas Guidewire (PolicyCenter, ClaimCenter, BillingCenter), las transforma a eventos AVRO y las publica en Kafka. Aplica patrones EIP: Content-Based Router, Message Translator, Dead Letter Channel. |
+| **[Drools Engine](openspecs/docs/components/drools-engine/README.md)** | Motor de reglas de negocio. Evalua fraude (riesgo por monto/frecuencia), valida polizas (limites y elegibilidad), calcula comisiones (por producto y canal) y asigna equipos a siniestros segun prioridad. |
+| **[Billing Service](openspecs/docs/components/billing-service/README.md)** | Gestion de facturacion. Crea facturas desde eventos Kafka y gestiona su ciclo de vida (PENDING -> PROCESSING -> COMPLETED). Cada transicion emite un evento al bus. |
+| **[Incidents Service](openspecs/docs/components/incidents-service/README.md)** | Gestion de siniestros. Registra incidencias desde eventos Kafka y las mueve por el flujo OPEN -> IN_PROGRESS -> RESOLVED -> CLOSED. Implementado en Quarkus como alternativa cloud-native a Spring Boot. |
+| **[Customers Service](openspecs/docs/components/customers-service/README.md)** | Gestion de clientes. Servicio poliglota (Node.js/TypeScript) que demuestra interoperabilidad fuera del ecosistema JVM. Registra clientes y gestiona su estado (ACTIVE/INACTIVE/SUSPENDED/BLOCKED). |
+
+### Infraestructura
+
+| Componente | Para que sirve |
+|-----------|----------------|
+| **[Apache Kafka](openspecs/docs/infra/kafka/README.md)** | Bus de eventos central. 9 topics organizados por dominio con serializacion AVRO. Modo KRaft (sin ZooKeeper), gestionado por Strimzi. |
+| **[PostgreSQL](openspecs/docs/infra/postgres/README.md)** | Base de datos relacional. 5 bases logicas aisladas (una por servicio) con el patron database-per-service. |
+| **[Apicurio Registry](openspecs/docs/infra/apicurio/README.md)** | Registro de schemas. Gobierna la compatibilidad de los schemas AVRO, OpenAPI y AsyncAPI entre productores y consumidores. |
+| **[ActiveMQ Artemis](openspecs/docs/infra/activemq/README.md)** | Broker JMS/AMQP. Complementa Kafka para patrones punto-a-punto y request/reply con sistemas legacy. |
+| **[3Scale APIcast](openspecs/docs/infra/threescale/README.md)** | API Gateway empresarial. Autenticacion por API Key, rate limiting (100-200 req/min) y enrutamiento a backends. |
+| **[Kafdrop](openspecs/docs/infra/kafka/README.md)** | UI web para inspeccion de topics, consumer groups y mensajes de Kafka. |
+
+> Documentacion detallada de arquitectura, ADRs y flujos de datos: [openspecs/docs/architecture/README.md](openspecs/docs/architecture/README.md)
 
 ---
 
@@ -237,9 +264,9 @@ oc get pods -n guidewire-apps
 |------|-----------|---------|
 | Plataforma | Red Hat OpenShift Local (CRC) | 4.x |
 | Orquestación | Kubernetes / OpenShift | 4.x |
-| API Gateway | Red Hat 3Scale (APIcast) | 3.11 |
-| Integración | Apache Camel | 4.x |
-| Event Streaming | Apache Kafka (KRaft) | 3.7 |
+| API Gateway | Red Hat 3Scale (APIcast) | latest |
+| Integración | Apache Camel | 4.4 |
+| Event Streaming | Apache Kafka (KRaft) | 4.0 (Strimzi v0.50.0) |
 | Mensajería JMS | Apache ActiveMQ Artemis | 2.33 |
 | Reglas de Negocio | Drools / KIE Server | 8.x |
 | Schema Registry | Apicurio Service Registry | 2.5 |

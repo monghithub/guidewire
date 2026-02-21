@@ -8,9 +8,12 @@ Guidewire Integration POC -- Architecture reference for the insurance integratio
 
 1. [Architecture Overview](#architecture-overview)
 2. [Component Interaction Diagram](#component-interaction-diagram)
-3. [Data Flow Diagrams](#data-flow-diagrams)
-4. [Architecture Decision Records (ADRs)](#architecture-decision-records-adrs)
-5. [Technology Stack Summary](#technology-stack-summary)
+3. [Componentes del Sistema](#componentes-del-sistema)
+   - [Servicios de Aplicacion](#servicios-de-aplicacion-namespace-guidewire-apps)
+   - [Infraestructura](#infraestructura-namespace-guidewire-infra)
+4. [Data Flow Diagrams](#data-flow-diagrams)
+5. [Architecture Decision Records (ADRs)](#architecture-decision-records-adrs)
+6. [Technology Stack Summary](#technology-stack-summary)
 
 ---
 
@@ -65,6 +68,98 @@ graph TD
     activemq["ActiveMQ Artemis :61616 / :8161"]
     kafdrop["Kafdrop — Kafka UI :9000"]
 ```
+
+---
+
+## Componentes del Sistema
+
+El POC se compone de **5 servicios de aplicacion** y **6 componentes de infraestructura**, desplegados en dos namespaces separados de OpenShift.
+
+### Servicios de Aplicacion (namespace: guidewire-apps)
+
+#### [Camel Gateway](../components/camel-gateway/README.md) — Hub de Integracion
+
+El punto de entrada al ecosistema. Apache Camel 4 actua como mediador de protocolos entre los sistemas Guidewire (SOAP/REST) y la arquitectura interna basada en eventos. Implementa los Enterprise Integration Patterns (EIP) clasicos: Content-Based Router, Message Translator, Dead Letter Channel y Wire Tap. Expone endpoints CXF para PolicyCenter, ClaimCenter y BillingCenter, transforma los mensajes a formato AVRO y los publica en los topics Kafka correspondientes. Antes de publicar, invoca al Drools Engine para enriquecer los eventos con reglas de negocio.
+
+- **Stack**: Java 21, Spring Boot 3.3, Apache Camel 4.4
+- **Puerto**: 8083
+- **Codigo**: [`components/camel-gateway/`](../../../components/camel-gateway/)
+
+#### [Drools Engine](../components/drools-engine/README.md) — Motor de Reglas de Negocio
+
+Centraliza las reglas de negocio del dominio asegurador en archivos DRL declarativos. Expone 4 conjuntos de reglas via REST: deteccion de fraude (evalua riesgo por monto, frecuencia y antiguedad del cliente), validacion de polizas (limites y elegibilidad), calculo de comisiones (por producto y canal) y enrutamiento de siniestros (asigna equipos segun prioridad y monto). Cada evaluacion se registra en una base de datos de auditoria.
+
+- **Stack**: Java 21, Spring Boot 3.3, Drools 8
+- **Puerto**: 8086
+- **Codigo**: [`components/drools-engine/`](../../../components/drools-engine/)
+
+#### [Billing Service](../components/billing-service/README.md) — Gestion de Facturacion
+
+Microservicio de facturacion que gestiona el ciclo de vida completo de las facturas: creacion, transiciones de estado y consulta. Las facturas se crean principalmente desde eventos Kafka (originados en Camel Gateway) y progresan a traves de una maquina de estados (PENDING -> PROCESSING -> COMPLETED/FAILED/CANCELLED). Cada transicion de estado publica un evento AVRO serializado con schema de Apicurio.
+
+- **Stack**: Java 21, Spring Boot 3.3, JPA/Hibernate, Spring Kafka
+- **Puerto**: 8082
+- **Codigo**: [`components/billing-service/`](../../../components/billing-service/)
+
+#### [Incidents Service](../components/incidents-service/README.md) — Gestion de Siniestros
+
+Microservicio cloud-native para la gestion de incidencias/siniestros. Demuestra el uso de Quarkus como alternativa a Spring Boot, con Panache ORM (simplificacion de JPA) y SmallRye Reactive Messaging para Kafka. Los siniestros siguen un ciclo de vida OPEN -> IN_PROGRESS -> RESOLVED -> CLOSED, con posibilidad de escalamiento (ESCALATED). Cada cambio de estado emite un evento a Kafka.
+
+- **Stack**: Java 21, Quarkus 3.8, Hibernate Panache, SmallRye Reactive Messaging
+- **Puerto**: 8084
+- **Codigo**: [`components/incidents-service/`](../../../components/incidents-service/)
+
+#### [Customers Service](../components/customers-service/README.md) — Gestion de Clientes
+
+Microservicio poliglota que demuestra que la arquitectura contract-driven permite usar tecnologias fuera del ecosistema JVM. Gestiona el registro y ciclo de vida de clientes (ACTIVE/INACTIVE/SUSPENDED/BLOCKED). Usa Prisma como ORM (migraciones declarativas, type-safety) y KafkaJS para la integracion con el bus de eventos. Valida todas las entradas con Zod schemas.
+
+- **Stack**: Node.js 20, TypeScript, Express 4, Prisma ORM, KafkaJS
+- **Puerto**: 8085
+- **Codigo**: [`components/customers-service/`](../../../components/customers-service/)
+
+### Infraestructura (namespace: guidewire-infra)
+
+#### [Apache Kafka](../infra/kafka/README.md) — Event Backbone
+
+El bus de eventos central de la arquitectura. Opera en modo KRaft (sin ZooKeeper) gestionado por el operador Strimzi. Mantiene 9 topics organizados por dominio: billing (2), incidents (2), customers (2), policies (1), eventos sin clasificar (1) y dead-letter queue (1). Todos los mensajes se serializan en formato AVRO con schemas gobernados por Apicurio. Retencion de 7 dias por defecto.
+
+- **Stack**: Apache Kafka 4.0 (Strimzi v0.50.0, KafkaNodePool CRD)
+- **Puerto**: 9092
+
+#### [PostgreSQL](../infra/postgres/README.md) — Base de Datos Relacional
+
+Instancia compartida de PostgreSQL que implementa el patron database-per-service a nivel logico. Contiene 5 bases de datos aisladas (billing, incidents, customers, drools_audit, apicurio), cada una con su usuario y permisos dedicados. Las migraciones se gestionan por cada servicio (JPA auto-DDL, Prisma, Hibernate).
+
+- **Stack**: PostgreSQL 16 Alpine
+- **Puerto**: 5432 (interno), 15432 (expuesto)
+
+#### [Apicurio Schema Registry](../infra/apicurio/README.md) — Gobernanza de Schemas
+
+Registro centralizado de schemas que garantiza la compatibilidad de los contratos de eventos. Almacena los 6 schemas AVRO, los 6 specs OpenAPI y el spec AsyncAPI en grupos de artefactos separados. Aplica politica de compatibilidad FULL (forward + backward) para evitar roturas entre productores y consumidores. Los serializadores Kafka de cada servicio consultan el registry en tiempo de ejecucion.
+
+- **Stack**: Apicurio Service Registry 2.5.11 (backend PostgreSQL)
+- **Puerto**: 8081
+
+#### [Apache ActiveMQ Artemis](../infra/activemq/README.md) — Mensajeria JMS
+
+Broker de mensajeria para patrones punto-a-punto y request/reply con sistemas legacy que usan JMS/AMQP. Complementa a Kafka (que es para event streaming). Define 3 colas: solicitudes de facturacion desde claims, alertas de fraude y notificaciones salientes. El Camel Gateway lo utiliza para comunicacion sincrona con BillingCenter.
+
+- **Stack**: Apache ActiveMQ Artemis 2.33 (operador AMQ Broker)
+- **Puerto**: 61616 (AMQP), 8161 (consola Hawtio)
+
+#### [3Scale API Gateway](../infra/threescale/README.md) — Gestion de APIs
+
+Gateway de API empresarial que protege todos los endpoints publicos. Implementa autenticacion por API Key (header `X-API-Key`), rate limiting diferenciado por servicio (100-200 req/min) y enrutamiento a los backends. Configurado en modo standalone (sin base de datos) con configuracion declarativa JSON.
+
+- **Stack**: Red Hat 3Scale APIcast
+- **Puerto**: 8000 (proxy), 8001 (management)
+
+#### [Kafdrop](../infra/kafka/README.md#kafdrop) — UI de Kafka
+
+Interfaz web para inspeccion de topics, consumer groups y mensajes de Kafka. Permite verificar visualmente que los eventos se estan produciendo y consumiendo correctamente durante el desarrollo y las pruebas E2E.
+
+- **Stack**: Kafdrop 4.0.1
+- **Puerto**: 9000
 
 ---
 

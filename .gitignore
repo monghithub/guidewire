@@ -1,0 +1,6 @@
+.claude/settings.json
+
+# Build artifacts
+**/target/
+**/dist/
+**/node_modules/
