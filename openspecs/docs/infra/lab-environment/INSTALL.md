@@ -293,19 +293,187 @@ curl -sk https://drools-engine-guidewire-apps.apps-crc.testing/actuator/health  
 
 ---
 
+## Paso 9: Configurar acceso desde la LAN
+
+El daemon proxy de CRC tiene un bug en `network-mode: user` (modo por defecto) que impide el acceso HTTP/HTTPS a las rutas de OpenShift. Ademas, si K3s esta instalado en el host, sus reglas iptables interceptan los puertos 80/443. Los siguientes pasos configuran el workaround.
+
+### 9.1 Parar K3s (si esta instalado)
+
+```bash
+sudo systemctl stop k3s
+sudo systemctl disable k3s
+```
+
+### 9.2 Limpiar reglas iptables de K3s
+
+```bash
+sudo iptables -t nat -F KUBE-SERVICES
+sudo iptables -t nat -F CNI-HOSTPORT-DNAT
+sudo iptables -t nat -F KUBE-EXT-UQMCRMJZLI3FTLDP 2>/dev/null || true
+sudo iptables -t nat -F KUBE-EXT-CVG3OEGEH7H5P3HQ 2>/dev/null || true
+```
+
+### 9.3 Permitir bind a puertos privilegiados
+
+```bash
+sudo sysctl net.ipv4.ip_unprivileged_port_start=80
+```
+
+Para hacerlo persistente entre reinicios:
+
+```bash
+echo 'net.ipv4.ip_unprivileged_port_start=80' | sudo tee /etc/sysctl.d/99-crc-unprivileged-ports.conf
+```
+
+### 9.4 Desactivar los forwarders rotos del daemon CRC
+
+```bash
+curl -s -X POST --unix-socket ~/.crc/crc-http.sock \
+  -H 'Content-Type: application/json' \
+  -d '{"local":":80","remote":"192.168.127.2:80","protocol":"tcp"}' \
+  http://localhost/network/services/forwarder/unexpose
+
+curl -s -X POST --unix-socket ~/.crc/crc-http.sock \
+  -H 'Content-Type: application/json' \
+  -d '{"local":":443","remote":"192.168.127.2:443","protocol":"tcp"}' \
+  http://localhost/network/services/forwarder/unexpose
+```
+
+### 9.5 Lanzar los port-forwards del router
+
+```bash
+oc port-forward --address 0.0.0.0 -n openshift-ingress svc/router-internal-default 80:80 &
+oc port-forward --address 0.0.0.0 -n openshift-ingress svc/router-internal-default 443:443 &
+```
+
+O usar el script que automatiza los pasos 9.2 a 9.5:
+
+```bash
+lab/openshift/scripts/start.sh
+```
+
+### 9.6 Configurar /etc/hosts en las maquinas cliente
+
+En cada maquina desde la que se quiera acceder (sustituir `192.168.1.135` por la IP del servidor):
+
+```
+192.168.1.135  console-openshift-console.apps-crc.testing
+192.168.1.135  oauth-openshift.apps-crc.testing
+192.168.1.135  kafdrop-guidewire-infra.apps-crc.testing
+192.168.1.135  apicurio-guidewire-infra.apps-crc.testing
+192.168.1.135  amq-console-guidewire-infra.apps-crc.testing
+192.168.1.135  apicast-guidewire-infra.apps-crc.testing
+192.168.1.135  billing-service-guidewire-apps.apps-crc.testing
+192.168.1.135  camel-gateway-guidewire-apps.apps-crc.testing
+192.168.1.135  incidents-service-guidewire-apps.apps-crc.testing
+192.168.1.135  customers-service-guidewire-apps.apps-crc.testing
+192.168.1.135  drools-engine-guidewire-apps.apps-crc.testing
+```
+
+### 9.7 Verificar acceso
+
+```bash
+# Web UIs
+curl -s -o /dev/null -w '%{http_code}' http://kafdrop-guidewire-infra.apps-crc.testing/     # 200
+curl -s -o /dev/null -w '%{http_code}' http://apicurio-guidewire-infra.apps-crc.testing/    # 302
+curl -s -o /dev/null -w '%{http_code}' http://amq-console-guidewire-infra.apps-crc.testing/ # 302
+curl -sk -o /dev/null -w '%{http_code}' https://console-openshift-console.apps-crc.testing/ # 200
+
+# Health checks
+curl -s -o /dev/null -w '%{http_code}' http://billing-service-guidewire-apps.apps-crc.testing/actuator/health   # 200
+curl -s -o /dev/null -w '%{http_code}' http://incidents-service-guidewire-apps.apps-crc.testing/q/health         # 200
+curl -s -o /dev/null -w '%{http_code}' http://customers-service-guidewire-apps.apps-crc.testing/health           # 200
+curl -s -o /dev/null -w '%{http_code}' http://camel-gateway-guidewire-apps.apps-crc.testing/actuator/health      # 200
+curl -s -o /dev/null -w '%{http_code}' http://drools-engine-guidewire-apps.apps-crc.testing/actuator/health      # 200
+```
+
+---
+
+## URLs y credenciales
+
+### Consola OpenShift
+
+| URL | Usuario | Password | Rol |
+|-----|---------|----------|-----|
+| https://console-openshift-console.apps-crc.testing | `kubeadmin` | `xtLsK-LLIzY-6UVEd-UESLR` | Administrador |
+| https://console-openshift-console.apps-crc.testing | `developer` | `developer` | Developer |
+
+> El navegador mostrara un aviso de certificado autofirmado. Aceptar la excepcion.
+
+### Web UIs
+
+| Componente | URL | Credenciales |
+|-----------|-----|--------------|
+| Kafdrop (Kafka UI) | http://kafdrop-guidewire-infra.apps-crc.testing | Sin auth |
+| Apicurio (Schema Registry) | http://apicurio-guidewire-infra.apps-crc.testing | Sin auth |
+| AMQ Console (ActiveMQ) | http://amq-console-guidewire-infra.apps-crc.testing | `admin` / `admin123` |
+
+### APIs de microservicios
+
+| Servicio | URL base | Endpoints | Health |
+|----------|----------|-----------|--------|
+| Billing Service | http://billing-service-guidewire-apps.apps-crc.testing | `/api/v1/invoices` | `/actuator/health` |
+| Camel Gateway | http://camel-gateway-guidewire-apps.apps-crc.testing | `/api/v1/gw-invoices` | `/actuator/health` |
+| Incidents Service | http://incidents-service-guidewire-apps.apps-crc.testing | `/api/v1/incidents` | `/q/health` |
+| Customers Service | http://customers-service-guidewire-apps.apps-crc.testing | `/api/v1/customers` | `/health` |
+| Drools Engine | http://drools-engine-guidewire-apps.apps-crc.testing | `/api/v1/rules/evaluate` | `/actuator/health` |
+
+### API Gateway (APIcast)
+
+Base: `http://apicast-guidewire-infra.apps-crc.testing` (requiere `user_key`)
+
+| Ruta | Backend |
+|------|---------|
+| `/api/v1/invoices` | Billing Service |
+| `/api/v1/gw-invoices` | Camel Gateway |
+| `/api/v1/incidents` | Incidents Service |
+| `/api/v1/customers` | Customers Service |
+| `/api/v1/rules/evaluate` | Drools Engine |
+| `/api/v1/policies` | Camel Gateway (PolicyCenter) |
+| `/api/v1/claims` | Camel Gateway (ClaimCenter) |
+
+### Credenciales de infraestructura
+
+| Servicio | Usuario | Password |
+|----------|---------|----------|
+| OpenShift (admin) | `kubeadmin` | `xtLsK-LLIzY-6UVEd-UESLR` |
+| OpenShift (dev) | `developer` | `developer` |
+| AMQ Console | `admin` | `admin123` |
+| PostgreSQL | `guidewire` | `guidewire123` |
+
+---
+
+## Apagar y reiniciar
+
+### Apagar
+
+```bash
+lab/openshift/scripts/stop.sh
+```
+
+### Reiniciar
+
+```bash
+lab/openshift/scripts/start.sh
+```
+
+> Ver tambien: [UNINSTALL.md](../../../../lab/openshift/UNINSTALL.md) para desinstalacion completa.
+
+---
+
 ## Operaciones del dia a dia
 
 ### Desde el HOST
 
 | Accion | Comando |
 |--------|---------|
-| Iniciar cluster | `crc start` |
-| Detener cluster | `crc stop` |
+| Iniciar entorno | `lab/openshift/scripts/start.sh` |
+| Detener entorno | `lab/openshift/scripts/stop.sh` |
 | Estado | `crc status` |
-| Consola web | `crc console` |
+| Consola web | https://console-openshift-console.apps-crc.testing |
 | Configurar oc | `eval $(crc oc-env)` |
 | Login developer | `oc login -u developer -p developer https://api.crc.testing:6443` |
-| Login admin | `oc login -u kubeadmin -p <password> https://api.crc.testing:6443` |
+| Login admin | `oc login -u kubeadmin -p xtLsK-LLIzY-6UVEd-UESLR https://api.crc.testing:6443` |
 
 ### Operaciones con el stack
 
@@ -335,14 +503,10 @@ Error: Failed to start the CRC VM
 **Solucion**: Verificar que la virtualizacion esta habilitada y que hay recursos suficientes:
 
 ```bash
-# Verificar virtualizacion
 grep -c -E '(vmx|svm)' /proc/cpuinfo
-
-# Verificar recursos disponibles
 free -h
 df -h
 
-# Reintentar con cleanup
 crc delete
 crc cleanup
 crc setup
@@ -351,177 +515,89 @@ crc start --cpus 6 --memory 14336 --disk-size 60
 
 ### Pods en estado Pending
 
-```
-NAME              READY   STATUS    RESTARTS   AGE
-billing-service   0/1     Pending   0          5m
-```
-
-**Solucion**: Generalmente es falta de recursos. Verificar:
+**Solucion**: Generalmente falta de recursos:
 
 ```bash
-# Ver eventos del pod
 oc describe pod <nombre-pod> -n guidewire-apps
-
-# Ver recursos del nodo
 oc adm top nodes
 
-# Si es falta de memoria, parar CRC y reiniciar con mas recursos
 crc stop
 crc start --memory 16384
 ```
 
 ### Operador no se instala
 
-```
-Operator strimzi may not be fully ready yet
-```
-
-**Solucion**: Los operadores pueden tardar unos minutos. Verificar:
+**Solucion**: Los operadores tardan unos minutos:
 
 ```bash
-# Login como admin
-oc login -u kubeadmin -p <password> https://api.crc.testing:6443
-
-# Ver estado de los operadores
+oc login -u kubeadmin -p xtLsK-LLIzY-6UVEd-UESLR https://api.crc.testing:6443
 oc get csv -n openshift-operators
-
-# Ver eventos
 oc get events -n openshift-operators --sort-by='.lastTimestamp'
-
-# Ver subscriptions
-oc get subscriptions -n openshift-operators
 ```
 
 ### Builds fallan
 
-```
-Build billing-service-1 failed
-```
-
-**Solucion**: Verificar los logs del build:
-
 ```bash
-# Ver logs del build
 oc logs build/billing-service-1 -n guidewire-apps
-
-# Reintentar el build
 oc start-build billing-service -n guidewire-apps \
   --from-dir=../../components/billing-service --follow
-
-# Si es problema de memoria, los builds Java necesitan ~1GB
-# Verificar recursos disponibles
-oc adm top nodes
 ```
 
 ### DNS no resuelve *.apps-crc.testing
 
-```
-curl: (6) Could not resolve host: kafdrop-guidewire-infra.apps-crc.testing
+```bash
+cat /etc/NetworkManager/conf.d/crc-nm-dnsmasq.conf
+sudo systemctl restart NetworkManager
 ```
 
-**Solucion**: CRC configura el DNS automaticamente, pero a veces falla:
+### Puerto 80/443 devuelve "404 page not found"
+
+Este es el bug del daemon proxy de CRC en `network-mode: user`. Ver [Paso 9](#paso-9-configurar-acceso-desde-la-lan) para la solucion completa.
+
+Si K3s esta activo, sus reglas iptables DNAT interceptan los puertos 80/443:
 
 ```bash
-# Verificar que el DNS esta configurado
-cat /etc/NetworkManager/conf.d/crc-nm-dnsmasq.conf
-
-# Reiniciar NetworkManager
-sudo systemctl restart NetworkManager
-
-# Alternativa: agregar manualmente a /etc/hosts
-echo "$(crc ip) kafdrop-guidewire-infra.apps-crc.testing" | sudo tee -a /etc/hosts
+sudo systemctl stop k3s
+sudo iptables -t nat -F KUBE-SERVICES
+sudo iptables -t nat -F CNI-HOSTPORT-DNAT
 ```
 
 ### Kafka no esta listo
 
-```
-Kafka cluster may still be starting
-```
-
-**Solucion**: Strimzi tarda en desplegar Kafka (~3-5 minutos). Verificar:
-
 ```bash
-# Estado del Kafka CR
 oc get kafka -n guidewire-infra
-
-# Pods de Kafka (con KafkaNodePool, el pod se llama kafka-pool)
 oc get pods -n guidewire-infra -l strimzi.io/cluster=kafka-cluster
-
-# Logs del operador Strimzi
 oc logs -f deploy/strimzi-cluster-operator -n openshift-operators
 ```
 
 ### Pull secret expirado (ImagePullBackOff en marketplace)
 
-```
-marketplace-operator   ImagePullBackOff
-```
-
-**Solucion**: El pull secret de CRC expira periodicamente. Hay que renovarlo:
-
 ```bash
-# 1. Crear service account en https://access.redhat.com/terms-based-registry/
-# 2. Obtener el token de autenticacion
-# 3. Actualizar el pull secret en el cluster
 oc set data secret/pull-secret -n openshift-config \
   --from-file=.dockerconfigjson=pull-secret.json
 
-# 4. Reiniciar CRI-O para que tome las nuevas credenciales
 ssh -i ~/.crc/machines/crc/id_ecdsa -o StrictHostKeyChecking=no \
   core@$(crc ip) "sudo systemctl restart crio"
 
-# 5. Borrar los pods fallidos para que se recreen
 oc delete pods -n openshift-marketplace --all
 ```
 
-### Puerto 6443 ocupado (k3s u otro servicio)
-
-```
-ERRO CRC requires port 6443
-```
-
-**Solucion**: Si tienes k3s o minikube, detenerlos antes de iniciar CRC:
+### Puerto 6443 ocupado (K3s)
 
 ```bash
 sudo systemctl stop k3s
-# o
-minikube stop
 ```
 
-### `oc login` devuelve 404
+### `oc login` devuelve error
 
-```
-error: the server is currently unable to handle the request
-```
-
-**Solucion**: El oauth-server de CRC puede tardar en estar listo. Alternativa: usar KUBECONFIG directamente:
+Alternativa: usar KUBECONFIG directamente:
 
 ```bash
 export KUBECONFIG=~/.crc/machines/crc/kubeconfig
 oc whoami   # system:admin
 ```
 
-### Acceso desde otra maquina en la red (sin GUI)
-
-Si la maquina con CRC no tiene interfaz grafica, puedes acceder desde otra maquina en la misma LAN:
-
-```bash
-# CRC ya expone los puertos 443 y 80 en 0.0.0.0
-# Solo necesitas exponer el API server (6443):
-socat TCP-LISTEN:6443,fork,reuseaddr TCP:127.0.0.1:6443 &
-
-# Desde la otra maquina, agregar entradas en /etc/hosts apuntando a la IP LAN:
-# <IP_LAN>  api.crc.testing console-openshift-console.apps-crc.testing
-#           kafdrop-guidewire-infra.apps-crc.testing ...
-```
-
 ### virtiofsd no encontrado
-
-```
-virtiofsd not found in PATH
-```
-
-**Solucion**: Instalar virtiofsd (necesario para libvirt):
 
 ```bash
 # Ubuntu/Debian
@@ -535,23 +611,7 @@ sudo dnf install virtiofsd
 
 ## Desinstalacion completa
 
-```bash
-# 1. Eliminar los namespaces del proyecto
-oc delete project guidewire-infra guidewire-apps
-
-# 2. Eliminar el cluster CRC
-crc stop
-crc delete
-
-# 3. Limpiar configuracion de CRC
-crc cleanup
-
-# 4. Eliminar el binario (opcional)
-sudo rm /usr/local/bin/crc
-
-# 5. Eliminar cache y configuracion (opcional)
-rm -rf ~/.crc
-```
+Ver [UNINSTALL.md](../../../../lab/openshift/UNINSTALL.md) para la guia detallada de desinstalacion, incluyendo la reversion de todos los cambios en el sistema host (sysctl, iptables, systemd, /etc/hosts, NetworkManager).
 
 ---
 
@@ -562,5 +622,6 @@ rm -rf ~/.crc
 - [Strimzi (Kafka on Kubernetes)](https://strimzi.io/documentation/)
 - [AMQ Broker Operator](https://access.redhat.com/documentation/en-us/red_hat_amq_broker)
 - [Apicurio Registry Operator](https://www.apicur.io/registry/docs/)
+- [UNINSTALL.md](../../../../lab/openshift/UNINSTALL.md) — Guia de desinstalacion
 - [Lab Environment spec.yml](../../../infra/lab-environment/spec.yml)
 - [Lab Environment docs](README.md)

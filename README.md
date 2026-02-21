@@ -207,10 +207,14 @@ guidewire/
 | Archivo | Descripción |
 |---------|-------------|
 | [deploy-all.sh](lab/openshift/deploy-all.sh) | Script de despliegue completo en CRC |
+| [start.sh](lab/openshift/scripts/start.sh) | Arranca CRC + port-forwards + verificacion |
+| [stop.sh](lab/openshift/scripts/stop.sh) | Para port-forwards + suspende CRC |
 | [namespaces.yml](lab/openshift/namespaces.yml) | Namespaces: guidewire-infra, guidewire-apps |
 | [operators/](lab/openshift/operators/) | Subscriptions: Strimzi, AMQ Broker, Apicurio |
 | [infra/](lab/openshift/infra/) | Manifiestos de infraestructura |
 | [apps/](lab/openshift/apps/) | Manifiestos de aplicaciones (BuildConfig + Deployment) |
+| [**INSTALL.md**](openspecs/docs/infra/lab-environment/INSTALL.md) | Guia completa de instalacion paso a paso |
+| [**UNINSTALL.md**](lab/openshift/UNINSTALL.md) | Guia de desinstalacion y reversion de cambios |
 | [podman-compose.yml](lab/podman/podman-compose.yml) | Alternativa legacy con Podman Compose |
 
 ---
