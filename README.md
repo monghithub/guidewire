@@ -234,11 +234,33 @@ cd lab/openshift
 # 4. Verificar
 oc get pods -n guidewire-infra
 oc get pods -n guidewire-apps
-
-# 5. Acceder desde tu navegador
-#    oc get routes -n guidewire-infra
-#    oc get routes -n guidewire-apps
 ```
+
+---
+
+## Apagar y reiniciar el entorno
+
+### Apagar
+
+```bash
+lab/openshift/scripts/stop.sh
+```
+
+Mata los port-forwards y suspende la VM de CRC. Los pods, datos y configuracion se conservan.
+
+### Reiniciar
+
+```bash
+lab/openshift/scripts/start.sh
+```
+
+Arranca CRC, limpia las reglas iptables de K3s, desactiva los forwarders rotos del daemon y lanza los port-forwards HTTP/HTTPS. Al finalizar verifica que las rutas responden.
+
+> **Prerequisitos (una sola vez)**: los scripts asumen que ya se ejecutaron estos comandos:
+> ```bash
+> sudo sysctl net.ipv4.ip_unprivileged_port_start=80
+> sudo systemctl stop k3s && sudo systemctl disable k3s
+> ```
 
 ---
 
