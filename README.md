@@ -4,7 +4,7 @@ POC de arquitectura de integracion para **Guidewire InsuranceSuite**. Demuestra 
 
 ## Que hace cada componente
 
-El sistema se compone de **5 microservicios** y **6 componentes de infraestructura**:
+El sistema se compone de **5 microservicios** y **5 componentes de infraestructura**:
 
 ### Microservicios
 
@@ -23,7 +23,6 @@ El sistema se compone de **5 microservicios** y **6 componentes de infraestructu
 | **[Apache Kafka](openspecs/docs/infra/kafka/README.md)** | Bus de eventos central. 9 topics organizados por dominio con serializacion AVRO. Modo KRaft (sin ZooKeeper), gestionado por Strimzi. |
 | **[PostgreSQL](openspecs/docs/infra/postgres/README.md)** | Base de datos relacional. 5 bases logicas aisladas (una por servicio) con el patron database-per-service. |
 | **[Apicurio Registry](openspecs/docs/infra/apicurio/README.md)** | Registro de schemas. Gobierna la compatibilidad de los schemas AVRO, OpenAPI y AsyncAPI entre productores y consumidores. |
-| **[ActiveMQ Artemis](openspecs/docs/infra/activemq/README.md)** | Broker JMS/AMQP. Complementa Kafka para patrones punto-a-punto y request/reply con sistemas legacy. |
 | **[3Scale APIcast](openspecs/docs/infra/threescale/README.md)** | API Gateway empresarial. Autenticacion por API Key, rate limiting (100-200 req/min) y enrutamiento a backends. |
 | **[Kafdrop](openspecs/docs/infra/kafka/README.md)** | UI web para inspeccion de topics, consumer groups y mensajes de Kafka. |
 
@@ -40,7 +39,7 @@ graph TD
             threescale["3Scale APIcast<br/>Route: apicast"]
             kafka["Strimzi Kafka — KRaft<br/>Event Backbone"]
             pg["PostgreSQL 16"]
-            support["Apicurio Registry · AMQ Broker · Kafdrop"]
+            support["Apicurio Registry · Kafdrop"]
         end
 
         subgraph apps["Namespace: guidewire-apps"]
@@ -155,7 +154,6 @@ guidewire/
 |-----------|------|---------------|
 | PostgreSQL | [spec.yml](openspecs/infra/postgres/spec.yml) | [docs](openspecs/docs/infra/postgres/README.md) |
 | Kafka (KRaft) | [spec.yml](openspecs/infra/kafka/spec.yml) | [docs](openspecs/docs/infra/kafka/README.md) |
-| ActiveMQ Artemis | [spec.yml](openspecs/infra/activemq/spec.yml) | [docs](openspecs/docs/infra/activemq/README.md) |
 | 3Scale API Gateway | [spec.yml](openspecs/infra/threescale/spec.yml) | [docs](openspecs/docs/infra/threescale/README.md) |
 | Apicurio Registry | [spec.yml](openspecs/infra/apicurio/spec.yml) | [docs](openspecs/docs/infra/apicurio/README.md) |
 | Lab Environment | [spec.yml](openspecs/infra/lab-environment/spec.yml) | [docs](openspecs/docs/infra/lab-environment/README.md) · [**INSTALL**](openspecs/docs/infra/lab-environment/INSTALL.md) |
@@ -210,7 +208,7 @@ guidewire/
 | [start.sh](lab/openshift/scripts/start.sh) | Arranca CRC + port-forwards + verificacion |
 | [stop.sh](lab/openshift/scripts/stop.sh) | Para port-forwards + suspende CRC |
 | [namespaces.yml](lab/openshift/namespaces.yml) | Namespaces: guidewire-infra, guidewire-apps |
-| [operators/](lab/openshift/operators/) | Subscriptions: Strimzi, AMQ Broker, Apicurio |
+| [operators/](lab/openshift/operators/) | Subscriptions: Strimzi, Apicurio |
 | [infra/](lab/openshift/infra/) | Manifiestos de infraestructura |
 | [apps/](lab/openshift/apps/) | Manifiestos de aplicaciones (BuildConfig + Deployment) |
 | [**INSTALL.md**](openspecs/docs/infra/lab-environment/INSTALL.md) | Guia completa de instalacion paso a paso |
@@ -290,7 +288,6 @@ CRC se ejecuta en una VM con red virtual. Para acceder desde otras maquinas de l
    192.168.1.135  oauth-openshift.apps-crc.testing
    192.168.1.135  kafdrop-guidewire-infra.apps-crc.testing
    192.168.1.135  apicurio-guidewire-infra.apps-crc.testing
-   192.168.1.135  amq-console-guidewire-infra.apps-crc.testing
    192.168.1.135  apicast-guidewire-infra.apps-crc.testing
    192.168.1.135  billing-service-guidewire-apps.apps-crc.testing
    192.168.1.135  camel-gateway-guidewire-apps.apps-crc.testing
@@ -314,7 +311,6 @@ CRC se ejecuta en una VM con red virtual. Para acceder desde otras maquinas de l
 |-----------|-----|--------------|
 | Kafdrop (Kafka UI) | http://kafdrop-guidewire-infra.apps-crc.testing | Sin auth |
 | Apicurio (Schema Registry) | http://apicurio-guidewire-infra.apps-crc.testing | Sin auth |
-| AMQ Console (ActiveMQ) | http://amq-console-guidewire-infra.apps-crc.testing | `admin` / `admin123` |
 
 ### APIs de microservicios
 
@@ -346,7 +342,6 @@ Todas las APIs estan expuestas a traves del gateway en `http://apicast-guidewire
 |----------|---------|----------|-----|
 | OpenShift (admin) | `kubeadmin` | `xtLsK-LLIzY-6UVEd-UESLR` | Consola web, `oc login` |
 | OpenShift (dev) | `developer` | `developer` | Consola web, `oc login` |
-| AMQ Console | `admin` | `admin123` | Web UI hawtio |
 | PostgreSQL | `guidewire` | `guidewire123` | Todas las bases de datos |
 
 ---
@@ -360,7 +355,6 @@ Todas las APIs estan expuestas a traves del gateway en `http://apicast-guidewire
 | API Gateway | Red Hat 3Scale (APIcast) | latest |
 | Integración | Apache Camel | 4.4 |
 | Event Streaming | Apache Kafka (KRaft) | 4.0 (Strimzi v0.50.0) |
-| Mensajería JMS | Apache ActiveMQ Artemis | 2.33 |
 | Reglas de Negocio | Drools / KIE Server | 8.x |
 | Schema Registry | Apicurio Service Registry | 2.5 |
 | Base de Datos | PostgreSQL | 16 |
@@ -389,7 +383,7 @@ El proyecto se gestiona con [GitHub Issues](../../issues). Los 41 issues abierto
 
 | Fase | Issues | Descripción |
 |------|--------|-------------|
-| Infraestructura | [#29](../../issues/29)-[#34](../../issues/34) | Kafka, Apicurio, 3Scale, ActiveMQ, PostgreSQL, Docker Compose |
+| Infraestructura | [#29](../../issues/29)-[#34](../../issues/34) | Kafka, Apicurio, 3Scale, PostgreSQL, Docker Compose |
 | Diseño | [#35](../../issues/35)-[#44](../../issues/44) | OpenAPI, AsyncAPI, AVRO |
 | Camel Gateway | [#45](../../issues/45)-[#51](../../issues/51) | Rutas SOAP/REST, transformaciones, Kafka |
 | Drools | [#52](../../issues/52)-[#53](../../issues/53) | Reglas de fraude, validaciones, comisiones |

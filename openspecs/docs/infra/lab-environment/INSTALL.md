@@ -223,16 +223,15 @@ El script despliega en este orden:
 
 ```
 Fase 1:  Namespaces (guidewire-infra, guidewire-apps)
-Fase 2:  Operadores (Strimzi, AMQ Broker, Apicurio)
+Fase 2:  Operadores (Strimzi, Apicurio)
 Fase 3:  PostgreSQL (Secret, ConfigMap, PVC, Deployment, Service)
 Fase 4:  Kafka (Strimzi Kafka CR + Topics)
-Fase 5:  ActiveMQ (AMQ Broker CR + Addresses)
-Fase 6:  Apicurio Registry (ApicurioRegistry CR)
-Fase 7:  Kafdrop (Deployment, Service, Route)
-Fase 8:  3Scale APIcast (ConfigMap, Deployment, Service, Route)
-Fase 9:  Application BuildConfigs
-Fase 10: Build images (oc start-build --from-dir)
-Fase 11: Deploy applications (Deployment, Service, Route)
+Fase 5:  Apicurio Registry (ApicurioRegistry CR)
+Fase 6:  Kafdrop (Deployment, Service, Route)
+Fase 7:  3Scale APIcast (ConfigMap, Deployment, Service, Route)
+Fase 8:  Application BuildConfigs
+Fase 9:  Build images (oc start-build --from-dir)
+Fase 10: Deploy applications (Deployment, Service, Route)
 ```
 
 > **Nota**: La primera vez tarda ~15-20 minutos (descarga de operadores e imagenes). Las siguientes veces ~5 minutos.
@@ -250,7 +249,6 @@ oc get pods -n guidewire-infra
 # postgres-xxxx                                    1/1     Running   5m
 # kafka-cluster-kafka-pool-0                       1/1     Running   4m
 # kafka-cluster-entity-operator-xxxx               1/1     Running   3m
-# activemq-broker-ss-0                             1/1     Running   3m
 # apicurio-registry-xxxx                           1/1     Running   3m
 # kafdrop-xxxx                                     1/1     Running   2m
 # apicast-xxxx                                     1/1     Running   2m
@@ -361,7 +359,6 @@ En cada maquina desde la que se quiera acceder (sustituir `192.168.1.135` por la
 192.168.1.135  oauth-openshift.apps-crc.testing
 192.168.1.135  kafdrop-guidewire-infra.apps-crc.testing
 192.168.1.135  apicurio-guidewire-infra.apps-crc.testing
-192.168.1.135  amq-console-guidewire-infra.apps-crc.testing
 192.168.1.135  apicast-guidewire-infra.apps-crc.testing
 192.168.1.135  billing-service-guidewire-apps.apps-crc.testing
 192.168.1.135  camel-gateway-guidewire-apps.apps-crc.testing
@@ -376,7 +373,6 @@ En cada maquina desde la que se quiera acceder (sustituir `192.168.1.135` por la
 # Web UIs
 curl -s -o /dev/null -w '%{http_code}' http://kafdrop-guidewire-infra.apps-crc.testing/     # 200
 curl -s -o /dev/null -w '%{http_code}' http://apicurio-guidewire-infra.apps-crc.testing/    # 302
-curl -s -o /dev/null -w '%{http_code}' http://amq-console-guidewire-infra.apps-crc.testing/ # 302
 curl -sk -o /dev/null -w '%{http_code}' https://console-openshift-console.apps-crc.testing/ # 200
 
 # Health checks
@@ -406,7 +402,6 @@ curl -s -o /dev/null -w '%{http_code}' http://drools-engine-guidewire-apps.apps-
 |-----------|-----|--------------|
 | Kafdrop (Kafka UI) | http://kafdrop-guidewire-infra.apps-crc.testing | Sin auth |
 | Apicurio (Schema Registry) | http://apicurio-guidewire-infra.apps-crc.testing | Sin auth |
-| AMQ Console (ActiveMQ) | http://amq-console-guidewire-infra.apps-crc.testing | `admin` / `admin123` |
 
 ### APIs de microservicios
 
@@ -438,7 +433,6 @@ Base: `http://apicast-guidewire-infra.apps-crc.testing` (requiere `user_key`)
 |----------|---------|----------|
 | OpenShift (admin) | `kubeadmin` | `xtLsK-LLIzY-6UVEd-UESLR` |
 | OpenShift (dev) | `developer` | `developer` |
-| AMQ Console | `admin` | `admin123` |
 | PostgreSQL | `guidewire` | `guidewire123` |
 
 ---
@@ -620,7 +614,6 @@ Ver [UNINSTALL.md](../../../../lab/openshift/UNINSTALL.md) para la guia detallad
 - [CRC (OpenShift Local) Documentation](https://crc.dev/crc/)
 - [Red Hat OpenShift Documentation](https://docs.openshift.com)
 - [Strimzi (Kafka on Kubernetes)](https://strimzi.io/documentation/)
-- [AMQ Broker Operator](https://access.redhat.com/documentation/en-us/red_hat_amq_broker)
 - [Apicurio Registry Operator](https://www.apicur.io/registry/docs/)
 - [UNINSTALL.md](../../../../lab/openshift/UNINSTALL.md) — Guia de desinstalacion
 - [Lab Environment spec.yml](../../../infra/lab-environment/spec.yml)

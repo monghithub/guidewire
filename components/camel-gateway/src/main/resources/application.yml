@@ -35,11 +35,6 @@ apicurio:
   registry:
     url: ${APICURIO_REGISTRY_URL:http://localhost:8080/apis/registry/v2}
 
-activemq:
-  broker-url: ${ACTIVEMQ_BROKER_URL:tcp://localhost:61616}
-  user: ${ACTIVEMQ_USER:admin}
-  password: ${ACTIVEMQ_PASSWORD:admin}
-
 guidewire:
   mock:
     base-url: ${GUIDEWIRE_MOCK_URL:http://mock-guidewire:8082}

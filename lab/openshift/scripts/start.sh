@@ -48,7 +48,6 @@ fi
 # ── 4. Wait for pods ─────────────────────────────────────────────────
 echo ""
 echo "=== Waiting for pods ==="
-$OC wait --for=condition=Ready pod -l application=activemq-broker-app -n guidewire-infra --timeout=120s 2>/dev/null || true
 $OC wait --for=condition=Ready pod -l strimzi.io/kind=Kafka -n guidewire-infra --timeout=120s 2>/dev/null || true
 echo "  Infra pods:"
 $OC get pods -n guidewire-infra --no-headers 2>/dev/null | grep -v Completed | grep -v Error
@@ -77,7 +76,6 @@ echo "=== Verifying routes ==="
 for host in \
   kafdrop-guidewire-infra.apps-crc.testing \
   apicurio-guidewire-infra.apps-crc.testing \
-  amq-console-guidewire-infra.apps-crc.testing \
   console-openshift-console.apps-crc.testing; do
   code=$(curl -sk -o /dev/null -w '%{http_code}' -H "Host: $host" https://127.0.0.1/ 2>/dev/null || \
          curl -s -o /dev/null -w '%{http_code}' -H "Host: $host" http://127.0.0.1/ 2>/dev/null)

@@ -64,11 +64,9 @@ deploy_infra() {
   info " Phase 2: Operators"
   info "============================================================"
   oc apply -f operators/strimzi-subscription.yml
-  oc apply -f operators/amq-broker-subscription.yml
   oc apply -f operators/apicurio-subscription.yml
 
   wait_for_operator "strimzi" 180
-  wait_for_operator "amq-broker" 180
   wait_for_operator "apicurio" 180
 
   info "============================================================"
@@ -95,26 +93,19 @@ deploy_infra() {
   oc apply -f infra/kafka/kafka-topics.yml
 
   info "============================================================"
-  info " Phase 5: ActiveMQ (AMQ Broker)"
-  info "============================================================"
-  oc apply -f infra/activemq/activemq-broker.yml
-  sleep 10
-  oc apply -f infra/activemq/activemq-addresses.yml
-
-  info "============================================================"
-  info " Phase 6: Apicurio Registry"
+  info " Phase 5: Apicurio Registry"
   info "============================================================"
   oc apply -f infra/apicurio/apicurio-registry.yml
 
   info "============================================================"
-  info " Phase 7: Kafdrop"
+  info " Phase 6: Kafdrop"
   info "============================================================"
   oc apply -f infra/kafdrop/deployment.yml
   oc apply -f infra/kafdrop/service.yml
   oc apply -f infra/kafdrop/route.yml
 
   info "============================================================"
-  info " Phase 8: 3Scale APIcast"
+  info " Phase 7: 3Scale APIcast"
   info "============================================================"
   oc apply -f infra/threescale/configmap-apicast.yml
   oc apply -f infra/threescale/deployment.yml
@@ -133,7 +124,7 @@ deploy_infra() {
 
 deploy_apps() {
   info "============================================================"
-  info " Phase 9: Application ImageStreams + BuildConfigs"
+  info " Phase 8: Application ImageStreams + BuildConfigs"
   info "============================================================"
   for svc in billing-service camel-gateway incidents-service customers-service drools-engine; do
     info "Applying BuildConfig for $svc..."
@@ -141,7 +132,7 @@ deploy_apps() {
   done
 
   info "============================================================"
-  info " Phase 10: Build Application Images"
+  info " Phase 9: Build Application Images"
   info "============================================================"
   PROJECT_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
   for svc in billing-service camel-gateway incidents-service customers-service drools-engine; do
@@ -152,7 +143,7 @@ deploy_apps() {
   done
 
   info "============================================================"
-  info " Phase 11: Deploy Applications"
+  info " Phase 10: Deploy Applications"
   info "============================================================"
   for svc in billing-service camel-gateway incidents-service customers-service drools-engine; do
     info "Deploying $svc..."
