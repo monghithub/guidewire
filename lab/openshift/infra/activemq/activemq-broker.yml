@@ -9,7 +9,9 @@ metadata:
 spec:
   deploymentPlan:
     size: 1
-    image: quay.io/artemiscloud/activemq-artemis-broker-kubernetes:artemis.2.33.0
+    # No explicit image — let the AMQ Broker operator use its default
+    # (includes hawtio web console). The community image
+    # artemiscloud/activemq-artemis-broker-kubernetes does NOT include hawtio.
     requireLogin: true
     persistenceEnabled: false
     messageMigration: false
