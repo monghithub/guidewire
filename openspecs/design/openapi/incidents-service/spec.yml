@@ -22,7 +22,7 @@ specification:
   format: OpenAPI 3.1
   file: incidents-service-api.yml
   base_path: /api/v1/incidents
-  register_in: apicurio (grupo: guidewire-openapi)
+  register_in: apicurio (grupo: guidewire.incidents-service)
 
   info:
     title: Incidents Microservice API

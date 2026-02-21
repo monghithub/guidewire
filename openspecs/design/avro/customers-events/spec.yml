@@ -22,7 +22,7 @@ schemas:
     file: CustomerRegistered.avsc
     namespace: com.guidewire.events.customers
     topic: customers.customer-registered
-    register_in: apicurio (grupo: guidewire, artifact: CustomerRegistered)
+    register_in: apicurio (grupo: guidewire.customers-service, artifact: CustomerRegistered)
     fields:
       - name: eventId
         type: string
@@ -58,7 +58,7 @@ schemas:
     file: CustomerStatusChanged.avsc
     namespace: com.guidewire.events.customers
     topic: customers.customer-status-changed
-    register_in: apicurio (grupo: guidewire, artifact: CustomerStatusChanged)
+    register_in: apicurio (grupo: guidewire.customers-service, artifact: CustomerStatusChanged)
     fields:
       - name: eventId
         type: string

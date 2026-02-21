@@ -22,7 +22,7 @@ specification:
   format: OpenAPI 3.1
   file: claimcenter-api.yml
   base_path: /api/v1/claims
-  register_in: apicurio (grupo: guidewire-openapi)
+  register_in: apicurio (grupo: guidewire.claimcenter)
 
   info:
     title: Guidewire ClaimCenter API

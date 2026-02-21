@@ -22,7 +22,7 @@ specification:
   format: OpenAPI 3.1
   file: policycenter-api.yml
   base_path: /api/v1/policies
-  register_in: apicurio (grupo: guidewire-openapi)
+  register_in: apicurio (grupo: guidewire.policycenter)
 
   info:
     title: Guidewire PolicyCenter API

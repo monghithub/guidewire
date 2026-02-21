@@ -34,20 +34,41 @@ configuration:
     password: apicurio123
 
   artifact_groups:
-    - group_id: guidewire
-      description: Schemas AVRO para eventos Kafka de Guidewire
-      artifact_types: [AVRO]
-      compatibility_rule: FULL
-
-    - group_id: guidewire-openapi
-      description: Especificaciones OpenAPI de APIs REST
+    - group_id: guidewire.policycenter
+      description: APIs del sistema core PolicyCenter
       artifact_types: [OPENAPI]
-      compatibility_rule: NONE
 
-    - group_id: guidewire-asyncapi
-      description: Especificaciones AsyncAPI de eventos
+    - group_id: guidewire.claimcenter
+      description: APIs del sistema core ClaimCenter
+      artifact_types: [OPENAPI]
+
+    - group_id: guidewire.billingcenter
+      description: APIs del sistema core BillingCenter
+      artifact_types: [OPENAPI]
+
+    - group_id: guidewire.camel-gateway
+      description: APIs del gateway de integracion Camel
+      artifact_types: [OPENAPI]
+
+    - group_id: guidewire.billing-service
+      description: APIs y schemas del microservicio de facturacion
+      artifact_types: [OPENAPI, AVRO]
+
+    - group_id: guidewire.incidents-service
+      description: APIs y schemas del microservicio de incidencias
+      artifact_types: [OPENAPI, AVRO]
+
+    - group_id: guidewire.customers-service
+      description: APIs y schemas del microservicio de clientes
+      artifact_types: [OPENAPI, AVRO]
+
+    - group_id: guidewire.drools-engine
+      description: APIs del motor de reglas Drools
+      artifact_types: [OPENAPI]
+
+    - group_id: guidewire.events
+      description: Especificacion AsyncAPI global de eventos Kafka
       artifact_types: [ASYNCAPI]
-      compatibility_rule: NONE
 
   compatibility:
     global_rule: FULL
@@ -91,6 +112,12 @@ healthcheck:
   interval: 15s
   timeout: 5s
   retries: 3
+
+convention: >
+  Toda API diseñada, añadida o modificada debe registrarse en Apicurio Registry.
+  Esto aplica a OpenAPI (REST), AsyncAPI (eventos) y Avro schemas.
+  En CI/CD, las specs se publican automáticamente al detectar cambios en
+  contracts/openapi/ y contracts/asyncapi/ (ver issue #88).
 
 acceptance_criteria:
   - Apicurio arranca y se conecta a PostgreSQL

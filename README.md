@@ -204,9 +204,10 @@ guidewire/
 
 | Archivo | Descripción |
 |---------|-------------|
-| [deploy-all.sh](lab/openshift/deploy-all.sh) | Script de despliegue completo en CRC |
+| [deploy-all.sh](lab/openshift/deploy-all.sh) | Script de despliegue completo en CRC (11 fases) |
 | [start.sh](lab/openshift/scripts/start.sh) | Arranca CRC + port-forwards + verificacion |
 | [stop.sh](lab/openshift/scripts/stop.sh) | Para port-forwards + suspende CRC |
+| [register-contracts.sh](lab/openshift/scripts/register-contracts.sh) | Registra 15 contratos en Apicurio Registry |
 | [namespaces.yml](lab/openshift/namespaces.yml) | Namespaces: guidewire-infra, guidewire-apps |
 | [operators/](lab/openshift/operators/) | Subscriptions: Strimzi, Apicurio |
 | [infra/](lab/openshift/infra/) | Manifiestos de infraestructura |
@@ -214,6 +215,26 @@ guidewire/
 | [**INSTALL.md**](openspecs/docs/infra/lab-environment/INSTALL.md) | Guia completa de instalacion paso a paso |
 | [**UNINSTALL.md**](lab/openshift/UNINSTALL.md) | Guia de desinstalacion y reversion de cambios |
 | [podman-compose.yml](lab/podman/podman-compose.yml) | Alternativa legacy con Podman Compose |
+
+### CI/CD
+
+| Archivo | Descripción |
+|---------|-------------|
+| [ci.yml](.github/workflows/ci.yml) | Pipeline CI: build, test, lint, contract validation, security scan |
+| [cd.yml](.github/workflows/cd.yml) | Pipeline CD: deploy a OpenShift, tag imagenes con git SHA, registrar contratos |
+| [dependabot.yml](.github/dependabot.yml) | Actualizacion automatica de dependencias (Maven, npm, GitHub Actions) |
+| [PR template](.github/pull_request_template.md) | Template para Pull Requests con checklist |
+
+### Tests
+
+| Servicio | Tests | Cobertura |
+|----------|-------|-----------|
+| billing-service | 58 | Controller, Service, Status, Consumer, Producer, ExceptionHandler |
+| camel-gateway | 36 | TransformationProcessor, HealthIndicator, Content-Based Routing |
+| incidents-service | 62 | Resource, Service, Status, ExceptionMappers, KafkaProducer |
+| customers-service | 55 | Controller, Service, Validator, ErrorHandler, Middleware |
+| drools-engine | 66 | Controller, Service, Fraud/Policy/Commission/Routing rules + boundaries |
+| **Total** | **277** | — |
 
 ---
 
@@ -371,9 +392,21 @@ Todas las APIs estan expuestas a traves del gateway en `http://apicast-guidewire
 
 1. **Spec** → Define completamente cada componente
 2. **Contracts** → OpenAPI, AsyncAPI, AVRO generados desde los specs
-3. **Code** → Scaffolds generados desde contratos y specs
-4. **Docs** → Documentación sincronizada con la implementación
-5. **Test** → Postman E2E valida el flujo completo
+3. **Code** → Scaffolds generados desde contratos y specs (contract-first: interfaces y tipos se regeneran en cada build)
+4. **Test** → 277 tests unitarios + Postman E2E valida el flujo completo
+5. **Register** → Contratos registrados automaticamente en Apicurio Registry
+6. **CI** → GitHub Actions valida build, tests, contratos y seguridad en cada push
+7. **CD** → Deploy automatico a OpenShift con image tagging por git SHA
+8. **Docs** → Documentación sincronizada con la implementación
+
+### Practicas de despliegue
+
+- **Zero-downtime deployments**: RollingUpdate con maxSurge=1, maxUnavailable=0
+- **Health probes**: Liveness + Readiness en los 5 servicios
+- **Resource limits**: Requests/limits de CPU y memoria ajustados por tipo de servicio
+- **Image traceability**: Cada imagen se tagea con el git SHA del commit que la generó
+- **Contract governance**: Los 15 contratos (8 OpenAPI + 1 AsyncAPI + 6 Avro) se registran en Apicurio
+- **Dependency management**: Dependabot actualiza Maven, npm y GitHub Actions semanalmente
 
 ---
 

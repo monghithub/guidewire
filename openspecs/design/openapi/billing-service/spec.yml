@@ -22,7 +22,7 @@ specification:
   format: OpenAPI 3.1
   file: billing-service-api.yml
   base_path: /api/v1/invoices
-  register_in: apicurio (grupo: guidewire-openapi)
+  register_in: apicurio (grupo: guidewire.billing-service)
 
   info:
     title: Billing Microservice API

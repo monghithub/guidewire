@@ -22,7 +22,7 @@ schemas:
     file: IncidentCreated.avsc
     namespace: com.guidewire.events.incidents
     topic: incidents.incident-created
-    register_in: apicurio (grupo: guidewire, artifact: IncidentCreated)
+    register_in: apicurio (grupo: guidewire.incidents-service, artifact: IncidentCreated)
     fields:
       - name: eventId
         type: string
@@ -70,7 +70,7 @@ schemas:
     file: IncidentStatusChanged.avsc
     namespace: com.guidewire.events.incidents
     topic: incidents.incident-status-changed
-    register_in: apicurio (grupo: guidewire, artifact: IncidentStatusChanged)
+    register_in: apicurio (grupo: guidewire.incidents-service, artifact: IncidentStatusChanged)
     fields:
       - name: eventId
         type: string

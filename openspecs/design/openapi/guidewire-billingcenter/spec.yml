@@ -22,7 +22,7 @@ specification:
   format: OpenAPI 3.1
   file: billingcenter-api.yml
   base_path: /api/v1/gw-invoices
-  register_in: apicurio (grupo: guidewire-openapi)
+  register_in: apicurio (grupo: guidewire.billingcenter)
 
   info:
     title: Guidewire BillingCenter API

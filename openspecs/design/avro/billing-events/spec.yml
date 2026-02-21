@@ -23,7 +23,7 @@ schemas:
     file: InvoiceCreated.avsc
     namespace: com.guidewire.events.billing
     topic: billing.invoice-created
-    register_in: apicurio (grupo: guidewire, artifact: InvoiceCreated)
+    register_in: apicurio (grupo: guidewire.billing-service, artifact: InvoiceCreated)
     fields:
       - name: eventId
         type: string
@@ -66,7 +66,7 @@ schemas:
     file: InvoiceStatusChanged.avsc
     namespace: com.guidewire.events.billing
     topic: billing.invoice-status-changed
-    register_in: apicurio (grupo: guidewire, artifact: InvoiceStatusChanged)
+    register_in: apicurio (grupo: guidewire.billing-service, artifact: InvoiceStatusChanged)
     fields:
       - name: eventId
         type: string
