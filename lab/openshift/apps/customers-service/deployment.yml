@@ -20,6 +20,7 @@ spec:
       containers:
         - name: customers-service
           image: image-registry.openshift-image-registry.svc:5000/guidewire-apps/customers-service:latest
+          imagePullPolicy: IfNotPresent
           ports:
             - containerPort: 8085
               protocol: TCP
@@ -37,15 +38,16 @@ spec:
             limits:
               cpu: 500m
               memory: 256Mi
+          livenessProbe:
+            tcpSocket:
+              port: 8085
+            initialDelaySeconds: 10
+            periodSeconds: 10
+            failureThreshold: 3
           readinessProbe:
             httpGet:
-              path: /health
+              path: /api/v1/customers?page=1&size=1
               port: 8085
             initialDelaySeconds: 15
-            periodSeconds: 10
-          livenessProbe:
-            httpGet:
-              path: /health
-              port: 8085
-            initialDelaySeconds: 30
-            periodSeconds: 15
+            periodSeconds: 5
+            failureThreshold: 3

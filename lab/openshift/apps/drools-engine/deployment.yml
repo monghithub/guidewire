@@ -20,6 +20,7 @@ spec:
       containers:
         - name: drools-engine
           image: image-registry.openshift-image-registry.svc:5000/guidewire-apps/drools-engine:latest
+          imagePullPolicy: IfNotPresent
           ports:
             - containerPort: 8086
               protocol: TCP
@@ -37,15 +38,17 @@ spec:
             limits:
               cpu: 500m
               memory: 512Mi
-          readinessProbe:
-            httpGet:
-              path: /actuator/health/readiness
-              port: 8086
-            initialDelaySeconds: 30
-            periodSeconds: 10
           livenessProbe:
             httpGet:
               path: /actuator/health/liveness
               port: 8086
             initialDelaySeconds: 60
-            periodSeconds: 15
+            periodSeconds: 10
+            failureThreshold: 3
+          readinessProbe:
+            httpGet:
+              path: /actuator/health/readiness
+              port: 8086
+            initialDelaySeconds: 15
+            periodSeconds: 5
+            failureThreshold: 3
