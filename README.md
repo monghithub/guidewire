@@ -242,19 +242,61 @@ oc get pods -n guidewire-apps
 
 ---
 
-## Routes (OpenShift)
+## Acceso a los servicios
 
-| Servicio | Route | URL |
-|----------|-------|-----|
-| 3Scale API Gateway | apicast | https://apicast-guidewire-infra.apps-crc.testing |
-| Apicurio Registry | apicurio | https://apicurio-guidewire-infra.apps-crc.testing |
-| Kafdrop | kafdrop | https://kafdrop-guidewire-infra.apps-crc.testing |
-| ActiveMQ Console | activemq-console | https://activemq-console-guidewire-infra.apps-crc.testing |
-| Billing Service | billing-service | https://billing-service-guidewire-apps.apps-crc.testing |
-| Camel Gateway | camel-gateway | https://camel-gateway-guidewire-apps.apps-crc.testing |
-| Incidents Service | incidents-service | https://incidents-service-guidewire-apps.apps-crc.testing |
-| Customers Service | customers-service | https://customers-service-guidewire-apps.apps-crc.testing |
-| Drools KIE Server | drools-engine | https://drools-engine-guidewire-apps.apps-crc.testing |
+### Configuracion de red
+
+CRC se ejecuta en una VM con red virtual. Para acceder desde otras maquinas de la LAN es necesario:
+
+1. **En el servidor CRC**, ejecutar el port-forward del router:
+   ```bash
+   lab/openshift/scripts/pf-router.sh
+   ```
+
+2. **En cada maquina cliente**, añadir al `/etc/hosts` (sustituir `192.168.1.135` por la IP del servidor):
+   ```
+   192.168.1.135  kafdrop-guidewire-infra.apps-crc.testing
+   192.168.1.135  apicurio-guidewire-infra.apps-crc.testing
+   192.168.1.135  amq-console-guidewire-infra.apps-crc.testing
+   192.168.1.135  apicast-guidewire-infra.apps-crc.testing
+   192.168.1.135  billing-service-guidewire-apps.apps-crc.testing
+   192.168.1.135  camel-gateway-guidewire-apps.apps-crc.testing
+   192.168.1.135  incidents-service-guidewire-apps.apps-crc.testing
+   192.168.1.135  customers-service-guidewire-apps.apps-crc.testing
+   192.168.1.135  drools-engine-guidewire-apps.apps-crc.testing
+   ```
+
+### Web UIs (navegador)
+
+| Componente | URL | Credenciales |
+|-----------|-----|--------------|
+| Kafdrop (Kafka UI) | http://kafdrop-guidewire-infra.apps-crc.testing | Sin auth |
+| Apicurio (Schema Registry) | http://apicurio-guidewire-infra.apps-crc.testing | Sin auth |
+| AMQ Console (ActiveMQ) | http://amq-console-guidewire-infra.apps-crc.testing | `admin` / `admin123` |
+
+### APIs de microservicios
+
+| Servicio | URL base | Endpoints | Health |
+|----------|----------|-----------|--------|
+| Billing Service | http://billing-service-guidewire-apps.apps-crc.testing | `/api/v1/invoices` | `/actuator/health` |
+| Camel Gateway | http://camel-gateway-guidewire-apps.apps-crc.testing | `/api/v1/gw-invoices` | `/actuator/health` |
+| Incidents Service | http://incidents-service-guidewire-apps.apps-crc.testing | `/api/v1/incidents` | `/q/health` |
+| Customers Service | http://customers-service-guidewire-apps.apps-crc.testing | `/api/v1/customers` | `/health` |
+| Drools Engine | http://drools-engine-guidewire-apps.apps-crc.testing | `/api/v1/rules/evaluate` | `/actuator/health` |
+
+### API Gateway (APIcast / 3Scale)
+
+Todas las APIs estan expuestas a traves del gateway en `http://apicast-guidewire-infra.apps-crc.testing`. Requiere API key (`user_key` como query param o header).
+
+| Ruta | Backend |
+|------|---------|
+| `/api/v1/invoices` | Billing Service |
+| `/api/v1/gw-invoices` | Camel Gateway |
+| `/api/v1/incidents` | Incidents Service |
+| `/api/v1/customers` | Customers Service |
+| `/api/v1/rules/evaluate` | Drools Engine |
+| `/api/v1/policies` | Camel Gateway (PolicyCenter) |
+| `/api/v1/claims` | Camel Gateway (ClaimCenter) |
 
 ---
 
