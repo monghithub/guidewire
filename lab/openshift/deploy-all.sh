@@ -31,6 +31,11 @@ error() { echo -e "${RED}[ERROR]${NC} $1"; exit 1; }
 command -v oc &>/dev/null || error "oc CLI not found. Run: eval \$(crc oc-env)"
 oc whoami &>/dev/null || error "Not logged in. Run: oc login -u developer -p developer https://api.crc.testing:6443"
 
+# Compute git SHA for image tagging
+PROJECT_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
+GIT_SHA=$(git -C "$PROJECT_ROOT" rev-parse --short HEAD)
+info "Git SHA for image tags: $GIT_SHA"
+
 wait_for_pods() {
   local ns=$1
   local timeout=${2:-300}
@@ -97,15 +102,29 @@ deploy_infra() {
   info "============================================================"
   oc apply -f infra/apicurio/apicurio-registry.yml
 
+  warn "Waiting for Apicurio Registry to be ready..."
+  oc wait --for=condition=Available deploy/apicurio-registry -n guidewire-infra --timeout=120s 2>/dev/null || \
+    warn "Apicurio Registry may still be starting, continuing..."
+
   info "============================================================"
-  info " Phase 6: Kafdrop"
+  info " Phase 6: Register API Contracts in Apicurio"
+  info "============================================================"
+  if [ -f "$SCRIPT_DIR/scripts/register-contracts.sh" ]; then
+    bash "$SCRIPT_DIR/scripts/register-contracts.sh" || \
+      warn "Contract registration had failures, continuing..."
+  else
+    warn "scripts/register-contracts.sh not found, skipping contract registration"
+  fi
+
+  info "============================================================"
+  info " Phase 7: Kafdrop"
   info "============================================================"
   oc apply -f infra/kafdrop/deployment.yml
   oc apply -f infra/kafdrop/service.yml
   oc apply -f infra/kafdrop/route.yml
 
   info "============================================================"
-  info " Phase 7: 3Scale APIcast"
+  info " Phase 8: 3Scale APIcast"
   info "============================================================"
   oc apply -f infra/threescale/configmap-apicast.yml
   oc apply -f infra/threescale/deployment.yml
@@ -124,7 +143,7 @@ deploy_infra() {
 
 deploy_apps() {
   info "============================================================"
-  info " Phase 8: Application ImageStreams + BuildConfigs"
+  info " Phase 9: Application ImageStreams + BuildConfigs"
   info "============================================================"
   for svc in billing-service camel-gateway incidents-service customers-service drools-engine; do
     info "Applying BuildConfig for $svc..."
@@ -132,18 +151,22 @@ deploy_apps() {
   done
 
   info "============================================================"
-  info " Phase 9: Build Application Images"
+  info " Phase 10: Build Application Images"
   info "============================================================"
-  PROJECT_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
   for svc in billing-service camel-gateway incidents-service customers-service drools-engine; do
     info "Building $svc from $PROJECT_ROOT/components/$svc ..."
-    oc start-build $svc -n guidewire-apps \
+    if oc start-build $svc -n guidewire-apps \
       --from-dir="$PROJECT_ROOT/components/$svc" \
-      --follow || warn "Build for $svc may have failed, continuing..."
+      --follow; then
+      oc tag guidewire-apps/$svc:latest guidewire-apps/$svc:$GIT_SHA -n guidewire-apps
+      info "Tagged $svc:latest -> $svc:$GIT_SHA"
+    else
+      warn "Build for $svc may have failed, continuing..."
+    fi
   done
 
   info "============================================================"
-  info " Phase 10: Deploy Applications"
+  info " Phase 11: Deploy Applications"
   info "============================================================"
   for svc in billing-service camel-gateway incidents-service customers-service drools-engine; do
     info "Deploying $svc..."
