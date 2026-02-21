@@ -45,7 +45,7 @@ graph TD
     gwmock["Guidewire Mock APIs<br/>Policy / Claim / Billing"]
     drools["Drools Rules Engine :8086<br/>Validation · Fraud · Routing"]
 
-    kafka["Apache Kafka — KRaft :9092<br/>Topics: billing.invoice-created · billing.invoice-status-changed<br/>incidents.incident-created · incidents.incident-status-changed<br/>customers.customer-registered · customers.customer-status-changed · dlq.errors"]
+    kafka["Apache Kafka — KRaft :9092<br/>Topics: billing.invoice-created · billing.invoice-status-changed<br/>incidents.incident-created · incidents.incident-status-changed<br/>customers.customer-registered · customers.customer-status-changed<br/>policies.policy-events · events.unclassified · dlq.errors"]
 
     kafka --> billing
     kafka --> incidents
@@ -59,7 +59,7 @@ graph TD
     incidents --> pg
     customers --> pg
 
-    pg["PostgreSQL :15432<br/>billing_db · incidents_db · customers_db · apicurio"]
+    pg["PostgreSQL :15432<br/>billing_db · incidents_db · customers_db · drools_audit · apicurio"]
 
     apicurio["Apicurio Schema Registry :8081"]
     activemq["ActiveMQ Artemis :61616 / :8161"]

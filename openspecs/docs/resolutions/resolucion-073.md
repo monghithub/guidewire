@@ -135,13 +135,15 @@ oc exec -n guidewire-infra kafka-cluster-kafka-0 -- bin/kafka-topics.sh \
 # https://kafdrop-guidewire-infra.apps-crc.testing
 ```
 
-**Topics esperados:**
+**Topics esperados (9 topics):**
 - `billing.invoice-created`
 - `billing.invoice-status-changed`
 - `incidents.incident-created`
 - `incidents.incident-status-changed`
 - `customers.customer-registered`
 - `customers.customer-status-changed`
+- `policies.policy-events`
+- `events.unclassified`
 - `dlq.errors`
 
 ## Paso 6: Test E2E con Postman/Newman
@@ -220,7 +222,7 @@ que el Service envie trafico antes de que el pod este listo.
 - [ ] `oc get pods -n guidewire-infra` muestra todos los pods Running
 - [ ] `oc get pods -n guidewire-apps` muestra todos los pods Running
 - [ ] Todos los healthchecks responden UP via Routes
-- [ ] Los 7 topics de Kafka existen
+- [ ] Los 9 topics de Kafka existen
 - [ ] Newman E2E pasa todos los tests
 - [ ] Los schemas Avro estan registrados en Apicurio
 - [ ] No hay errores en los logs (`oc logs -n guidewire-apps deploy/<service>`)

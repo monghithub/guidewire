@@ -116,6 +116,19 @@ Respuesta:
 }
 ```
 
+## Base de Datos
+
+El Drools Engine utiliza una base de datos PostgreSQL para almacenar el audit trail de las evaluaciones de reglas.
+
+| Parámetro | Valor |
+|-----------|-------|
+| Base de datos | `drools_audit` |
+| Usuario | `drools_user` |
+| Password | `drools123` |
+| JDBC URL | `jdbc:postgresql://postgres.guidewire-infra.svc.cluster.local:5432/drools_audit` |
+
+La base se crea automáticamente en el init script de PostgreSQL (`configmap-init-db.yml`).
+
 ## Spec de referencia
 
 - [spec.yml](../../../components/drools-engine/spec.yml)

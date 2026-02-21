@@ -2,7 +2,7 @@
 
 ## Descripción
 
-Instancia PostgreSQL 16 compartida que aloja 4 bases de datos lógicas, una por cada servicio que requiere persistencia. Se respeta el patrón **database-per-service**: cada servicio tiene su propia base de datos y usuario con permisos aislados.
+Instancia PostgreSQL 16 compartida que aloja 5 bases de datos lógicas, una por cada servicio que requiere persistencia. Se respeta el patrón **database-per-service**: cada servicio tiene su propia base de datos y usuario con permisos aislados.
 
 ## Configuración
 
@@ -29,6 +29,7 @@ Instancia PostgreSQL 16 compartida que aloja 4 bases de datos lógicas, una por 
 | `billing` | `billing_user` | `billing123` | Billing Service (Spring Boot) |
 | `incidents` | `incidents_user` | `incidents123` | Incidents Service (Quarkus) |
 | `customers` | `customers_user` | `customers123` | Customers Service (Node.js) |
+| `drools_audit` | `drools_user` | `drools123` | Drools Engine — audit trail (Spring Boot) |
 
 ## Inicialización
 
@@ -96,6 +97,14 @@ erDiagram
         string user "customers_user"
         string password "customers123"
         string service "Customers Service (Node.js)"
+    }
+
+    POSTGRESQL_INSTANCE ||--o{ DROOLS_AUDIT_DB : contains
+
+    DROOLS_AUDIT_DB {
+        string user "drools_user"
+        string password "drools123"
+        string service "Drools Engine (Spring Boot)"
     }
 ```
 

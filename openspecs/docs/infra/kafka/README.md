@@ -32,6 +32,8 @@ Broker de eventos en modo **KRaft** (sin ZooKeeper). Actúa como backbone de la 
 | `incidents.incident-status-changed` | 3 | 7 días | Cambio de estado de siniestro |
 | `customers.customer-registered` | 3 | 7 días | Nuevo cliente registrado |
 | `customers.customer-status-changed` | 3 | 7 días | Cambio de estado de cliente |
+| `policies.policy-events` | 3 | 7 días | Eventos de pólizas desde PolicyCenter |
+| `events.unclassified` | 1 | 30 días | Eventos no clasificados (fallback) |
 | `dlq.errors` | 1 | 30 días | Dead Letter Queue |
 
 ## Flujo de eventos
@@ -49,9 +51,13 @@ graph LR
         IIS["incidents.incident-status-changed"]
         CCR["customers.customer-registered"]
         CCS["customers.customer-status-changed"]
+        PPE["policies.policy-events"]
+        EUC["events.unclassified"]
         DLQ["dlq.errors"]
     end
 
+    CAMEL --> PPE
+    CAMEL --> EUC
     CAMEL --> BIC
     CAMEL --> BIS
     CAMEL --> IIC

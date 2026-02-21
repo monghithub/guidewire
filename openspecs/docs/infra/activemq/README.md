@@ -20,7 +20,7 @@ Broker de mensajería JMS/AMQP para patrones request/reply, transacciones y cola
 
 | Parámetro | Valor |
 |-----------|-------|
-| Imagen | `apache/activemq-artemis:2.33.0` |
+| Imagen | `quay.io/artemiscloud/activemq-artemis-broker-kubernetes:artemis.2.33.0` |
 | Puerto broker | **61616** (AMQP/JMS) |
 | Puerto consola | **8161** (Hawtio) |
 | Usuario | `admin` / `admin123` |
