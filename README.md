@@ -253,8 +253,15 @@ CRC se ejecuta en una VM con red virtual. Para acceder desde otras maquinas de l
    lab/openshift/scripts/pf-router.sh
    ```
 
-2. **En cada maquina cliente**, añadir al `/etc/hosts` (sustituir `192.168.1.135` por la IP del servidor):
+2. **En el servidor CRC**, ejecutar el port-forward HTTPS para la consola OpenShift:
+   ```bash
+   oc port-forward --address 0.0.0.0 -n openshift-ingress svc/router-internal-default 443:443
    ```
+
+3. **En cada maquina cliente**, añadir al `/etc/hosts` (sustituir `192.168.1.135` por la IP del servidor):
+   ```
+   192.168.1.135  console-openshift-console.apps-crc.testing
+   192.168.1.135  oauth-openshift.apps-crc.testing
    192.168.1.135  kafdrop-guidewire-infra.apps-crc.testing
    192.168.1.135  apicurio-guidewire-infra.apps-crc.testing
    192.168.1.135  amq-console-guidewire-infra.apps-crc.testing
@@ -265,6 +272,15 @@ CRC se ejecuta en una VM con red virtual. Para acceder desde otras maquinas de l
    192.168.1.135  customers-service-guidewire-apps.apps-crc.testing
    192.168.1.135  drools-engine-guidewire-apps.apps-crc.testing
    ```
+
+### Consola OpenShift
+
+| URL | Usuario | Password | Rol |
+|-----|---------|----------|-----|
+| https://console-openshift-console.apps-crc.testing | `kubeadmin` | `xtLsK-LLIzY-6UVEd-UESLR` | Administrador (acceso completo) |
+| https://console-openshift-console.apps-crc.testing | `developer` | `developer` | Developer (solo namespaces propios) |
+
+> El navegador mostrara un aviso de certificado autofirmado. Aceptar la excepcion para continuar.
 
 ### Web UIs (navegador)
 
@@ -297,6 +313,15 @@ Todas las APIs estan expuestas a traves del gateway en `http://apicast-guidewire
 | `/api/v1/rules/evaluate` | Drools Engine |
 | `/api/v1/policies` | Camel Gateway (PolicyCenter) |
 | `/api/v1/claims` | Camel Gateway (ClaimCenter) |
+
+### Credenciales de infraestructura
+
+| Servicio | Usuario | Password | Uso |
+|----------|---------|----------|-----|
+| OpenShift (admin) | `kubeadmin` | `xtLsK-LLIzY-6UVEd-UESLR` | Consola web, `oc login` |
+| OpenShift (dev) | `developer` | `developer` | Consola web, `oc login` |
+| AMQ Console | `admin` | `admin123` | Web UI hawtio |
+| PostgreSQL | `guidewire` | `guidewire123` | Todas las bases de datos |
 
 ---
 
