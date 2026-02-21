@@ -1,0 +1,187 @@
+name: CD - Deploy to OpenShift
+
+on:
+  push:
+    branches: [master, main]
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: "Target environment (for future multi-env support)"
+        required: false
+        default: "dev"
+        type: choice
+        options:
+          - dev
+          - staging
+
+env:
+  OPENSHIFT_SERVER: ${{ secrets.OPENSHIFT_SERVER }}
+  OPENSHIFT_TOKEN: ${{ secrets.OPENSHIFT_TOKEN }}
+  APPS_NS: guidewire-apps
+  INFRA_NS: guidewire-infra
+
+jobs:
+  # ---------------------------------------------------------------------------
+  # Deploy all services to OpenShift via BuildConfig + Binary builds
+  # ---------------------------------------------------------------------------
+  deploy:
+    name: "Deploy to OpenShift"
+    runs-on: ubuntu-latest
+    # Only run if CI workflow succeeded for this commit (on push triggers)
+    # For manual dispatch, skip the CI check
+    if: >
+      github.event_name == 'workflow_dispatch' ||
+      github.event_name == 'push'
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install oc CLI
+        uses: redhat-actions/openshift-tools-installer@v1
+        with:
+          oc: "4"
+
+      - name: Login to OpenShift
+        run: |
+          oc login \
+            --token="${OPENSHIFT_TOKEN}" \
+            --server="${OPENSHIFT_SERVER}" \
+            --insecure-skip-tls-verify
+
+      - name: Verify cluster connectivity
+        run: |
+          echo "=== Cluster info ==="
+          oc whoami
+          oc project "${APPS_NS}"
+          echo ""
+          echo "=== Current pods in ${APPS_NS} ==="
+          oc get pods -n "${APPS_NS}" --no-headers | head -20
+
+      - name: Build and deploy services
+        run: |
+          SHORT_SHA=$(git rev-parse --short HEAD)
+          SERVICES="billing-service camel-gateway incidents-service customers-service drools-engine"
+          FAILED=""
+
+          for svc in $SERVICES; do
+            echo ""
+            echo "==========================================================="
+            echo " Building: $svc"
+            echo "==========================================================="
+
+            # Start binary build from component source directory
+            if oc start-build "$svc" \
+                -n "${APPS_NS}" \
+                --from-dir="components/$svc" \
+                --follow \
+                --wait; then
+              echo "[OK] Build succeeded: $svc"
+
+              # Tag the image with the git short SHA for traceability
+              oc tag "${APPS_NS}/$svc:latest" "${APPS_NS}/$svc:${SHORT_SHA}" -n "${APPS_NS}"
+              echo "[OK] Tagged: $svc:${SHORT_SHA}"
+            else
+              echo "[FAIL] Build failed: $svc"
+              FAILED="$FAILED $svc"
+            fi
+          done
+
+          if [ -n "$FAILED" ]; then
+            echo ""
+            echo "ERROR: The following services failed to build:$FAILED"
+            exit 1
+          fi
+
+      - name: Wait for rollouts
+        run: |
+          SERVICES="billing-service camel-gateway incidents-service customers-service drools-engine"
+
+          for svc in $SERVICES; do
+            echo "Waiting for rollout: $svc ..."
+            oc rollout status deployment/"$svc" -n "${APPS_NS}" --timeout=120s
+            echo "[OK] $svc is ready"
+          done
+
+      - name: Register contracts in Apicurio Registry
+        continue-on-error: true
+        run: |
+          # Get the Apicurio route from the infra namespace
+          REGISTRY_URL=$(oc get route apicurio -n "${INFRA_NS}" -o jsonpath='{.spec.host}' 2>/dev/null || true)
+
+          if [ -z "$REGISTRY_URL" ]; then
+            echo "WARN: Apicurio route not found in ${INFRA_NS}, skipping contract registration"
+            exit 0
+          fi
+
+          REGISTRY_URL="http://${REGISTRY_URL}"
+          echo "Registering contracts at: ${REGISTRY_URL}"
+
+          chmod +x lab/openshift/scripts/register-contracts.sh
+          lab/openshift/scripts/register-contracts.sh "${REGISTRY_URL}"
+
+      - name: Verify health endpoints
+        continue-on-error: true
+        run: |
+          echo "=== Checking service health endpoints ==="
+          echo ""
+
+          SERVICES="billing-service camel-gateway incidents-service customers-service drools-engine"
+
+          for svc in $SERVICES; do
+            # Get the route URL for each service
+            ROUTE=$(oc get route "$svc" -n "${APPS_NS}" -o jsonpath='{.spec.host}' 2>/dev/null || true)
+
+            if [ -z "$ROUTE" ]; then
+              echo "[SKIP] $svc — no route found"
+              continue
+            fi
+
+            # Try common health endpoints
+            for path in /q/health /health /actuator/health; do
+              HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" "http://${ROUTE}${path}" --max-time 10 2>/dev/null || echo "000")
+              if [[ "$HTTP_CODE" =~ ^2[0-9][0-9]$ ]]; then
+                echo "[OK]   $svc — http://${ROUTE}${path} (HTTP $HTTP_CODE)"
+                break
+              fi
+            done
+
+            if [[ ! "$HTTP_CODE" =~ ^2[0-9][0-9]$ ]]; then
+              echo "[WARN] $svc — no healthy endpoint found (last HTTP $HTTP_CODE)"
+            fi
+          done
+
+      - name: Deployment summary
+        run: |
+          SHORT_SHA=$(git rev-parse --short HEAD)
+          echo ""
+          echo "==========================================================="
+          echo " Deployment complete"
+          echo " Commit:      ${SHORT_SHA}"
+          echo " Environment: ${{ github.event.inputs.environment || 'dev' }}"
+          echo " Namespace:   ${APPS_NS}"
+          echo "==========================================================="
+          echo ""
+          echo "=== Pod status ==="
+          oc get pods -n "${APPS_NS}" -o wide
+          echo ""
+          echo "=== Routes ==="
+          oc get routes -n "${APPS_NS}"
+
+# =============================================================================
+# Required GitHub Secrets:
+#
+#   OPENSHIFT_SERVER
+#     The OpenShift API server URL.
+#     Example: https://api.crc.testing:6443
+#
+#   OPENSHIFT_TOKEN
+#     A ServiceAccount token with 'edit' role in both guidewire-apps and
+#     guidewire-infra namespaces.
+#     Create with:
+#       oc create sa github-deployer -n guidewire-apps
+#       oc adm policy add-role-to-user edit -z github-deployer -n guidewire-apps
+#       oc adm policy add-role-to-user view  -z github-deployer -n guidewire-infra
+#       oc create token github-deployer -n guidewire-apps --duration=8760h
+#
+# =============================================================================
