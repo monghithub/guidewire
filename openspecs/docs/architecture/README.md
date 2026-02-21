@@ -341,9 +341,9 @@ stateDiagram-v2
 |---------------------|-----------------------------|---------|----------------------------------------------|
 | Platform            | Red Hat OpenShift Local (CRC) | 4.x   | Single-node OpenShift cluster                 |
 | Orchestration       | Kubernetes / OpenShift      | 4.x     | Pod scheduling, service discovery, routes     |
-| API Gateway         | Red Hat 3Scale (APIcast)    | 3.11    | Rate limiting, auth, API management           |
-| Integration         | Apache Camel 4              | 4.x     | EIP, protocol mediation, routing              |
-| Event Streaming     | Apache Kafka (KRaft)        | 3.7     | Event backbone, durable log                   |
+| API Gateway         | Red Hat 3Scale (APIcast)    | latest  | Rate limiting, auth, API management           |
+| Integration         | Apache Camel 4              | 4.4     | EIP, protocol mediation, routing              |
+| Event Streaming     | Apache Kafka (KRaft)        | 4.0     | Event backbone, durable log (Strimzi v0.50.0) |
 | JMS Messaging       | Apache ActiveMQ Artemis     | 2.33    | Point-to-point messaging, legacy integration  |
 | Rules Engine        | Drools 8                    | 8.x     | Business rules, fraud detection, validation   |
 | Schema Registry     | Apicurio Service Registry   | 2.5     | AVRO schema governance, compatibility checks  |

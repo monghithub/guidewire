@@ -8,12 +8,41 @@ Broker de eventos en modo **KRaft** (sin ZooKeeper). Actúa como backbone de la 
 
 | Parámetro | Valor |
 |-----------|-------|
-| Imagen | `apache/kafka:3.7.0` |
-| Modo | KRaft (controller + broker en un nodo) |
+| Operador | Strimzi v0.50.0 (via OLM) |
+| Versión Kafka | **4.0.0** |
+| API CRD | `kafka.strimzi.io/v1` |
+| Modo | KRaft (controller + broker en un nodo, via KafkaNodePool) |
 | Puerto | **9092** |
 | Retención | 7 días (168 horas) |
 | Particiones por defecto | 3 |
 | Auto-create topics | **Deshabilitado** |
+
+### KafkaNodePool
+
+Strimzi v0.50.0 requiere un recurso `KafkaNodePool` para definir réplicas, roles y almacenamiento. El CR `Kafka` ya no acepta estos campos inline.
+
+```yaml
+apiVersion: kafka.strimzi.io/v1
+kind: KafkaNodePool
+metadata:
+  name: kafka-pool
+  labels:
+    strimzi.io/cluster: kafka-cluster
+spec:
+  replicas: 1
+  roles: [controller, broker]
+  storage:
+    type: persistent-claim
+    size: 5Gi
+```
+
+El CR `Kafka` debe incluir las anotaciones de KRaft:
+
+```yaml
+annotations:
+  strimzi.io/kraft: enabled
+  strimzi.io/node-pools: enabled
+```
 
 ## DNS (OpenShift)
 
@@ -84,7 +113,7 @@ graph LR
 
 | Parámetro | Valor |
 |-----------|-------|
-| Imagen | `obsidiandynamics/kafdrop:4.0.1` |
+| Imagen | `docker.io/obsidiandynamics/kafdrop:4.0.1` |
 | Puerto | **9000** |
 | URL | https://kafdrop-guidewire-infra.apps-crc.testing |
 
@@ -92,21 +121,23 @@ Kafdrop permite inspeccionar topics, particiones, consumer groups y mensajes ind
 
 ## Comandos útiles (oc CLI)
 
+> **Nota**: Con Strimzi + KafkaNodePool el pod se llama `kafka-cluster-kafka-pool-0` (no `kafka-cluster-kafka-0`).
+
 ```bash
 # Listar topics
-oc exec -n guidewire-infra kafka-cluster-kafka-0 -- bin/kafka-topics.sh --bootstrap-server localhost:9092 --list
+oc exec -n guidewire-infra kafka-cluster-kafka-pool-0 -- bin/kafka-topics.sh --bootstrap-server localhost:9092 --list
 
 # Describir un topic
-oc exec -n guidewire-infra kafka-cluster-kafka-0 -- bin/kafka-topics.sh --bootstrap-server localhost:9092 --describe --topic billing.invoice-created
+oc exec -n guidewire-infra kafka-cluster-kafka-pool-0 -- bin/kafka-topics.sh --bootstrap-server localhost:9092 --describe --topic billing.invoice-created
 
 # Producir mensaje de prueba
-echo '{"test": true}' | oc exec -i -n guidewire-infra kafka-cluster-kafka-0 -- bin/kafka-console-producer.sh --bootstrap-server localhost:9092 --topic billing.invoice-created
+echo '{"test": true}' | oc exec -i -n guidewire-infra kafka-cluster-kafka-pool-0 -- bin/kafka-console-producer.sh --bootstrap-server localhost:9092 --topic billing.invoice-created
 
 # Consumir mensajes
-oc exec -n guidewire-infra kafka-cluster-kafka-0 -- bin/kafka-console-consumer.sh --bootstrap-server localhost:9092 --topic billing.invoice-created --from-beginning
+oc exec -n guidewire-infra kafka-cluster-kafka-pool-0 -- bin/kafka-console-consumer.sh --bootstrap-server localhost:9092 --topic billing.invoice-created --from-beginning
 
 # Ver consumer groups
-oc exec -n guidewire-infra kafka-cluster-kafka-0 -- bin/kafka-consumer-groups.sh --bootstrap-server localhost:9092 --list
+oc exec -n guidewire-infra kafka-cluster-kafka-pool-0 -- bin/kafka-consumer-groups.sh --bootstrap-server localhost:9092 --list
 ```
 
 ## Garantías de entrega

@@ -116,6 +116,20 @@ Respuesta:
 }
 ```
 
+## Notas de Implementación
+
+### Safety net: `fireAllRules(100)`
+
+El `RulesService.java` limita la ejecución a un máximo de 100 activaciones de reglas por sesión. Esto previene loops infinitos en caso de reglas mal escritas.
+
+### Reglas DRL — prevención de loops
+
+Las reglas DRL evitan el uso de `update(fact)` que puede causar re-evaluación infinita entre reglas. En su lugar:
+
+- Se usan setters directos (`fact.setField(value)`) para campos que no afectan condiciones de otras reglas
+- Se usa `modify(fact) { ... }` solo cuando es necesario propagar cambios al motor
+- Las reglas de asignación de nivel de riesgo están consolidadas en una sola regla con lógica Java (`if/else`) para evitar cross-activation
+
 ## Base de Datos
 
 El Drools Engine utiliza una base de datos PostgreSQL para almacenar el audit trail de las evaluaciones de reglas.

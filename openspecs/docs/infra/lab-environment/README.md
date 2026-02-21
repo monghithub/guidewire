@@ -61,7 +61,7 @@ crc start --cpus 6 --memory 14336 --disk-size 60
 | Consola web | `crc console` | Abre la consola OpenShift en el navegador |
 | Destruir | `crc delete` | Elimina el cluster completo |
 | Config oc | `eval $(crc oc-env)` | Configura el CLI `oc` en tu shell |
-| Login | `oc login -u developer -p developer https://api.crc.testing:6443` | Autenticarse |
+| Login | `oc login -u developer -p developer https://api.crc.testing:6443` | Autenticarse (o usar `KUBECONFIG=~/.crc/machines/crc/kubeconfig`) |
 
 ### Operaciones con oc
 

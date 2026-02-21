@@ -8,7 +8,7 @@ Instancia PostgreSQL 16 compartida que aloja 5 bases de datos lógicas, una por 
 
 | Parámetro | Valor |
 |-----------|-------|
-| Imagen | `postgres:16-alpine` |
+| Imagen | `docker.io/library/postgres:16-alpine` |
 | Puerto interno | 5432 |
 | Puerto expuesto | **15432** (remapeado para evitar conflictos) |
 | Superusuario | `postgres` / `postgres123` |

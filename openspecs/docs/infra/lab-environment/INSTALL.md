@@ -246,14 +246,14 @@ Fase 11: Deploy applications (Deployment, Service, Route)
 ```bash
 # Infraestructura
 oc get pods -n guidewire-infra
-# NAME                        READY   STATUS    RESTARTS   AGE
-# postgres-xxxx               1/1     Running   0          5m
-# kafka-cluster-kafka-0       1/1     Running   0          4m
-# kafka-cluster-zookeeper-0   1/1     Running   0          5m
-# activemq-broker-ss-0        1/1     Running   0          3m
-# apicurio-registry-xxxx      1/1     Running   0          3m
-# kafdrop-xxxx                1/1     Running   0          2m
-# apicast-xxxx                1/1     Running   0          2m
+# NAME                                             READY   STATUS    AGE
+# postgres-xxxx                                    1/1     Running   5m
+# kafka-cluster-kafka-pool-0                       1/1     Running   4m
+# kafka-cluster-entity-operator-xxxx               1/1     Running   3m
+# activemq-broker-ss-0                             1/1     Running   3m
+# apicurio-registry-xxxx                           1/1     Running   3m
+# kafdrop-xxxx                                     1/1     Running   2m
+# apicast-xxxx                                     1/1     Running   2m
 
 # Aplicaciones
 oc get pods -n guidewire-apps
@@ -264,6 +264,8 @@ oc get pods -n guidewire-apps
 # customers-service-xxxx      1/1     Running   0          2m
 # drools-engine-xxxx          1/1     Running   0          2m
 ```
+
+> **Nota**: Ya no hay pod de ZooKeeper — Strimzi v0.50.0 usa Kafka en modo KRaft con `KafkaNodePool`. El pod se llama `kafka-cluster-kafka-pool-0`.
 
 ### Routes
 
@@ -281,8 +283,12 @@ curl -sk https://kafdrop-guidewire-infra.apps-crc.testing
 # Apicurio
 curl -sk https://apicurio-guidewire-infra.apps-crc.testing/health/ready
 
-# Billing Service
-curl -sk https://billing-service-guidewire-apps.apps-crc.testing/q/health/ready
+# Health checks (cada framework tiene su ruta)
+curl -sk https://billing-service-guidewire-apps.apps-crc.testing/actuator/health    # Spring Boot
+curl -sk https://incidents-service-guidewire-apps.apps-crc.testing/q/health          # Quarkus
+curl -sk https://customers-service-guidewire-apps.apps-crc.testing/health            # Node.js/Express
+curl -sk https://camel-gateway-guidewire-apps.apps-crc.testing/actuator/health       # Spring Boot
+curl -sk https://drools-engine-guidewire-apps.apps-crc.testing/actuator/health       # Spring Boot
 ```
 
 ---
@@ -438,11 +444,91 @@ Kafka cluster may still be starting
 # Estado del Kafka CR
 oc get kafka -n guidewire-infra
 
-# Pods de Kafka
+# Pods de Kafka (con KafkaNodePool, el pod se llama kafka-pool)
 oc get pods -n guidewire-infra -l strimzi.io/cluster=kafka-cluster
 
 # Logs del operador Strimzi
 oc logs -f deploy/strimzi-cluster-operator -n openshift-operators
+```
+
+### Pull secret expirado (ImagePullBackOff en marketplace)
+
+```
+marketplace-operator   ImagePullBackOff
+```
+
+**Solucion**: El pull secret de CRC expira periodicamente. Hay que renovarlo:
+
+```bash
+# 1. Crear service account en https://access.redhat.com/terms-based-registry/
+# 2. Obtener el token de autenticacion
+# 3. Actualizar el pull secret en el cluster
+oc set data secret/pull-secret -n openshift-config \
+  --from-file=.dockerconfigjson=pull-secret.json
+
+# 4. Reiniciar CRI-O para que tome las nuevas credenciales
+ssh -i ~/.crc/machines/crc/id_ecdsa -o StrictHostKeyChecking=no \
+  core@$(crc ip) "sudo systemctl restart crio"
+
+# 5. Borrar los pods fallidos para que se recreen
+oc delete pods -n openshift-marketplace --all
+```
+
+### Puerto 6443 ocupado (k3s u otro servicio)
+
+```
+ERRO CRC requires port 6443
+```
+
+**Solucion**: Si tienes k3s o minikube, detenerlos antes de iniciar CRC:
+
+```bash
+sudo systemctl stop k3s
+# o
+minikube stop
+```
+
+### `oc login` devuelve 404
+
+```
+error: the server is currently unable to handle the request
+```
+
+**Solucion**: El oauth-server de CRC puede tardar en estar listo. Alternativa: usar KUBECONFIG directamente:
+
+```bash
+export KUBECONFIG=~/.crc/machines/crc/kubeconfig
+oc whoami   # system:admin
+```
+
+### Acceso desde otra maquina en la red (sin GUI)
+
+Si la maquina con CRC no tiene interfaz grafica, puedes acceder desde otra maquina en la misma LAN:
+
+```bash
+# CRC ya expone los puertos 443 y 80 en 0.0.0.0
+# Solo necesitas exponer el API server (6443):
+socat TCP-LISTEN:6443,fork,reuseaddr TCP:127.0.0.1:6443 &
+
+# Desde la otra maquina, agregar entradas en /etc/hosts apuntando a la IP LAN:
+# <IP_LAN>  api.crc.testing console-openshift-console.apps-crc.testing
+#           kafdrop-guidewire-infra.apps-crc.testing ...
+```
+
+### virtiofsd no encontrado
+
+```
+virtiofsd not found in PATH
+```
+
+**Solucion**: Instalar virtiofsd (necesario para libvirt):
+
+```bash
+# Ubuntu/Debian
+sudo apt install virtiofsd
+
+# Fedora/RHEL
+sudo dnf install virtiofsd
 ```
 
 ---

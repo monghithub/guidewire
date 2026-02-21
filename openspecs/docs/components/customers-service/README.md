@@ -132,6 +132,37 @@ npm run build
 npm start
 ```
 
+## Docker / OpenShift
+
+### Dockerfile (multi-stage)
+
+El build Docker usa `npx tsc` directamente (no `npm run build`) porque el script `generate:types` referencia specs OpenAPI que no existen dentro del contexto de Docker.
+
+### Prisma en Alpine / OpenShift
+
+El `schema.prisma` incluye `binaryTargets` para compatibilidad con Alpine + OpenSSL 3.x:
+
+```prisma
+generator client {
+  provider      = "prisma-client-js"
+  binaryTargets = ["native", "linux-musl-openssl-3.0.x"]
+}
+```
+
+El Dockerfile de producción agrega `apk add --no-cache openssl` para satisfacer la dependencia de Prisma.
+
+### OpenShift (random UID)
+
+OpenShift ejecuta contenedores con un UID aleatorio. Para que Prisma y Node.js puedan escribir en `/app`, el Dockerfile incluye:
+
+```dockerfile
+RUN chmod -R g+rwX /app && chgrp -R 0 /app
+```
+
+### .dockerignore
+
+El archivo `.dockerignore` **no** excluye `tsconfig.json` ni `prisma/` ya que ambos son necesarios durante el build.
+
 ## Spec de referencia
 
 - [spec.yml](../../../components/customers-service/spec.yml)

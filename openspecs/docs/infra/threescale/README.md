@@ -8,7 +8,7 @@ API Gateway empresarial que expone todas las APIs del ecosistema. Gestiona auten
 
 | Parámetro | Valor |
 |-----------|-------|
-| Imagen | `quay.io/3scale/apicast:v3.11` |
+| Imagen | `quay.io/3scale/apicast:latest` |
 | Puerto proxy | **8000** |
 | Puerto management | **8001** |
 | Modo | Standalone (config declarativa) |
