@@ -23,7 +23,7 @@
         <lombok.version>1.18.30</lombok.version>
         <avro.version>1.11.3</avro.version>
         <apicurio.version>2.5.10.Final</apicurio.version>
-        <openapi-generator.version>7.2.0</openapi-generator.version>
+        <openapi-generator.version>7.20.0</openapi-generator.version>
     </properties>
 
     <dependencies>
