@@ -300,6 +300,14 @@ components:
         - SUSPENDED: Cliente suspendido temporalmente
         - BLOCKED: Cliente bloqueado (requiere intervencion manual)
 
+    PreferredLanguage:
+      type: string
+      enum:
+        - es
+        - en
+        - pt
+      description: Preferred communication language
+
     DocumentType:
       type: string
       enum:
@@ -356,6 +364,8 @@ components:
           $ref: "#/components/schemas/CustomerStatus"
         address:
           $ref: "#/components/schemas/Address"
+        preferredLanguage:
+          $ref: "#/components/schemas/PreferredLanguage"
         createdAt:
           type: string
           format: date-time
@@ -421,6 +431,8 @@ components:
           description: Numero de documento (debe ser unico por tipo)
         address:
           $ref: "#/components/schemas/Address"
+        preferredLanguage:
+          $ref: "#/components/schemas/PreferredLanguage"
 
     UpdateCustomerRequest:
       type: object
@@ -438,6 +450,8 @@ components:
           $ref: "#/components/schemas/CustomerStatus"
         address:
           $ref: "#/components/schemas/Address"
+        preferredLanguage:
+          $ref: "#/components/schemas/PreferredLanguage"
 
     PaginatedCustomerList:
       type: object
