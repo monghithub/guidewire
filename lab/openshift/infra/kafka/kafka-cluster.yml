@@ -1,15 +1,42 @@
 ---
-apiVersion: kafka.strimzi.io/v1beta2
+apiVersion: kafka.strimzi.io/v1
+kind: KafkaNodePool
+metadata:
+  name: kafka-pool
+  namespace: guidewire-infra
+  labels:
+    strimzi.io/cluster: kafka-cluster
+    app.kubernetes.io/part-of: guidewire-poc
+spec:
+  replicas: 1
+  roles:
+    - controller
+    - broker
+  storage:
+    type: persistent-claim
+    size: 5Gi
+    deleteClaim: true
+  resources:
+    requests:
+      memory: 512Mi
+      cpu: 250m
+    limits:
+      memory: 1Gi
+      cpu: 500m
+---
+apiVersion: kafka.strimzi.io/v1
 kind: Kafka
 metadata:
   name: kafka-cluster
   namespace: guidewire-infra
   labels:
     app.kubernetes.io/part-of: guidewire-poc
+  annotations:
+    strimzi.io/kraft: enabled
+    strimzi.io/node-pools: enabled
 spec:
   kafka:
-    version: 3.7.0
-    replicas: 1
+    version: 4.0.0
     listeners:
       - name: plain
         port: 9092
@@ -24,16 +51,5 @@ spec:
       num.partitions: 3
       auto.create.topics.enable: false
       log.retention.hours: 168
-    storage:
-      type: persistent-claim
-      size: 5Gi
-      deleteClaim: true
-    resources:
-      requests:
-        memory: 512Mi
-        cpu: 250m
-      limits:
-        memory: 1Gi
-        cpu: 500m
   entityOperator:
     topicOperator: {}

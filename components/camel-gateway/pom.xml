@@ -22,6 +22,7 @@
         <camel.version>4.4.0</camel.version>
         <apicurio.version>2.5.11.Final</apicurio.version>
         <avro.version>1.11.3</avro.version>
+        <codegen.skip>false</codegen.skip>
     </properties>
 
     <dependencyManagement>
@@ -59,6 +60,10 @@
         <dependency>
             <groupId>org.apache.camel.springboot</groupId>
             <artifactId>camel-rest-starter</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.camel.springboot</groupId>
+            <artifactId>camel-openapi-java-starter</artifactId>
         </dependency>
         <dependency>
             <groupId>org.apache.camel.springboot</groupId>
@@ -189,7 +194,7 @@
                             <goal>generate</goal>
                         </goals>
                         <configuration>
-                            <skip>false</skip>
+                            <skip>${codegen.skip}</skip>
                             <inputSpec>${project.basedir}/../../contracts/openapi/camel-gateway-api.yml</inputSpec>
                             <generatorName>spring</generatorName>
                             <apiPackage>com.guidewire.integration.gateway.api</apiPackage>

@@ -1,5 +1,5 @@
 ---
-apiVersion: kafka.strimzi.io/v1beta2
+apiVersion: kafka.strimzi.io/v1
 kind: KafkaTopic
 metadata:
   name: billing.invoice-created
@@ -13,7 +13,7 @@ spec:
   config:
     retention.ms: 604800000
 ---
-apiVersion: kafka.strimzi.io/v1beta2
+apiVersion: kafka.strimzi.io/v1
 kind: KafkaTopic
 metadata:
   name: billing.invoice-status-changed
@@ -27,7 +27,7 @@ spec:
   config:
     retention.ms: 604800000
 ---
-apiVersion: kafka.strimzi.io/v1beta2
+apiVersion: kafka.strimzi.io/v1
 kind: KafkaTopic
 metadata:
   name: incidents.incident-created
@@ -41,7 +41,7 @@ spec:
   config:
     retention.ms: 604800000
 ---
-apiVersion: kafka.strimzi.io/v1beta2
+apiVersion: kafka.strimzi.io/v1
 kind: KafkaTopic
 metadata:
   name: incidents.incident-status-changed
@@ -55,7 +55,7 @@ spec:
   config:
     retention.ms: 604800000
 ---
-apiVersion: kafka.strimzi.io/v1beta2
+apiVersion: kafka.strimzi.io/v1
 kind: KafkaTopic
 metadata:
   name: customers.customer-registered
@@ -69,7 +69,7 @@ spec:
   config:
     retention.ms: 604800000
 ---
-apiVersion: kafka.strimzi.io/v1beta2
+apiVersion: kafka.strimzi.io/v1
 kind: KafkaTopic
 metadata:
   name: customers.customer-status-changed
@@ -83,7 +83,7 @@ spec:
   config:
     retention.ms: 604800000
 ---
-apiVersion: kafka.strimzi.io/v1beta2
+apiVersion: kafka.strimzi.io/v1
 kind: KafkaTopic
 metadata:
   name: policies.policy-events
@@ -97,7 +97,7 @@ spec:
   config:
     retention.ms: 604800000
 ---
-apiVersion: kafka.strimzi.io/v1beta2
+apiVersion: kafka.strimzi.io/v1
 kind: KafkaTopic
 metadata:
   name: events.unclassified
@@ -111,7 +111,7 @@ spec:
   config:
     retention.ms: 2592000000
 ---
-apiVersion: kafka.strimzi.io/v1beta2
+apiVersion: kafka.strimzi.io/v1
 kind: KafkaTopic
 metadata:
   name: dlq.errors

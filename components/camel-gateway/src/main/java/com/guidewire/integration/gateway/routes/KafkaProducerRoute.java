@@ -34,25 +34,25 @@ public class KafkaProducerRoute extends RouteBuilder {
                     .when(header("eventType").startsWith("invoice"))
                         .log("Routing to billing topic")
                         .to("kafka:billing.invoice-created?brokers=" + kafkaBootstrapServers
-                                + "&serializerClass=io.apicurio.registry.serde.avro.AvroKafkaSerializer"
+                                + "&valueSerializer=io.apicurio.registry.serde.avro.AvroKafkaSerializer"
                                 + "&additionalProperties.apicurio.registry.url=" + apicurioRegistryUrl
                                 + "&additionalProperties.apicurio.registry.auto-register=true")
                     .when(header("eventType").startsWith("incident"))
                         .log("Routing to incidents topic")
                         .to("kafka:incidents.incident-created?brokers=" + kafkaBootstrapServers
-                                + "&serializerClass=io.apicurio.registry.serde.avro.AvroKafkaSerializer"
+                                + "&valueSerializer=io.apicurio.registry.serde.avro.AvroKafkaSerializer"
                                 + "&additionalProperties.apicurio.registry.url=" + apicurioRegistryUrl
                                 + "&additionalProperties.apicurio.registry.auto-register=true")
                     .when(header("eventType").startsWith("customer"))
                         .log("Routing to customers topic")
                         .to("kafka:customers.customer-registered?brokers=" + kafkaBootstrapServers
-                                + "&serializerClass=io.apicurio.registry.serde.avro.AvroKafkaSerializer"
+                                + "&valueSerializer=io.apicurio.registry.serde.avro.AvroKafkaSerializer"
                                 + "&additionalProperties.apicurio.registry.url=" + apicurioRegistryUrl
                                 + "&additionalProperties.apicurio.registry.auto-register=true")
                     .when(header("eventType").startsWith("policy"))
                         .log("Routing to policies topic")
                         .to("kafka:policies.policy-events?brokers=" + kafkaBootstrapServers
-                                + "&serializerClass=io.apicurio.registry.serde.avro.AvroKafkaSerializer"
+                                + "&valueSerializer=io.apicurio.registry.serde.avro.AvroKafkaSerializer"
                                 + "&additionalProperties.apicurio.registry.url=" + apicurioRegistryUrl
                                 + "&additionalProperties.apicurio.registry.auto-register=true")
                     .otherwise()

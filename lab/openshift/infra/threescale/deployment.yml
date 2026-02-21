@@ -20,7 +20,7 @@ spec:
     spec:
       containers:
         - name: apicast
-          image: quay.io/3scale/apicast:v3.11
+          image: quay.io/3scale/apicast:latest
           ports:
             - containerPort: 8080
               protocol: TCP

@@ -42,9 +42,7 @@ public class SoapGatewayRoute extends RouteBuilder {
         // =====================================================================
         // PolicyCenter SOAP Endpoint
         // =====================================================================
-        from("cxf:/ws/policycenter?wsdlURL=wsdl/PolicyCenter.wsdl"
-                + "&serviceClass=org.apache.cxf.jaxws.JaxWsServerFactoryBean"
-                + "&dataFormat=PAYLOAD")
+        from("cxf:/ws/policycenter?dataFormat=PAYLOAD")
                 .routeId("soap-policycenter")
                 .log("SOAP PolicyCenter request - operation: ${header.operationName}")
                 .to("micrometer:counter:soap_requests?tags=center=PolicyCenter")

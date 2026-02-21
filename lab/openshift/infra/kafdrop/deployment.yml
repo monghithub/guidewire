@@ -20,7 +20,7 @@ spec:
     spec:
       containers:
         - name: kafdrop
-          image: obsidiandynamics/kafdrop:4.0.1
+          image: docker.io/obsidiandynamics/kafdrop:4.0.1
           ports:
             - containerPort: 9000
               protocol: TCP
