@@ -4,7 +4,7 @@ html {
   height: 100%;
   @include mat.theme((
     color: (
-      primary: mat.$blue-palette,
+      primary: mat.$indigo-palette,
       tertiary: mat.$orange-palette,
     ),
     typography: Roboto,
@@ -14,60 +14,110 @@ html {
 
 body {
   color-scheme: light;
-  background-color: var(--mat-sys-surface);
-  color: var(--mat-sys-on-surface);
-  font: var(--mat-sys-body-medium);
+  background-color: #f0f2f5;
+  color: #1e1e2d;
+  font-family: 'Roboto', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
   margin: 0;
   height: 100%;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
 // Guidewire color variables
 :root {
   --gw-primary: #1a237e;
-  --gw-primary-light: #283593;
+  --gw-primary-light: #3949ab;
   --gw-accent: #ff6f00;
   --gw-success: #2e7d32;
   --gw-danger: #c62828;
   --gw-warning: #f57f17;
-  --gw-surface: #f5f5f5;
-  --gw-text: #212121;
-  --gw-text-secondary: #757575;
+  --gw-surface: #ffffff;
+  --gw-bg: #f0f2f5;
+  --gw-text: #1e1e2d;
+  --gw-text-secondary: #5e6278;
+  --gw-border: #e4e6ef;
 }
 
 // Table styling
 .mat-mdc-table {
   border-radius: 8px;
   overflow: hidden;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.08);
 }
 
 .mat-mdc-header-row {
-  background: #e8eaf6;
+  background: #f8f9fc;
+  .mat-mdc-header-cell {
+    color: #5e6278;
+    font-weight: 600;
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
 }
 
-.mat-mdc-row:hover {
-  background: #f5f5f5;
+.mat-mdc-row {
+  &:hover { background: #f8f9fc; }
+  .mat-mdc-cell { color: #3f4254; font-size: 14px; }
 }
 
 // Card styling
 .mat-mdc-card {
   border-radius: 12px !important;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.06), 0 1px 2px rgba(0,0,0,0.04) !important;
+  border: 1px solid var(--gw-border);
+  background: var(--gw-surface);
+}
+
+.mat-mdc-card-header {
+  .mat-mdc-card-title {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--gw-text);
+  }
+}
+
+// Button improvements
+.mat-mdc-raised-button {
+  border-radius: 8px !important;
+  font-weight: 500;
+  letter-spacing: 0.3px;
+}
+
+.mat-mdc-stroked-button {
+  border-radius: 8px !important;
+}
+
+// Chip improvements
+.mat-mdc-chip {
+  font-size: 12px !important;
+  font-weight: 500;
 }
 
 // Scrollbar styling
 ::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
+  width: 6px;
+  height: 6px;
 }
 
 ::-webkit-scrollbar-track {
-  background: #f1f1f1;
+  background: transparent;
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #bdbdbd;
-  border-radius: 4px;
+  background: #c4c4c4;
+  border-radius: 3px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: #9e9e9e;
+  background: #a0a0a0;
+}
+
+// Selection
+::selection {
+  background: rgba(26, 35, 126, 0.15);
+  color: #1a237e;
 }

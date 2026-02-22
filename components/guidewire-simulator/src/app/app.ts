@@ -35,7 +35,7 @@ import { ToastComponent } from './shared/components/toast/toast.component';
     .content {
       flex: 1;
       overflow-y: auto;
-      background: #f5f5f5;
+      background: #f0f2f5;
     }
   `],
 })

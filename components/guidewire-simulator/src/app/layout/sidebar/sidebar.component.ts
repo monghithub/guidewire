@@ -12,8 +12,8 @@ import { MatIconModule } from '@angular/material/icon';
       <div class="brand">
         <div class="brand-icon">GW</div>
         <div class="brand-text">
-          <span class="brand-name">Guidewire</span>
-          <span class="brand-sub">Simulator</span>
+          <span class="brand-name">POC Integración</span>
+          <span class="brand-sub">Guidewire</span>
         </div>
       </div>
 
@@ -60,52 +60,61 @@ import { MatIconModule } from '@angular/material/icon';
       </nav>
 
       <div class="sidebar-footer">
-        <span>Guidewire POC v1.0</span>
+        <span>POC Integración Guidewire v1.0</span>
       </div>
     </div>
   `,
   styles: [`
     .sidebar {
-      width: 260px; height: 100vh; background: #1a237e; color: white;
-      display: flex; flex-direction: column; overflow-y: auto;
+      width: 260px; height: 100vh;
+      background: linear-gradient(180deg, #1a237e 0%, #0d1447 100%);
+      color: white; display: flex; flex-direction: column; overflow-y: auto;
     }
     .brand {
       display: flex; align-items: center; gap: 12px; padding: 20px 16px;
-      border-bottom: 1px solid rgba(255,255,255,0.1);
+      border-bottom: 1px solid rgba(255,255,255,0.08);
     }
     .brand-icon {
-      width: 44px; height: 44px; background: #ff6f00; border-radius: 10px;
-      display: flex; align-items: center; justify-content: center;
+      width: 44px; height: 44px; background: linear-gradient(135deg, #ff8f00, #ff6f00);
+      border-radius: 10px; display: flex; align-items: center; justify-content: center;
       font-weight: 700; font-size: 18px; color: white;
+      box-shadow: 0 2px 8px rgba(255, 111, 0, 0.3);
     }
     .brand-text { display: flex; flex-direction: column; }
-    .brand-name { font-size: 18px; font-weight: 600; }
-    .brand-sub { font-size: 12px; opacity: 0.7; }
+    .brand-name { font-size: 16px; font-weight: 600; letter-spacing: 0.3px; }
+    .brand-sub { font-size: 13px; opacity: 0.8; font-weight: 300; }
     nav { flex: 1; padding: 8px 0; }
     .nav-section {
-      padding: 16px 16px 4px; font-size: 11px; text-transform: uppercase;
-      letter-spacing: 1px; opacity: 0.5; font-weight: 500;
+      padding: 20px 16px 6px; font-size: 10px; text-transform: uppercase;
+      letter-spacing: 1.5px; opacity: 0.4; font-weight: 600;
     }
     :host ::ng-deep {
       .mat-mdc-list-item {
-        color: rgba(255,255,255,0.85) !important;
+        color: rgba(255,255,255,0.75) !important;
         border-radius: 0 24px 24px 0;
         margin-right: 12px;
+        transition: all 0.2s ease;
+        &:hover {
+          color: white !important;
+          background: rgba(255,255,255,0.06) !important;
+        }
       }
       .mat-mdc-list-item .mat-icon {
-        color: rgba(255,255,255,0.7) !important;
+        color: rgba(255,255,255,0.55) !important;
+        transition: color 0.2s ease;
       }
       .active-link {
         background: rgba(255,255,255,0.12) !important;
         color: white !important;
       }
       .active-link .mat-icon {
-        color: #ff6f00 !important;
+        color: #ffab40 !important;
       }
     }
     .sidebar-footer {
-      padding: 12px 16px; font-size: 11px; opacity: 0.4; text-align: center;
-      border-top: 1px solid rgba(255,255,255,0.1);
+      padding: 14px 16px; font-size: 10px; opacity: 0.35; text-align: center;
+      border-top: 1px solid rgba(255,255,255,0.06);
+      letter-spacing: 0.3px;
     }
   `],
 })

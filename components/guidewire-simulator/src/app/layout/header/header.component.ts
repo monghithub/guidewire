@@ -21,10 +21,11 @@ import { toSignal } from '@angular/core/rxjs-interop';
   `,
   styles: [`
     .header {
-      background: #283593; color: white; height: 56px;
-      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+      background: #ffffff; color: #1e1e2d; height: 56px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+      border-bottom: 1px solid #e4e6ef;
     }
-    .page-title { font-size: 18px; font-weight: 500; }
+    .page-title { font-size: 17px; font-weight: 600; letter-spacing: 0.2px; }
     .spacer { flex: 1; }
   `],
 })

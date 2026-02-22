@@ -102,16 +102,26 @@ import { forkJoin } from 'rxjs';
         <mat-card-content>
           <div class="infra-links">
             @for (link of infraLinks; track link.name) {
-              <a [href]="link.url" target="_blank" rel="noopener" class="infra-link">
-                <div class="infra-link-icon" [style.background]="link.color">
-                  <mat-icon>{{ link.icon }}</mat-icon>
-                </div>
-                <div class="infra-link-info">
-                  <span class="infra-link-name">{{ link.name }}</span>
-                  <span class="infra-link-desc">{{ link.description }}</span>
-                </div>
-                <mat-icon class="infra-link-arrow">open_in_new</mat-icon>
-              </a>
+              <div class="infra-link-wrapper">
+                <a [href]="link.url" target="_blank" rel="noopener" class="infra-link">
+                  <div class="infra-link-icon" [style.background]="link.color">
+                    <mat-icon>{{ link.icon }}</mat-icon>
+                  </div>
+                  <div class="infra-link-info">
+                    <span class="infra-link-name">{{ link.name }}</span>
+                    <span class="infra-link-desc">{{ link.description }}</span>
+                  </div>
+                  <mat-icon class="infra-link-arrow">open_in_new</mat-icon>
+                </a>
+                @if (link.credentials) {
+                  <div class="infra-credentials">
+                    <mat-icon class="cred-icon">key</mat-icon>
+                    <span class="cred-label">{{ link.credentials.user }}</span>
+                    <span class="cred-separator">/</span>
+                    <code class="cred-pass">{{ link.credentials.pass }}</code>
+                  </div>
+                }
+              </div>
             }
           </div>
         </mat-card-content>
@@ -119,65 +129,94 @@ import { forkJoin } from 'rxjs';
     </div>
   `,
   styles: [`
-    .dashboard { padding: 24px; }
+    .dashboard { padding: 28px; }
     .summary-cards {
       display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-      gap: 16px; margin-bottom: 24px;
+      gap: 16px; margin-bottom: 28px;
     }
     .summary-card {
-      cursor: pointer; transition: transform 0.2s, box-shadow 0.2s;
-      &:hover { transform: translateY(-2px); box-shadow: 0 6px 16px rgba(0,0,0,0.12); }
+      cursor: pointer; transition: all 0.25s ease;
+      &:hover { transform: translateY(-3px); box-shadow: 0 8px 24px rgba(0,0,0,0.1); }
     }
     .card-content {
-      display: flex; align-items: center; gap: 16px; padding: 16px;
+      display: flex; align-items: center; gap: 16px; padding: 18px;
     }
     .card-icon {
-      width: 56px; height: 56px; border-radius: 12px; display: flex;
+      width: 52px; height: 52px; border-radius: 12px; display: flex;
       align-items: center; justify-content: center; color: white;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.15);
     }
-    .card-icon mat-icon { font-size: 28px; width: 28px; height: 28px; }
+    .card-icon mat-icon { font-size: 26px; width: 26px; height: 26px; }
     .card-info { display: flex; flex-direction: column; }
-    .card-count { font-size: 28px; font-weight: 700; color: #1a237e; }
-    .card-title { font-size: 13px; color: #757575; }
+    .card-count { font-size: 28px; font-weight: 700; color: #1e1e2d; }
+    .card-title { font-size: 12px; color: #5e6278; font-weight: 500; text-transform: uppercase; letter-spacing: 0.5px; }
     .grid-row {
-      display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 24px;
+      display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 28px;
     }
-    .health-list { display: flex; flex-direction: column; gap: 12px; margin: 16px 0; }
-    .health-item { display: flex; align-items: center; gap: 8px; }
+    .health-list { display: flex; flex-direction: column; gap: 10px; margin: 16px 0; }
+    .health-item {
+      display: flex; align-items: center; gap: 10px;
+      padding: 8px 12px; border-radius: 8px; background: #f8f9fc;
+    }
     .health-dot {
-      width: 10px; height: 10px; border-radius: 50%;
+      width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0;
     }
-    .health-dot.up { background: #4caf50; }
-    .health-dot.down { background: #f44336; }
-    .health-dot.checking { background: #9e9e9e; }
-    .health-name { flex: 1; font-size: 14px; }
-    .health-status { font-size: 12px; text-transform: uppercase; color: #757575; }
-    .refresh-btn { width: 100%; }
+    .health-dot.up { background: #22c55e; box-shadow: 0 0 6px rgba(34,197,94,0.4); }
+    .health-dot.down { background: #ef4444; box-shadow: 0 0 6px rgba(239,68,68,0.4); }
+    .health-dot.checking { background: #a1a1aa; animation: pulse 1.5s infinite; }
+    @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }
+    .health-name { flex: 1; font-size: 13px; font-weight: 500; color: #3f4254; }
+    .health-status {
+      font-size: 11px; text-transform: uppercase; font-weight: 600; letter-spacing: 0.5px;
+      padding: 2px 8px; border-radius: 4px;
+    }
+    .health-item:has(.health-dot.up) .health-status { color: #16a34a; background: #f0fdf4; }
+    .health-item:has(.health-dot.down) .health-status { color: #dc2626; background: #fef2f2; }
+    .health-item:has(.health-dot.checking) .health-status { color: #71717a; background: #f4f4f5; }
+    .refresh-btn { width: 100%; margin-top: 4px; }
     .quick-actions {
-      display: flex; flex-direction: column; gap: 12px; margin-top: 16px;
+      display: flex; flex-direction: column; gap: 10px; margin-top: 16px;
     }
+    .quick-actions button { text-align: left; padding: 10px 16px; font-weight: 500; }
     .orange-btn { background: #ff6f00 !important; color: white !important; }
     .green-btn { background: #2e7d32 !important; color: white !important; }
     .infra-card { margin-top: 0; }
     .infra-links {
-      display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
       gap: 12px; margin-top: 16px;
     }
     .infra-link {
       display: flex; align-items: center; gap: 12px; padding: 12px 16px;
       border-radius: 8px; text-decoration: none; color: inherit;
-      border: 1px solid #e0e0e0; transition: all 0.2s;
-      &:hover { background: #f5f5f5; border-color: #bdbdbd; transform: translateY(-1px); box-shadow: 0 2px 8px rgba(0,0,0,0.08); }
+      border: 1px solid var(--gw-border, #e4e6ef); transition: all 0.2s ease;
+      background: #fff;
+      &:hover { background: #f8f9fc; border-color: #c4c8d8; transform: translateY(-1px); box-shadow: 0 4px 12px rgba(0,0,0,0.06); }
     }
     .infra-link-icon {
-      width: 40px; height: 40px; border-radius: 8px; display: flex;
+      width: 38px; height: 38px; border-radius: 8px; display: flex;
       align-items: center; justify-content: center; color: white; flex-shrink: 0;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.12);
     }
-    .infra-link-icon mat-icon { font-size: 20px; width: 20px; height: 20px; }
+    .infra-link-icon mat-icon { font-size: 18px; width: 18px; height: 18px; }
     .infra-link-info { display: flex; flex-direction: column; flex: 1; min-width: 0; }
-    .infra-link-name { font-size: 14px; font-weight: 500; }
-    .infra-link-desc { font-size: 11px; color: #757575; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-    .infra-link-arrow { color: #9e9e9e; font-size: 18px; width: 18px; height: 18px; }
+    .infra-link-name { font-size: 13px; font-weight: 600; color: #1e1e2d; }
+    .infra-link-desc { font-size: 11px; color: #5e6278; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .infra-link-arrow { color: #a1a5b7; font-size: 16px; width: 16px; height: 16px; }
+    .infra-link-wrapper { display: flex; flex-direction: column; }
+    .infra-credentials {
+      display: flex; align-items: center; gap: 6px; padding: 5px 16px 6px 16px;
+      background: #f8f9fc; border: 1px solid var(--gw-border, #e4e6ef); border-top: none;
+      border-radius: 0 0 8px 8px; font-size: 11px; color: #5e6278;
+    }
+    .cred-icon { font-size: 13px; width: 13px; height: 13px; color: #a1a5b7; }
+    .cred-label { font-weight: 600; color: #3f4254; }
+    .cred-separator { color: #c4c8d8; }
+    .cred-pass {
+      font-family: 'Roboto Mono', monospace; font-size: 11px; background: #eef0f8;
+      padding: 1px 8px; border-radius: 4px; color: #3f4254; user-select: all;
+    }
+    .infra-link-wrapper .infra-link { border-radius: 8px 8px 0 0; }
+    .infra-link-wrapper:not(:has(.infra-credentials)) .infra-link { border-radius: 8px; }
     @media (max-width: 768px) {
       .grid-row { grid-template-columns: 1fr; }
       .infra-links { grid-template-columns: 1fr; }
@@ -193,14 +232,14 @@ export class DashboardComponent implements OnInit {
   readonly healthService = inject(HealthService);
 
   readonly infraLinks = [
-    { name: 'OpenShift Console', description: 'Cluster management & monitoring', url: 'https://console-openshift-console.apps-crc.testing', icon: 'cloud', color: '#e00' },
-    { name: 'Apicurio Registry', description: 'API & schema registry', url: 'https://apicurio-guidewire-infra.apps-crc.testing', icon: 'api', color: '#1a237e' },
-    { name: 'Kafdrop', description: 'Kafka topics & messages browser', url: 'http://kafdrop-guidewire-infra.apps-crc.testing', icon: 'stream', color: '#00695c' },
-    { name: '3Scale APIcast', description: 'API gateway management', url: 'http://apicast-guidewire-infra.apps-crc.testing', icon: 'security', color: '#6a1b9a' },
-    { name: 'Camel Gateway — Swagger', description: 'REST API documentation', url: 'http://camel-gateway-guidewire-apps.apps-crc.testing/webjars/swagger-ui/index.html', icon: 'description', color: '#85ea2d' },
-    { name: 'Billing Service — Swagger', description: 'Billing REST API docs', url: 'http://billing-service-guidewire-apps.apps-crc.testing/webjars/swagger-ui/index.html', icon: 'receipt_long', color: '#ff6f00' },
-    { name: 'Incidents Service — Swagger', description: 'Quarkus Incidents API docs', url: 'http://incidents-service-guidewire-apps.apps-crc.testing/q/swagger-ui', icon: 'report_problem', color: '#b71c1c' },
-    { name: 'Customers Service — Docs', description: 'Prisma/Express Customers API', url: 'http://customers-service-guidewire-apps.apps-crc.testing', icon: 'people', color: '#2e7d32' },
+    { name: 'OpenShift Console', description: 'Cluster management & monitoring', url: 'https://console-openshift-console.apps-crc.testing', icon: 'cloud', color: '#e00', credentials: { user: 'kubeadmin', pass: 'xtLsK-LLIzY-6UVEd-UESLR' } },
+    { name: 'Apicurio Registry', description: 'API & schema registry', url: 'https://apicurio-guidewire-infra.apps-crc.testing', icon: 'api', color: '#1a237e', credentials: { user: 'developer', pass: 'developer' } },
+    { name: 'Kafdrop', description: 'Kafka topics & messages browser', url: 'http://kafdrop-guidewire-infra.apps-crc.testing', icon: 'stream', color: '#00695c', credentials: null },
+    { name: 'Camel Gateway — Swagger', description: 'REST API documentation', url: 'http://camel-gateway-guidewire-apps.apps-crc.testing/swagger-ui.html', icon: 'route', color: '#85ea2d', credentials: null },
+    { name: 'Billing Service — Swagger', description: 'REST API documentation', url: 'http://billing-service-guidewire-apps.apps-crc.testing/swagger-ui.html', icon: 'receipt_long', color: '#ff6f00', credentials: null },
+    { name: 'Incidents Service — Swagger', description: 'REST API documentation', url: 'http://incidents-service-guidewire-apps.apps-crc.testing/q/swagger-ui', icon: 'report_problem', color: '#b71c1c', credentials: null },
+    { name: 'Customers Service — Health', description: 'Express health endpoint', url: 'http://customers-service-guidewire-apps.apps-crc.testing/health', icon: 'people', color: '#2e7d32', credentials: null },
+    { name: 'Drools Engine — Swagger', description: 'Rules API documentation', url: 'http://drools-engine-guidewire-apps.apps-crc.testing/swagger-ui.html', icon: 'gavel', color: '#795548', credentials: null },
   ];
 
   loading = signal(false);
