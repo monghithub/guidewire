@@ -32,12 +32,12 @@ public class SoapGatewayRoute extends RouteBuilder {
                 .log(LoggingLevel.ERROR, "SOAP Gateway error: ${exception.message}")
                 .setHeader(Exchange.HTTP_RESPONSE_CODE, constant(500))
                 .setHeader(Exchange.CONTENT_TYPE, constant("text/xml"))
-                .setBody(simple(
-                        "<soap:Envelope xmlns:soap=\"http://schemas.xmlsoap.org/soap/envelope/\">"
-                        + "<soap:Body><soap:Fault>"
-                        + "<faultcode>soap:Server</faultcode>"
-                        + "<faultstring>${exception.message}</faultstring>"
-                        + "</soap:Fault></soap:Body></soap:Envelope>"));
+                .setBody(simple("""
+                        <soap:Envelope xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/">\
+                        <soap:Body><soap:Fault>\
+                        <faultcode>soap:Server</faultcode>\
+                        <faultstring>${exception.message}</faultstring>\
+                        </soap:Fault></soap:Body></soap:Envelope>"""));
 
         // =====================================================================
         // PolicyCenter SOAP Endpoint

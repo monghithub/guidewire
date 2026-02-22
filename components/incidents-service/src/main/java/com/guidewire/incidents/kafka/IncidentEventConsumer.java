@@ -40,14 +40,15 @@ public class IncidentEventConsumer {
                 priority = Priority.MEDIUM;
             }
 
-            CreateIncidentRequest request = CreateIncidentRequest.builder()
-                    .claimId(claimId)
-                    .customerId(customerId)
-                    .title(title)
-                    .description(description)
-                    .priority(priority)
-                    .sourceEvent("incidents.incident-created")
-                    .build();
+            CreateIncidentRequest request = new CreateIncidentRequest(
+                    claimId,
+                    customerId,
+                    priority,
+                    title,
+                    description,
+                    null,
+                    "incidents.incident-created"
+            );
 
             incidentService.create(request);
             LOG.infof("Incident created from Kafka event for claimId=%s", claimId);

@@ -45,33 +45,38 @@ class IncidentResourceAdditionalTest {
         claimId = UUID.randomUUID();
         customerId = UUID.randomUUID();
 
-        sampleResponse = IncidentResponse.builder()
-                .id(incidentId)
-                .claimId(claimId)
-                .customerId(customerId)
-                .status(IncidentStatus.OPEN)
-                .priority(Priority.MEDIUM)
-                .title("Test incident title")
-                .description("Test incident description with enough chars")
-                .createdAt(LocalDateTime.now())
-                .updatedAt(LocalDateTime.now())
-                .build();
+        sampleResponse = new IncidentResponse(
+                incidentId,
+                claimId,
+                customerId,
+                IncidentStatus.OPEN,
+                Priority.MEDIUM,
+                "Test incident title",
+                "Test incident description with enough chars",
+                null,
+                null,
+                null,
+                LocalDateTime.now(),
+                LocalDateTime.now()
+        );
     }
 
     @Test
     void patchIncident_shouldReturn200_withUpdatedFields() {
-        IncidentResponse updatedResponse = IncidentResponse.builder()
-                .id(incidentId)
-                .claimId(claimId)
-                .customerId(customerId)
-                .status(IncidentStatus.IN_PROGRESS)
-                .priority(Priority.HIGH)
-                .title("Updated incident title")
-                .description("Test incident description with enough chars")
-                .assignedTo("agent-007")
-                .createdAt(LocalDateTime.now())
-                .updatedAt(LocalDateTime.now())
-                .build();
+        IncidentResponse updatedResponse = new IncidentResponse(
+                incidentId,
+                claimId,
+                customerId,
+                IncidentStatus.IN_PROGRESS,
+                Priority.HIGH,
+                "Updated incident title",
+                "Test incident description with enough chars",
+                "agent-007",
+                null,
+                null,
+                LocalDateTime.now(),
+                LocalDateTime.now()
+        );
 
         when(incidentService.update(eq(incidentId), any(UpdateIncidentRequest.class)))
                 .thenReturn(updatedResponse);
@@ -171,15 +176,15 @@ class IncidentResourceAdditionalTest {
 
     @Test
     void listIncidents_shouldFilterByStatus() {
-        PagedResponse<IncidentResponse> pagedResponse = PagedResponse.<IncidentResponse>builder()
-                .content(List.of(sampleResponse))
-                .pageIndex(0)
-                .pageSize(20)
-                .totalElements(1L)
-                .totalPages(1)
-                .hasNext(false)
-                .hasPrevious(false)
-                .build();
+        PagedResponse<IncidentResponse> pagedResponse = new PagedResponse<>(
+                List.of(sampleResponse),
+                0,
+                20,
+                1L,
+                1,
+                false,
+                false
+        );
 
         when(incidentService.findAll(any(), any(), eq(IncidentStatus.OPEN), any(), anyInt(), anyInt()))
                 .thenReturn(pagedResponse);

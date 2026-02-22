@@ -53,39 +53,18 @@ class InvoiceControllerTest {
     @DisplayName("POST /api/v1/invoices should return 201 with created invoice")
     void createInvoice_shouldReturn201() throws Exception {
         // Arrange
-        CreateInvoiceRequest request = CreateInvoiceRequest.builder()
-                .policyId(POLICY_ID)
-                .customerId(CUSTOMER_ID)
-                .totalAmount(new BigDecimal("500.00"))
-                .currency("MXN")
-                .items(List.of(
-                        InvoiceItemDto.builder()
-                                .description("Premium payment")
-                                .quantity(1)
-                                .unitPrice(new BigDecimal("500.00"))
-                                .build()
-                ))
-                .build();
+        CreateInvoiceRequest request = new CreateInvoiceRequest(
+                POLICY_ID, CUSTOMER_ID, new BigDecimal("500.00"), "MXN", null,
+                List.of(new InvoiceItemDto(
+                        null, "Premium payment", 1, new BigDecimal("500.00"), null)));
 
-        InvoiceResponse response = InvoiceResponse.builder()
-                .id(INVOICE_ID)
-                .policyId(POLICY_ID)
-                .customerId(CUSTOMER_ID)
-                .totalAmount(new BigDecimal("500.00"))
-                .currency("MXN")
-                .status(InvoiceStatus.PENDING)
-                .createdAt(LocalDateTime.now())
-                .updatedAt(LocalDateTime.now())
-                .items(List.of(
-                        InvoiceItemDto.builder()
-                                .id(UUID.randomUUID())
-                                .description("Premium payment")
-                                .quantity(1)
-                                .unitPrice(new BigDecimal("500.00"))
-                                .subtotal(new BigDecimal("500.00"))
-                                .build()
-                ))
-                .build();
+        InvoiceResponse response = new InvoiceResponse(
+                INVOICE_ID, POLICY_ID, CUSTOMER_ID, InvoiceStatus.PENDING,
+                new BigDecimal("500.00"), "MXN", null,
+                LocalDateTime.now(), LocalDateTime.now(),
+                List.of(new InvoiceItemDto(
+                        UUID.randomUUID(), "Premium payment", 1,
+                        new BigDecimal("500.00"), new BigDecimal("500.00"))));
 
         when(invoiceService.create(any(CreateInvoiceRequest.class))).thenReturn(response);
 
@@ -106,17 +85,10 @@ class InvoiceControllerTest {
     @DisplayName("GET /api/v1/invoices/{id} should return 200 with invoice")
     void getInvoice_shouldReturn200() throws Exception {
         // Arrange
-        InvoiceResponse response = InvoiceResponse.builder()
-                .id(INVOICE_ID)
-                .policyId(POLICY_ID)
-                .customerId(CUSTOMER_ID)
-                .totalAmount(new BigDecimal("1000.00"))
-                .currency("MXN")
-                .status(InvoiceStatus.PROCESSING)
-                .createdAt(LocalDateTime.now())
-                .updatedAt(LocalDateTime.now())
-                .items(List.of())
-                .build();
+        InvoiceResponse response = new InvoiceResponse(
+                INVOICE_ID, POLICY_ID, CUSTOMER_ID, InvoiceStatus.PROCESSING,
+                new BigDecimal("1000.00"), "MXN", null,
+                LocalDateTime.now(), LocalDateTime.now(), List.of());
 
         when(invoiceService.findById(INVOICE_ID)).thenReturn(response);
 
@@ -147,23 +119,13 @@ class InvoiceControllerTest {
     @DisplayName("PATCH /api/v1/invoices/{id} should return 200 with updated invoice")
     void updateStatus_shouldReturn200() throws Exception {
         // Arrange
-        UpdateInvoiceRequest request = UpdateInvoiceRequest.builder()
-                .status(InvoiceStatus.PROCESSING)
-                .sourceEvent("payment-initiated")
-                .build();
+        UpdateInvoiceRequest request = new UpdateInvoiceRequest(
+                InvoiceStatus.PROCESSING, null, "payment-initiated");
 
-        InvoiceResponse response = InvoiceResponse.builder()
-                .id(INVOICE_ID)
-                .policyId(POLICY_ID)
-                .customerId(CUSTOMER_ID)
-                .totalAmount(new BigDecimal("750.00"))
-                .currency("MXN")
-                .status(InvoiceStatus.PROCESSING)
-                .sourceEvent("payment-initiated")
-                .createdAt(LocalDateTime.now())
-                .updatedAt(LocalDateTime.now())
-                .items(List.of())
-                .build();
+        InvoiceResponse response = new InvoiceResponse(
+                INVOICE_ID, POLICY_ID, CUSTOMER_ID, InvoiceStatus.PROCESSING,
+                new BigDecimal("750.00"), "MXN", "payment-initiated",
+                LocalDateTime.now(), LocalDateTime.now(), List.of());
 
         when(invoiceService.updateStatus(eq(INVOICE_ID), any(UpdateInvoiceRequest.class)))
                 .thenReturn(response);

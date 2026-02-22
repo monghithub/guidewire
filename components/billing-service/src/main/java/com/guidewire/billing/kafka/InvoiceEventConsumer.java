@@ -38,21 +38,20 @@ public class InvoiceEventConsumer {
             BigDecimal totalAmount = new BigDecimal(event.get("totalAmount").toString());
             String currency = event.get("currency") != null ? event.get("currency").toString() : "MXN";
 
-            CreateInvoiceRequest request = CreateInvoiceRequest.builder()
-                    .policyId(policyId)
-                    .customerId(customerId)
-                    .totalAmount(totalAmount)
-                    .currency(currency)
-                    .sourceEvent("billing.invoice-created")
-                    .items(List.of(
-                            InvoiceItemDto.builder()
-                                    .description("Invoice from BillingCenter event")
-                                    .quantity(1)
-                                    .unitPrice(totalAmount)
-                                    .subtotal(totalAmount)
-                                    .build()
+            CreateInvoiceRequest request = new CreateInvoiceRequest(
+                    policyId,
+                    customerId,
+                    totalAmount,
+                    currency,
+                    "billing.invoice-created",
+                    List.of(new InvoiceItemDto(
+                            null,
+                            "Invoice from BillingCenter event",
+                            1,
+                            totalAmount,
+                            totalAmount
                     ))
-                    .build();
+            );
 
             invoiceService.create(request);
             log.info("Invoice created from Kafka event for policyId={}", policyId);

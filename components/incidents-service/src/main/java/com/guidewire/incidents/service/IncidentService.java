@@ -36,11 +36,11 @@ public class IncidentService {
 
     @Transactional
     public IncidentResponse create(CreateIncidentRequest request) {
-        LOG.infof("Creating incident for claimId=%s, customerId=%s", request.getClaimId(), request.getCustomerId());
+        LOG.infof("Creating incident for claimId=%s, customerId=%s", request.claimId(), request.customerId());
 
         Incident incident = incidentMapper.toEntity(request);
 
-        if (request.getPriority() == null) {
+        if (request.priority() == null) {
             incident.setPriority(Priority.MEDIUM);
         }
 
@@ -64,30 +64,30 @@ public class IncidentService {
 
         List<IncidentResponse> content = incidentMapper.toResponseList(incidents);
 
-        return PagedResponse.<IncidentResponse>builder()
-                .content(content)
-                .pageIndex(pageIndex)
-                .pageSize(pageSize)
-                .totalElements(totalElements)
-                .totalPages(totalPages)
-                .hasNext(pageIndex < totalPages - 1)
-                .hasPrevious(pageIndex > 0)
-                .build();
+        return new PagedResponse<>(
+                content,
+                pageIndex,
+                pageSize,
+                totalElements,
+                totalPages,
+                pageIndex < totalPages - 1,
+                pageIndex > 0
+        );
     }
 
     public IncidentResponse update(UUID id, UpdateIncidentRequest request) {
         UpdateResult result = doUpdate(id, request);
 
-        if (result.statusChanged) {
+        if (result.statusChanged()) {
             incidentEventProducer.publishStatusChanged(
-                    result.incident,
-                    result.previousStatus,
+                    result.incident(),
+                    result.previousStatus(),
                     "incidents-service",
-                    request.getResolution()
+                    request.resolution()
             );
         }
 
-        return incidentMapper.toResponse(result.incident);
+        return incidentMapper.toResponse(result.incident());
     }
 
     @Transactional
@@ -98,8 +98,8 @@ public class IncidentService {
         IncidentStatus previousStatus = incident.getStatus();
         boolean statusChanged = false;
 
-        if (request.getStatus() != null) {
-            IncidentStatus targetStatus = request.getStatus();
+        if (request.status() != null) {
+            IncidentStatus targetStatus = request.status();
 
             if (!previousStatus.canTransitionTo(targetStatus)) {
                 throw new InvalidStatusTransitionException(previousStatus.name(), targetStatus.name());
@@ -109,24 +109,24 @@ public class IncidentService {
             LOG.infof("Incident %s status changed from %s to %s", id, previousStatus, targetStatus);
         }
 
-        if (request.getPriority() != null) {
-            incident.setPriority(request.getPriority());
+        if (request.priority() != null) {
+            incident.setPriority(request.priority());
         }
 
-        if (request.getTitle() != null) {
-            incident.setTitle(request.getTitle());
+        if (request.title() != null) {
+            incident.setTitle(request.title());
         }
 
-        if (request.getDescription() != null) {
-            incident.setDescription(request.getDescription());
+        if (request.description() != null) {
+            incident.setDescription(request.description());
         }
 
-        if (request.getAssignedTo() != null) {
-            incident.setAssignedTo(request.getAssignedTo());
+        if (request.assignedTo() != null) {
+            incident.setAssignedTo(request.assignedTo());
         }
 
-        if (request.getResolution() != null) {
-            incident.setResolution(request.getResolution());
+        if (request.resolution() != null) {
+            incident.setResolution(request.resolution());
         }
 
         incidentRepository.persist(incident);
@@ -134,15 +134,5 @@ public class IncidentService {
         return new UpdateResult(incident, previousStatus, statusChanged);
     }
 
-    static class UpdateResult {
-        final Incident incident;
-        final IncidentStatus previousStatus;
-        final boolean statusChanged;
-
-        UpdateResult(Incident incident, IncidentStatus previousStatus, boolean statusChanged) {
-            this.incident = incident;
-            this.previousStatus = previousStatus;
-            this.statusChanged = statusChanged;
-        }
-    }
+    record UpdateResult(Incident incident, IncidentStatus previousStatus, boolean statusChanged) {}
 }

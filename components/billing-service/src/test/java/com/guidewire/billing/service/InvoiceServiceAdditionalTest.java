@@ -56,19 +56,12 @@ class InvoiceServiceAdditionalTest {
     private static final UUID INVOICE_ID = UUID.randomUUID();
 
     private CreateInvoiceRequest buildCreateRequest(BigDecimal totalAmount, String currency) {
-        InvoiceItemDto itemDto = InvoiceItemDto.builder()
-                .description("Test item")
-                .quantity(1)
-                .unitPrice(totalAmount != null ? totalAmount : BigDecimal.ONE)
-                .build();
+        InvoiceItemDto itemDto = new InvoiceItemDto(
+                null, "Test item", 1,
+                totalAmount != null ? totalAmount : BigDecimal.ONE, null);
 
-        return CreateInvoiceRequest.builder()
-                .policyId(POLICY_ID)
-                .customerId(CUSTOMER_ID)
-                .totalAmount(totalAmount)
-                .currency(currency)
-                .items(List.of(itemDto))
-                .build();
+        return new CreateInvoiceRequest(
+                POLICY_ID, CUSTOMER_ID, totalAmount, currency, null, List.of(itemDto));
     }
 
     private void stubMapperAndRepoForCreate(String expectedCurrency) {
@@ -94,10 +87,8 @@ class InvoiceServiceAdditionalTest {
                 .status(InvoiceStatus.PENDING)
                 .build();
 
-        InvoiceResponse response = InvoiceResponse.builder()
-                .id(INVOICE_ID)
-                .currency("MXN")
-                .build();
+        InvoiceResponse response = new InvoiceResponse(
+                INVOICE_ID, null, null, null, null, "MXN", null, null, null, null);
 
         when(invoiceMapper.toEntity(any(CreateInvoiceRequest.class))).thenReturn(mappedInvoice);
         when(invoiceMapper.toItemEntity(any(InvoiceItemDto.class))).thenReturn(mappedItem);
@@ -188,9 +179,8 @@ class InvoiceServiceAdditionalTest {
                 .currency("MXN")
                 .build();
 
-        UpdateInvoiceRequest request = UpdateInvoiceRequest.builder()
-                .currency("USD")
-                .build();
+        UpdateInvoiceRequest request = new UpdateInvoiceRequest(
+                null, "USD", null);
 
         Invoice updatedInvoice = Invoice.builder()
                 .id(INVOICE_ID)
@@ -201,11 +191,9 @@ class InvoiceServiceAdditionalTest {
                 .currency("USD")
                 .build();
 
-        InvoiceResponse expectedResponse = InvoiceResponse.builder()
-                .id(INVOICE_ID)
-                .status(InvoiceStatus.PENDING)
-                .currency("USD")
-                .build();
+        InvoiceResponse expectedResponse = new InvoiceResponse(
+                INVOICE_ID, null, null, InvoiceStatus.PENDING,
+                null, "USD", null, null, null, null);
 
         when(invoiceRepository.findById(INVOICE_ID)).thenReturn(Optional.of(invoice));
         when(invoiceRepository.save(any(Invoice.class))).thenReturn(updatedInvoice);
@@ -215,8 +203,8 @@ class InvoiceServiceAdditionalTest {
         InvoiceResponse result = invoiceService.updateStatus(INVOICE_ID, request);
 
         // Assert
-        assertThat(result.getCurrency()).isEqualTo("USD");
-        assertThat(result.getStatus()).isEqualTo(InvoiceStatus.PENDING);
+        assertThat(result.currency()).isEqualTo("USD");
+        assertThat(result.status()).isEqualTo(InvoiceStatus.PENDING);
         verify(invoiceEventProducer, never()).publishStatusChanged(any(), any(), any(), any());
     }
 
@@ -225,9 +213,8 @@ class InvoiceServiceAdditionalTest {
     void updateStatus_invoiceNotFound_shouldThrowResourceNotFoundException() {
         // Arrange
         UUID nonExistentId = UUID.randomUUID();
-        UpdateInvoiceRequest request = UpdateInvoiceRequest.builder()
-                .status(InvoiceStatus.PROCESSING)
-                .build();
+        UpdateInvoiceRequest request = new UpdateInvoiceRequest(
+                InvoiceStatus.PROCESSING, null, null);
 
         when(invoiceRepository.findById(nonExistentId)).thenReturn(Optional.empty());
 
@@ -253,10 +240,8 @@ class InvoiceServiceAdditionalTest {
                 .status(InvoiceStatus.FAILED)
                 .build();
 
-        UpdateInvoiceRequest request = UpdateInvoiceRequest.builder()
-                .status(InvoiceStatus.PENDING)
-                .sourceEvent("retry-requested")
-                .build();
+        UpdateInvoiceRequest request = new UpdateInvoiceRequest(
+                InvoiceStatus.PENDING, null, "retry-requested");
 
         Invoice updatedInvoice = Invoice.builder()
                 .id(INVOICE_ID)
@@ -266,10 +251,9 @@ class InvoiceServiceAdditionalTest {
                 .status(InvoiceStatus.PENDING)
                 .build();
 
-        InvoiceResponse expectedResponse = InvoiceResponse.builder()
-                .id(INVOICE_ID)
-                .status(InvoiceStatus.PENDING)
-                .build();
+        InvoiceResponse expectedResponse = new InvoiceResponse(
+                INVOICE_ID, null, null, InvoiceStatus.PENDING,
+                null, null, null, null, null, null);
 
         when(invoiceRepository.findById(INVOICE_ID)).thenReturn(Optional.of(invoice));
         when(invoiceRepository.save(any(Invoice.class))).thenReturn(updatedInvoice);
@@ -279,7 +263,7 @@ class InvoiceServiceAdditionalTest {
         InvoiceResponse result = invoiceService.updateStatus(INVOICE_ID, request);
 
         // Assert
-        assertThat(result.getStatus()).isEqualTo(InvoiceStatus.PENDING);
+        assertThat(result.status()).isEqualTo(InvoiceStatus.PENDING);
         verify(invoiceEventProducer).publishStatusChanged(
                 eq(updatedInvoice),
                 eq(InvoiceStatus.FAILED),
@@ -300,10 +284,8 @@ class InvoiceServiceAdditionalTest {
                 .status(InvoiceStatus.PENDING)
                 .build();
 
-        UpdateInvoiceRequest request = UpdateInvoiceRequest.builder()
-                .status(InvoiceStatus.CANCELLED)
-                .sourceEvent("user-cancelled")
-                .build();
+        UpdateInvoiceRequest request = new UpdateInvoiceRequest(
+                InvoiceStatus.CANCELLED, null, "user-cancelled");
 
         Invoice updatedInvoice = Invoice.builder()
                 .id(INVOICE_ID)
@@ -313,10 +295,9 @@ class InvoiceServiceAdditionalTest {
                 .status(InvoiceStatus.CANCELLED)
                 .build();
 
-        InvoiceResponse expectedResponse = InvoiceResponse.builder()
-                .id(INVOICE_ID)
-                .status(InvoiceStatus.CANCELLED)
-                .build();
+        InvoiceResponse expectedResponse = new InvoiceResponse(
+                INVOICE_ID, null, null, InvoiceStatus.CANCELLED,
+                null, null, null, null, null, null);
 
         when(invoiceRepository.findById(INVOICE_ID)).thenReturn(Optional.of(invoice));
         when(invoiceRepository.save(any(Invoice.class))).thenReturn(updatedInvoice);
@@ -326,7 +307,7 @@ class InvoiceServiceAdditionalTest {
         InvoiceResponse result = invoiceService.updateStatus(INVOICE_ID, request);
 
         // Assert
-        assertThat(result.getStatus()).isEqualTo(InvoiceStatus.CANCELLED);
+        assertThat(result.status()).isEqualTo(InvoiceStatus.CANCELLED);
         verify(invoiceEventProducer).publishStatusChanged(
                 eq(updatedInvoice),
                 eq(InvoiceStatus.PENDING),

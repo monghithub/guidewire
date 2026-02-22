@@ -147,7 +147,7 @@ public class TransformationProcessor {
         if (node.isObject()) {
             Iterator<Map.Entry<String, JsonNode>> fields = node.fields();
             while (fields.hasNext()) {
-                Map.Entry<String, JsonNode> field = fields.next();
+                var field = fields.next();
                 String fieldName = field.getKey();
                 JsonNode value = field.getValue();
 
@@ -173,12 +173,11 @@ public class TransformationProcessor {
     }
 
     private String wrapInSoapEnvelope(String bodyContent) {
-        return "<?xml version=\"1.0\" encoding=\"UTF-8\"?>"
-                + "<soap:Envelope xmlns:soap=\"http://schemas.xmlsoap.org/soap/envelope/\">"
-                + "<soap:Body>"
-                + bodyContent
-                + "</soap:Body>"
-                + "</soap:Envelope>";
+        return """
+                <?xml version="1.0" encoding="UTF-8"?>\
+                <soap:Envelope xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/">\
+                <soap:Body>%s</soap:Body>\
+                </soap:Envelope>""".formatted(bodyContent);
     }
 
     private String escapeXml(String input) {

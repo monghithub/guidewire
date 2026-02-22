@@ -47,7 +47,8 @@ class InvoiceEventConsumerTest {
         ConsumerRecord<String, GenericRecord> consumerRecord = new ConsumerRecord<>(
                 "billing.invoice-created", 0, 0L, "key-1", genericRecord);
 
-        InvoiceResponse dummyResponse = InvoiceResponse.builder().id(UUID.randomUUID()).build();
+        InvoiceResponse dummyResponse = new InvoiceResponse(
+                UUID.randomUUID(), null, null, null, null, null, null, null, null, null);
         when(invoiceService.create(any(CreateInvoiceRequest.class))).thenReturn(dummyResponse);
 
         // Act

@@ -71,25 +71,33 @@ class IncidentServiceAdditionalTest {
                 .updatedAt(LocalDateTime.now())
                 .build();
 
-        sampleResponse = IncidentResponse.builder()
-                .id(incidentId)
-                .claimId(claimId)
-                .customerId(customerId)
-                .status(IncidentStatus.OPEN)
-                .priority(Priority.MEDIUM)
-                .title("Test incident title")
-                .description("Test incident description with enough chars")
-                .createdAt(LocalDateTime.now())
-                .updatedAt(LocalDateTime.now())
-                .build();
+        sampleResponse = new IncidentResponse(
+                incidentId,
+                claimId,
+                customerId,
+                IncidentStatus.OPEN,
+                Priority.MEDIUM,
+                "Test incident title",
+                "Test incident description with enough chars",
+                null,
+                null,
+                null,
+                LocalDateTime.now(),
+                LocalDateTime.now()
+        );
     }
 
     @Test
     void update_shouldThrow_whenIncidentNotFound() {
         UUID missingId = UUID.randomUUID();
-        UpdateIncidentRequest request = UpdateIncidentRequest.builder()
-                .title("Updated title here")
-                .build();
+        UpdateIncidentRequest request = new UpdateIncidentRequest(
+                null,
+                null,
+                "Updated title here",
+                null,
+                null,
+                null
+        );
 
         when(incidentRepository.findByIdOptional(missingId)).thenReturn(Optional.empty());
 
@@ -104,9 +112,14 @@ class IncidentServiceAdditionalTest {
 
     @Test
     void update_shouldNotPublishEvent_whenOnlyPriorityChanged() {
-        UpdateIncidentRequest request = UpdateIncidentRequest.builder()
-                .priority(Priority.CRITICAL)
-                .build();
+        UpdateIncidentRequest request = new UpdateIncidentRequest(
+                null,
+                Priority.CRITICAL,
+                null,
+                null,
+                null,
+                null
+        );
 
         when(incidentRepository.findByIdOptional(incidentId)).thenReturn(Optional.of(sampleIncident));
         doNothing().when(incidentRepository).persist(any(Incident.class));
@@ -122,24 +135,29 @@ class IncidentServiceAdditionalTest {
 
     @Test
     void update_shouldApplyAllFieldsSimultaneously() {
-        UpdateIncidentRequest request = UpdateIncidentRequest.builder()
-                .status(IncidentStatus.IN_PROGRESS)
-                .priority(Priority.HIGH)
-                .title("Completely new title")
-                .description("Completely new description with enough length")
-                .assignedTo("agent-999")
-                .resolution("Partial resolution note")
-                .build();
+        UpdateIncidentRequest request = new UpdateIncidentRequest(
+                IncidentStatus.IN_PROGRESS,
+                Priority.HIGH,
+                "Completely new title",
+                "Completely new description with enough length",
+                "agent-999",
+                "Partial resolution note"
+        );
 
-        IncidentResponse updatedResponse = IncidentResponse.builder()
-                .id(incidentId)
-                .status(IncidentStatus.IN_PROGRESS)
-                .priority(Priority.HIGH)
-                .title("Completely new title")
-                .description("Completely new description with enough length")
-                .assignedTo("agent-999")
-                .resolution("Partial resolution note")
-                .build();
+        IncidentResponse updatedResponse = new IncidentResponse(
+                incidentId,
+                null,
+                null,
+                IncidentStatus.IN_PROGRESS,
+                Priority.HIGH,
+                "Completely new title",
+                "Completely new description with enough length",
+                "agent-999",
+                "Partial resolution note",
+                null,
+                null,
+                null
+        );
 
         when(incidentRepository.findByIdOptional(incidentId)).thenReturn(Optional.of(sampleIncident));
         doNothing().when(incidentRepository).persist(any(Incident.class));
@@ -165,14 +183,29 @@ class IncidentServiceAdditionalTest {
 
     @Test
     void update_shouldAllowTransition_openToEscalated() {
-        UpdateIncidentRequest request = UpdateIncidentRequest.builder()
-                .status(IncidentStatus.ESCALATED)
-                .build();
+        UpdateIncidentRequest request = new UpdateIncidentRequest(
+                IncidentStatus.ESCALATED,
+                null,
+                null,
+                null,
+                null,
+                null
+        );
 
-        IncidentResponse escalatedResponse = IncidentResponse.builder()
-                .id(incidentId)
-                .status(IncidentStatus.ESCALATED)
-                .build();
+        IncidentResponse escalatedResponse = new IncidentResponse(
+                incidentId,
+                null,
+                null,
+                IncidentStatus.ESCALATED,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null
+        );
 
         when(incidentRepository.findByIdOptional(incidentId)).thenReturn(Optional.of(sampleIncident));
         doNothing().when(incidentRepository).persist(any(Incident.class));
@@ -201,15 +234,29 @@ class IncidentServiceAdditionalTest {
                 .description("This incident was escalated")
                 .build();
 
-        UpdateIncidentRequest request = UpdateIncidentRequest.builder()
-                .status(IncidentStatus.CLOSED)
-                .resolution("Issue resolved after escalation")
-                .build();
+        UpdateIncidentRequest request = new UpdateIncidentRequest(
+                IncidentStatus.CLOSED,
+                null,
+                null,
+                null,
+                null,
+                "Issue resolved after escalation"
+        );
 
-        IncidentResponse closedResponse = IncidentResponse.builder()
-                .id(incidentId)
-                .status(IncidentStatus.CLOSED)
-                .build();
+        IncidentResponse closedResponse = new IncidentResponse(
+                incidentId,
+                null,
+                null,
+                IncidentStatus.CLOSED,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null
+        );
 
         when(incidentRepository.findByIdOptional(incidentId)).thenReturn(Optional.of(escalatedIncident));
         doNothing().when(incidentRepository).persist(any(Incident.class));
@@ -238,16 +285,29 @@ class IncidentServiceAdditionalTest {
                 .description("This incident was resolved but needs reopening")
                 .build();
 
-        UpdateIncidentRequest request = UpdateIncidentRequest.builder()
-                .status(IncidentStatus.IN_PROGRESS)
-                .assignedTo("agent-reopen")
-                .build();
+        UpdateIncidentRequest request = new UpdateIncidentRequest(
+                IncidentStatus.IN_PROGRESS,
+                null,
+                null,
+                null,
+                "agent-reopen",
+                null
+        );
 
-        IncidentResponse reopenedResponse = IncidentResponse.builder()
-                .id(incidentId)
-                .status(IncidentStatus.IN_PROGRESS)
-                .assignedTo("agent-reopen")
-                .build();
+        IncidentResponse reopenedResponse = new IncidentResponse(
+                incidentId,
+                null,
+                null,
+                IncidentStatus.IN_PROGRESS,
+                null,
+                null,
+                null,
+                "agent-reopen",
+                null,
+                null,
+                null,
+                null
+        );
 
         when(incidentRepository.findByIdOptional(incidentId)).thenReturn(Optional.of(resolvedIncident));
         doNothing().when(incidentRepository).persist(any(Incident.class));
@@ -280,8 +340,8 @@ class IncidentServiceAdditionalTest {
                 null, null, IncidentStatus.OPEN, null, 0, 20);
 
         assertThat(result).isNotNull();
-        assertThat(result.getContent()).hasSize(1);
-        assertThat(result.getTotalElements()).isEqualTo(1L);
+        assertThat(result.content()).hasSize(1);
+        assertThat(result.totalElements()).isEqualTo(1L);
 
         verify(incidentRepository).findWithFilters(null, null, IncidentStatus.OPEN, null, 0, 20);
         verify(incidentRepository).countWithFilters(null, null, IncidentStatus.OPEN, null);
@@ -299,11 +359,11 @@ class IncidentServiceAdditionalTest {
         PagedResponse<IncidentResponse> result = incidentService.findAll(null, null, null, null, 0, 20);
 
         assertThat(result).isNotNull();
-        assertThat(result.getContent()).isEmpty();
-        assertThat(result.getTotalElements()).isEqualTo(0L);
-        assertThat(result.getTotalPages()).isEqualTo(0);
-        assertThat(result.isHasNext()).isFalse();
-        assertThat(result.isHasPrevious()).isFalse();
+        assertThat(result.content()).isEmpty();
+        assertThat(result.totalElements()).isEqualTo(0L);
+        assertThat(result.totalPages()).isEqualTo(0);
+        assertThat(result.hasNext()).isFalse();
+        assertThat(result.hasPrevious()).isFalse();
     }
 
     @Test
@@ -321,9 +381,9 @@ class IncidentServiceAdditionalTest {
 
         PagedResponse<IncidentResponse> result = incidentService.findAll(null, null, null, null, 2, 10);
 
-        assertThat(result.getTotalPages()).isEqualTo(3);
-        assertThat(result.getPageIndex()).isEqualTo(2);
-        assertThat(result.isHasNext()).isFalse();
-        assertThat(result.isHasPrevious()).isTrue();
+        assertThat(result.totalPages()).isEqualTo(3);
+        assertThat(result.pageIndex()).isEqualTo(2);
+        assertThat(result.hasNext()).isFalse();
+        assertThat(result.hasPrevious()).isTrue();
     }
 }

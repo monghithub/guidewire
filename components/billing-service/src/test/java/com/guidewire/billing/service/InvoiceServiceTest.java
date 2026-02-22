@@ -56,19 +56,11 @@ class InvoiceServiceTest {
     @DisplayName("create() should create an invoice with items")
     void create_shouldCreateInvoiceWithItems() {
         // Arrange
-        InvoiceItemDto itemDto = InvoiceItemDto.builder()
-                .description("Premium payment")
-                .quantity(1)
-                .unitPrice(new BigDecimal("500.00"))
-                .build();
+        InvoiceItemDto itemDto = new InvoiceItemDto(
+                null, "Premium payment", 1, new BigDecimal("500.00"), null);
 
-        CreateInvoiceRequest request = CreateInvoiceRequest.builder()
-                .policyId(POLICY_ID)
-                .customerId(CUSTOMER_ID)
-                .totalAmount(new BigDecimal("500.00"))
-                .currency("MXN")
-                .items(List.of(itemDto))
-                .build();
+        CreateInvoiceRequest request = new CreateInvoiceRequest(
+                POLICY_ID, CUSTOMER_ID, new BigDecimal("500.00"), "MXN", null, List.of(itemDto));
 
         Invoice mappedInvoice = Invoice.builder()
                 .policyId(POLICY_ID)
@@ -94,14 +86,9 @@ class InvoiceServiceTest {
                 .updatedAt(LocalDateTime.now())
                 .build();
 
-        InvoiceResponse expectedResponse = InvoiceResponse.builder()
-                .id(INVOICE_ID)
-                .policyId(POLICY_ID)
-                .customerId(CUSTOMER_ID)
-                .totalAmount(new BigDecimal("500.00"))
-                .currency("MXN")
-                .status(InvoiceStatus.PENDING)
-                .build();
+        InvoiceResponse expectedResponse = new InvoiceResponse(
+                INVOICE_ID, POLICY_ID, CUSTOMER_ID, InvoiceStatus.PENDING,
+                new BigDecimal("500.00"), "MXN", null, null, null, null);
 
         when(invoiceMapper.toEntity(request)).thenReturn(mappedInvoice);
         when(invoiceMapper.toItemEntity(itemDto)).thenReturn(mappedItem);
@@ -113,11 +100,11 @@ class InvoiceServiceTest {
 
         // Assert
         assertThat(result).isNotNull();
-        assertThat(result.getId()).isEqualTo(INVOICE_ID);
-        assertThat(result.getPolicyId()).isEqualTo(POLICY_ID);
-        assertThat(result.getCustomerId()).isEqualTo(CUSTOMER_ID);
-        assertThat(result.getTotalAmount()).isEqualByComparingTo(new BigDecimal("500.00"));
-        assertThat(result.getStatus()).isEqualTo(InvoiceStatus.PENDING);
+        assertThat(result.id()).isEqualTo(INVOICE_ID);
+        assertThat(result.policyId()).isEqualTo(POLICY_ID);
+        assertThat(result.customerId()).isEqualTo(CUSTOMER_ID);
+        assertThat(result.totalAmount()).isEqualByComparingTo(new BigDecimal("500.00"));
+        assertThat(result.status()).isEqualTo(InvoiceStatus.PENDING);
 
         verify(invoiceMapper).toEntity(request);
         verify(invoiceMapper).toItemEntity(itemDto);
@@ -137,13 +124,9 @@ class InvoiceServiceTest {
                 .status(InvoiceStatus.PENDING)
                 .build();
 
-        InvoiceResponse expectedResponse = InvoiceResponse.builder()
-                .id(INVOICE_ID)
-                .policyId(POLICY_ID)
-                .customerId(CUSTOMER_ID)
-                .totalAmount(new BigDecimal("1000.00"))
-                .status(InvoiceStatus.PENDING)
-                .build();
+        InvoiceResponse expectedResponse = new InvoiceResponse(
+                INVOICE_ID, POLICY_ID, CUSTOMER_ID, InvoiceStatus.PENDING,
+                new BigDecimal("1000.00"), null, null, null, null, null);
 
         when(invoiceRepository.findById(INVOICE_ID)).thenReturn(Optional.of(invoice));
         when(invoiceMapper.toResponse(invoice)).thenReturn(expectedResponse);
@@ -153,8 +136,8 @@ class InvoiceServiceTest {
 
         // Assert
         assertThat(result).isNotNull();
-        assertThat(result.getId()).isEqualTo(INVOICE_ID);
-        assertThat(result.getTotalAmount()).isEqualByComparingTo(new BigDecimal("1000.00"));
+        assertThat(result.id()).isEqualTo(INVOICE_ID);
+        assertThat(result.totalAmount()).isEqualByComparingTo(new BigDecimal("1000.00"));
 
         verify(invoiceRepository).findById(INVOICE_ID);
         verify(invoiceMapper).toResponse(invoice);
@@ -189,10 +172,8 @@ class InvoiceServiceTest {
                 .status(InvoiceStatus.PENDING)
                 .build();
 
-        UpdateInvoiceRequest request = UpdateInvoiceRequest.builder()
-                .status(InvoiceStatus.PROCESSING)
-                .sourceEvent("payment-received")
-                .build();
+        UpdateInvoiceRequest request = new UpdateInvoiceRequest(
+                InvoiceStatus.PROCESSING, null, "payment-received");
 
         Invoice updatedInvoice = Invoice.builder()
                 .id(INVOICE_ID)
@@ -202,10 +183,9 @@ class InvoiceServiceTest {
                 .status(InvoiceStatus.PROCESSING)
                 .build();
 
-        InvoiceResponse expectedResponse = InvoiceResponse.builder()
-                .id(INVOICE_ID)
-                .status(InvoiceStatus.PROCESSING)
-                .build();
+        InvoiceResponse expectedResponse = new InvoiceResponse(
+                INVOICE_ID, null, null, InvoiceStatus.PROCESSING,
+                null, null, null, null, null, null);
 
         when(invoiceRepository.findById(INVOICE_ID)).thenReturn(Optional.of(invoice));
         when(invoiceRepository.save(any(Invoice.class))).thenReturn(updatedInvoice);
@@ -216,7 +196,7 @@ class InvoiceServiceTest {
 
         // Assert
         assertThat(result).isNotNull();
-        assertThat(result.getStatus()).isEqualTo(InvoiceStatus.PROCESSING);
+        assertThat(result.status()).isEqualTo(InvoiceStatus.PROCESSING);
 
         verify(invoiceRepository).findById(INVOICE_ID);
         verify(invoiceRepository).save(any(Invoice.class));
@@ -240,9 +220,8 @@ class InvoiceServiceTest {
                 .status(InvoiceStatus.COMPLETED)
                 .build();
 
-        UpdateInvoiceRequest request = UpdateInvoiceRequest.builder()
-                .status(InvoiceStatus.PENDING)
-                .build();
+        UpdateInvoiceRequest request = new UpdateInvoiceRequest(
+                InvoiceStatus.PENDING, null, null);
 
         when(invoiceRepository.findById(INVOICE_ID)).thenReturn(Optional.of(invoice));
 

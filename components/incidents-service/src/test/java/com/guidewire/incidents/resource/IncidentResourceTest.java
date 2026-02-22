@@ -43,17 +43,20 @@ class IncidentResourceTest {
         claimId = UUID.randomUUID();
         customerId = UUID.randomUUID();
 
-        sampleResponse = IncidentResponse.builder()
-                .id(incidentId)
-                .claimId(claimId)
-                .customerId(customerId)
-                .status(IncidentStatus.OPEN)
-                .priority(Priority.MEDIUM)
-                .title("Test incident title")
-                .description("Test incident description with enough chars")
-                .createdAt(LocalDateTime.now())
-                .updatedAt(LocalDateTime.now())
-                .build();
+        sampleResponse = new IncidentResponse(
+                incidentId,
+                claimId,
+                customerId,
+                IncidentStatus.OPEN,
+                Priority.MEDIUM,
+                "Test incident title",
+                "Test incident description with enough chars",
+                null,
+                null,
+                null,
+                LocalDateTime.now(),
+                LocalDateTime.now()
+        );
     }
 
     @Test
@@ -97,15 +100,15 @@ class IncidentResourceTest {
 
     @Test
     void listIncidents_shouldReturn200() {
-        PagedResponse<IncidentResponse> pagedResponse = PagedResponse.<IncidentResponse>builder()
-                .content(List.of(sampleResponse))
-                .pageIndex(0)
-                .pageSize(20)
-                .totalElements(1L)
-                .totalPages(1)
-                .hasNext(false)
-                .hasPrevious(false)
-                .build();
+        PagedResponse<IncidentResponse> pagedResponse = new PagedResponse<>(
+                List.of(sampleResponse),
+                0,
+                20,
+                1L,
+                1,
+                false,
+                false
+        );
 
         when(incidentService.findAll(any(), any(), any(), any(), anyInt(), anyInt()))
                 .thenReturn(pagedResponse);

@@ -32,16 +32,16 @@ public class InvoiceService {
 
     @Transactional
     public InvoiceResponse create(CreateInvoiceRequest request) {
-        log.info("Creating invoice for policyId={}, customerId={}", request.getPolicyId(), request.getCustomerId());
+        log.info("Creating invoice for policyId={}, customerId={}", request.policyId(), request.customerId());
 
-        validateTotalAmount(request.getTotalAmount());
+        validateTotalAmount(request.totalAmount());
 
         Invoice invoice = invoiceMapper.toEntity(request);
-        if (request.getCurrency() == null || request.getCurrency().isBlank()) {
+        if (request.currency() == null || request.currency().isBlank()) {
             invoice.setCurrency("MXN");
         }
 
-        for (var itemDto : request.getItems()) {
+        for (var itemDto : request.items()) {
             InvoiceItem item = invoiceMapper.toItemEntity(itemDto);
             BigDecimal subtotal = item.getUnitPrice().multiply(BigDecimal.valueOf(item.getQuantity()));
             item.setSubtotal(subtotal);
@@ -74,8 +74,8 @@ public class InvoiceService {
         InvoiceStatus previousStatus = invoice.getStatus();
         boolean statusChanged = false;
 
-        if (request.getStatus() != null) {
-            InvoiceStatus targetStatus = request.getStatus();
+        if (request.status() != null) {
+            InvoiceStatus targetStatus = request.status();
 
             if (!previousStatus.canTransitionTo(targetStatus)) {
                 throw new InvalidStatusTransitionException(previousStatus.name(), targetStatus.name());
@@ -85,12 +85,12 @@ public class InvoiceService {
             log.info("Invoice {} status changed from {} to {}", id, previousStatus, targetStatus);
         }
 
-        if (request.getCurrency() != null) {
-            invoice.setCurrency(request.getCurrency());
+        if (request.currency() != null) {
+            invoice.setCurrency(request.currency());
         }
 
-        if (request.getSourceEvent() != null) {
-            invoice.setSourceEvent(request.getSourceEvent());
+        if (request.sourceEvent() != null) {
+            invoice.setSourceEvent(request.sourceEvent());
         }
 
         Invoice updated = invoiceRepository.save(invoice);
@@ -100,7 +100,7 @@ public class InvoiceService {
                     updated,
                     previousStatus,
                     "billing-service",
-                    request.getSourceEvent()
+                    request.sourceEvent()
             );
         }
 
