@@ -261,7 +261,7 @@ graph LR
 
 Todas las APIs se exponen a traves de un unico hostname: `apicast-guidewire-infra.apps-crc.testing`
 
-### APIs Guidewire (via Camel Gateway) — 100 req/min
+### Camel Gateway (id: 1) — 100 req/min
 
 | Ruta | Metodo | Backend | Metrica |
 |------|--------|---------|---------|
@@ -276,20 +276,60 @@ Todas las APIs se exponen a traves de un unico hostname: `apicast-guidewire-infr
 | `/api/v1/gw-invoices` | GET | camel-gateway:8083 | `gw_invoices_get` |
 | `/api/v1/gw-invoices` | POST | camel-gateway:8083 | `gw_invoices_post` |
 
-### APIs de Microservicios — 200-300 req/min
+### Billing Service (id: 2) — 200 req/min
 
-| Ruta | Metodo | Backend | Rate Limit | Metrica |
-|------|--------|---------|-----------|---------|
-| `/api/v1/invoices` | GET, POST | billing-service:8082 | 200/min | `invoices_*` |
-| `/api/v1/invoices/{id}` | GET, PATCH | billing-service:8082 | 200/min | `invoices_*` |
-| `/api/v1/incidents` | GET, POST | incidents-service:8084 | 200/min | `incidents_*` |
-| `/api/v1/incidents/{id}` | GET, PATCH | incidents-service:8084 | 200/min | `incidents_*` |
-| `/api/v1/customers` | GET, POST | customers-service:8085 | 200/min | `customers_*` |
-| `/api/v1/customers/{id}` | GET, PATCH | customers-service:8085 | 200/min | `customers_*` |
-| `/api/v1/rules/fraud-check` | POST | drools-engine:8086 | 300/min | `rules_fraud_check` |
-| `/api/v1/rules/validate-policy` | POST | drools-engine:8086 | 300/min | `rules_validate_policy` |
-| `/api/v1/rules/calculate-commission` | POST | drools-engine:8086 | 300/min | `rules_calculate_commission` |
-| `/api/v1/rules/route-incident` | POST | drools-engine:8086 | 300/min | `rules_route_incident` |
+| Ruta | Metodo | Backend | Metrica |
+|------|--------|---------|---------|
+| `/api/v1/invoices` | GET | billing-service:8082 | `invoices_get` |
+| `/api/v1/invoices` | POST | billing-service:8082 | `invoices_post` |
+| `/api/v1/invoices/{id}` | GET | billing-service:8082 | `invoices_get_by_id` |
+| `/api/v1/invoices/{id}` | PATCH | billing-service:8082 | `invoices_patch` |
+
+### Incidents Service (id: 3) — 200 req/min
+
+| Ruta | Metodo | Backend | Metrica |
+|------|--------|---------|---------|
+| `/api/v1/incidents` | GET | incidents-service:8084 | `incidents_get` |
+| `/api/v1/incidents` | POST | incidents-service:8084 | `incidents_post` |
+| `/api/v1/incidents/{id}` | GET | incidents-service:8084 | `incidents_get_by_id` |
+| `/api/v1/incidents/{id}` | PATCH | incidents-service:8084 | `incidents_patch` |
+
+### Customers Service (id: 4) — 200 req/min
+
+| Ruta | Metodo | Backend | Metrica |
+|------|--------|---------|---------|
+| `/api/v1/customers` | GET | customers-service:8085 | `customers_get` |
+| `/api/v1/customers` | POST | customers-service:8085 | `customers_post` |
+| `/api/v1/customers/{id}` | GET | customers-service:8085 | `customers_get_by_id` |
+| `/api/v1/customers/{id}` | PATCH | customers-service:8085 | `customers_patch` |
+
+### Drools Engine (id: 5) — 300 req/min
+
+| Ruta | Metodo | Backend | Metrica |
+|------|--------|---------|---------|
+| `/api/v1/rules/fraud-check` | POST | drools-engine:8086 | `rules_fraud_check` |
+| `/api/v1/rules/validate-policy` | POST | drools-engine:8086 | `rules_validate_policy` |
+| `/api/v1/rules/calculate-commission` | POST | drools-engine:8086 | `rules_calculate_commission` |
+| `/api/v1/rules/route-incident` | POST | drools-engine:8086 | `rules_route_incident` |
+
+### Resumen: 28 proxy rules totales
+
+```mermaid
+graph LR
+    subgraph "apicast-guidewire-infra.apps-crc.testing"
+        GW["APIcast<br/>:8080"]
+    end
+
+    subgraph "Discriminacion por path prefix"
+        GW -->|"/api/v1/policies/**<br/>/api/v1/claims/**<br/>/api/v1/gw-invoices/**<br/>10 rules"| C["Camel :8083"]
+        GW -->|"/api/v1/invoices/**<br/>4 rules"| B["Billing :8082"]
+        GW -->|"/api/v1/incidents/**<br/>4 rules"| I["Incidents :8084"]
+        GW -->|"/api/v1/customers/**<br/>4 rules"| CU["Customers :8085"]
+        GW -->|"/api/v1/rules/**<br/>4 rules"| D["Drools :8086"]
+    end
+```
+
+> **Nota**: los 5 services comparten los mismos `hosts` en la configuracion, por lo que APIcast **no discrimina por hostname sino por path prefix**. Esto funciona porque cada servicio expone paths unicos (`/policies`, `/invoices`, `/incidents`, `/customers`, `/rules`).
 
 ---
 
