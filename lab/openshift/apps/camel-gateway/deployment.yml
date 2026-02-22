@@ -25,7 +25,7 @@ spec:
       containers:
         - name: camel-gateway
           image: image-registry.openshift-image-registry.svc:5000/guidewire-apps/camel-gateway:latest
-          imagePullPolicy: IfNotPresent
+          imagePullPolicy: Always
           ports:
             - containerPort: 8083
               protocol: TCP

@@ -25,7 +25,7 @@ spec:
       containers:
         - name: drools-engine
           image: image-registry.openshift-image-registry.svc:5000/guidewire-apps/drools-engine:latest
-          imagePullPolicy: IfNotPresent
+          imagePullPolicy: Always
           ports:
             - containerPort: 8086
               protocol: TCP
