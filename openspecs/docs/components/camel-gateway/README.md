@@ -1,10 +1,10 @@
 # Camel Integration Gateway — Documentación
 
-> [Volver a OpenSpecs](../../README.md) · [Volver al README principal](../../../../README.md)
+> [Volver a OpenSpecs](../../../README.md) · [Volver al README principal](../../../../README.md)
 
 ## Descripción
 
-Gateway de integración central basado en Apache Camel 4.x + Spring Boot 3.3. Actúa como mediador entre Guidewire (SOAP/REST) y el ecosistema de microservicios. Implementa patrones EIP.
+Gateway de integración central basado en Apache Camel 4.18 + Spring Boot 3.3. Actúa como mediador entre Guidewire (SOAP/REST) y el ecosistema de microservicios. Implementa patrones EIP.
 
 ## Stack Tecnológico
 
@@ -12,7 +12,7 @@ Gateway de integración central basado en Apache Camel 4.x + Spring Boot 3.3. Ac
 |------|-----------|
 | Runtime | Java 21 |
 | Framework | Spring Boot 3.3.x |
-| Integración | Apache Camel 4.x |
+| Integración | Apache Camel 4.18.0 |
 | Build | Maven |
 | Puerto | **8083** |
 

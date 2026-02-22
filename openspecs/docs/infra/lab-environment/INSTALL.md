@@ -8,9 +8,9 @@ Guia para montar el laboratorio de integracion Guidewire desde cero. Al terminar
 
 | Requisito | Minimo | Recomendado |
 |-----------|--------|-------------|
-| RAM | 16 GB | 32 GB+ |
-| CPU | 4 cores | 8 cores+ |
-| Disco | 60 GB libres | 100 GB+ |
+| RAM | 24 GB | 32 GB+ |
+| CPU | 8 cores | 12 cores+ |
+| Disco | 80 GB libres | 120 GB+ |
 | SO | Ubuntu 22.04+ / Fedora 38+ / RHEL 9+ / macOS 13+ | Fedora 40+ |
 | CPU Virtualization | VT-x / AMD-V habilitado en BIOS | — |
 | Cuenta Red Hat | Gratuita (para pull secret) | — |
@@ -104,9 +104,9 @@ Este comando:
 ```bash
 # Iniciar con recursos suficientes para el stack Guidewire
 crc start \
-  --cpus 6 \
-  --memory 14336 \
-  --disk-size 60
+  --cpus 8 \
+  --memory 20480 \
+  --disk-size 80
 ```
 
 La primera vez:
@@ -255,12 +255,13 @@ oc get pods -n guidewire-infra
 
 # Aplicaciones
 oc get pods -n guidewire-apps
-# NAME                        READY   STATUS    RESTARTS   AGE
-# billing-service-xxxx        1/1     Running   0          2m
-# camel-gateway-xxxx          1/1     Running   0          2m
-# incidents-service-xxxx      1/1     Running   0          2m
-# customers-service-xxxx      1/1     Running   0          2m
-# drools-engine-xxxx          1/1     Running   0          2m
+# NAME                           READY   STATUS    RESTARTS   AGE
+# billing-service-xxxx           1/1     Running   0          2m
+# camel-gateway-xxxx             1/1     Running   0          2m
+# incidents-service-xxxx         1/1     Running   0          2m
+# customers-service-xxxx         1/1     Running   0          2m
+# drools-engine-xxxx             1/1     Running   0          2m
+# guidewire-simulator-xxxx       1/1     Running   0          2m
 ```
 
 > **Nota**: Ya no hay pod de ZooKeeper — Strimzi v0.50.0 usa Kafka en modo KRaft con `KafkaNodePool`. El pod se llama `kafka-cluster-kafka-pool-0`.
@@ -365,6 +366,7 @@ En cada maquina desde la que se quiera acceder (sustituir `192.168.1.135` por la
 192.168.1.135  incidents-service-guidewire-apps.apps-crc.testing
 192.168.1.135  customers-service-guidewire-apps.apps-crc.testing
 192.168.1.135  drools-engine-guidewire-apps.apps-crc.testing
+192.168.1.135  guidewire-simulator-guidewire-apps.apps-crc.testing
 ```
 
 ### 9.7 Verificar acceso
@@ -381,6 +383,7 @@ curl -s -o /dev/null -w '%{http_code}' http://incidents-service-guidewire-apps.a
 curl -s -o /dev/null -w '%{http_code}' http://customers-service-guidewire-apps.apps-crc.testing/health           # 200
 curl -s -o /dev/null -w '%{http_code}' http://camel-gateway-guidewire-apps.apps-crc.testing/actuator/health      # 200
 curl -s -o /dev/null -w '%{http_code}' http://drools-engine-guidewire-apps.apps-crc.testing/actuator/health      # 200
+curl -s -o /dev/null -w '%{http_code}' http://guidewire-simulator-guidewire-apps.apps-crc.testing/health     # 200
 ```
 
 ---
@@ -402,6 +405,7 @@ curl -s -o /dev/null -w '%{http_code}' http://drools-engine-guidewire-apps.apps-
 |-----------|-----|--------------|
 | Kafdrop (Kafka UI) | http://kafdrop-guidewire-infra.apps-crc.testing | Sin auth |
 | Apicurio (Schema Registry) | http://apicurio-guidewire-infra.apps-crc.testing | Sin auth |
+| Guidewire Simulator | http://guidewire-simulator-guidewire-apps.apps-crc.testing | Sin auth |
 
 ### APIs de microservicios
 
@@ -411,21 +415,21 @@ curl -s -o /dev/null -w '%{http_code}' http://drools-engine-guidewire-apps.apps-
 | Camel Gateway | http://camel-gateway-guidewire-apps.apps-crc.testing | `/api/v1/gw-invoices` | `/actuator/health` |
 | Incidents Service | http://incidents-service-guidewire-apps.apps-crc.testing | `/api/v1/incidents` | `/q/health` |
 | Customers Service | http://customers-service-guidewire-apps.apps-crc.testing | `/api/v1/customers` | `/health` |
-| Drools Engine | http://drools-engine-guidewire-apps.apps-crc.testing | `/api/v1/rules/evaluate` | `/actuator/health` |
+| Drools Engine | http://drools-engine-guidewire-apps.apps-crc.testing | `/api/v1/rules/fraud-check`, `/api/v1/rules/policy-validation`, `/api/v1/rules/commission`, `/api/v1/rules/incident-routing` | `/actuator/health` |
 
 ### API Gateway (APIcast)
 
-Base: `http://apicast-guidewire-infra.apps-crc.testing` (requiere `user_key`)
+Base: `http://apicast-guidewire-infra.apps-crc.testing` (requiere header `X-API-Key: poc-test-key-12345`)
 
 | Ruta | Backend |
 |------|---------|
-| `/api/v1/invoices` | Billing Service |
-| `/api/v1/gw-invoices` | Camel Gateway |
-| `/api/v1/incidents` | Incidents Service |
-| `/api/v1/customers` | Customers Service |
-| `/api/v1/rules/evaluate` | Drools Engine |
 | `/api/v1/policies` | Camel Gateway (PolicyCenter) |
 | `/api/v1/claims` | Camel Gateway (ClaimCenter) |
+| `/api/v1/gw-invoices` | Camel Gateway (BillingCenter) |
+| `/api/v1/invoices` | Billing Service |
+| `/api/v1/incidents` | Incidents Service |
+| `/api/v1/customers` | Customers Service |
+| `/api/v1/rules/*` | Drools Engine |
 
 ### Credenciales de infraestructura
 
@@ -433,7 +437,7 @@ Base: `http://apicast-guidewire-infra.apps-crc.testing` (requiere `user_key`)
 |----------|---------|----------|
 | OpenShift (admin) | `kubeadmin` | `xtLsK-LLIzY-6UVEd-UESLR` |
 | OpenShift (dev) | `developer` | `developer` |
-| PostgreSQL | `guidewire` | `guidewire123` |
+| PostgreSQL | `postgres` | `postgres123` |
 
 ---
 
@@ -504,7 +508,7 @@ df -h
 crc delete
 crc cleanup
 crc setup
-crc start --cpus 6 --memory 14336 --disk-size 60
+crc start --cpus 8 --memory 20480 --disk-size 80
 ```
 
 ### Pods en estado Pending
@@ -516,7 +520,7 @@ oc describe pod <nombre-pod> -n guidewire-apps
 oc adm top nodes
 
 crc stop
-crc start --memory 16384
+crc start --memory 20480
 ```
 
 ### Operador no se instala

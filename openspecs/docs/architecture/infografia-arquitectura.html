@@ -1,0 +1,1802 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Guidewire Integration POC &mdash; Architecture Infographic</title>
+<style>
+  :root {
+    --navy: #0a1628;
+    --dark-blue: #0f2440;
+    --mid-blue: #1a3a5c;
+    --blue: #2563eb;
+    --light-blue: #3b82f6;
+    --accent-cyan: #06b6d4;
+    --accent-green: #10b981;
+    --accent-orange: #f59e0b;
+    --accent-red: #ef4444;
+    --accent-purple: #8b5cf6;
+    --accent-pink: #ec4899;
+    --white: #ffffff;
+    --gray-50: #f8fafc;
+    --gray-100: #f1f5f9;
+    --gray-200: #e2e8f0;
+    --gray-300: #cbd5e1;
+    --gray-400: #94a3b8;
+    --gray-500: #64748b;
+    --gray-600: #475569;
+    --gray-700: #334155;
+    --gray-800: #1e293b;
+    --card-bg: rgba(15, 36, 64, 0.6);
+    --card-border: rgba(59, 130, 246, 0.2);
+    --glow: rgba(37, 99, 235, 0.15);
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+    background: var(--navy);
+    color: var(--gray-100);
+    line-height: 1.6;
+    overflow-x: hidden;
+  }
+
+  /* Background grid pattern */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image:
+      linear-gradient(rgba(37,99,235,0.03) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(37,99,235,0.03) 1px, transparent 1px);
+    background-size: 60px 60px;
+    z-index: -1;
+  }
+
+  .container {
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: 0 2rem;
+  }
+
+  /* ─── HERO ─── */
+  .hero {
+    position: relative;
+    padding: 5rem 0 4rem;
+    text-align: center;
+    overflow: hidden;
+  }
+  .hero::before {
+    content: '';
+    position: absolute;
+    top: -50%;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 800px;
+    height: 800px;
+    background: radial-gradient(circle, rgba(37,99,235,0.12) 0%, transparent 70%);
+    pointer-events: none;
+  }
+  .hero-badge {
+    display: inline-block;
+    background: rgba(37,99,235,0.15);
+    border: 1px solid rgba(37,99,235,0.3);
+    color: var(--light-blue);
+    padding: 0.4rem 1.2rem;
+    border-radius: 999px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    margin-bottom: 1.5rem;
+  }
+  .hero h1 {
+    font-size: 3.5rem;
+    font-weight: 800;
+    letter-spacing: -0.02em;
+    background: linear-gradient(135deg, var(--white) 0%, var(--light-blue) 50%, var(--accent-cyan) 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    margin-bottom: 0.75rem;
+  }
+  .hero p.subtitle {
+    font-size: 1.25rem;
+    color: var(--gray-400);
+    max-width: 700px;
+    margin: 0 auto 2.5rem;
+  }
+  .tech-badges {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    justify-content: center;
+    max-width: 900px;
+    margin: 0 auto;
+  }
+  .tech-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    padding: 0.35rem 0.85rem;
+    border-radius: 6px;
+    font-size: 0.78rem;
+    font-weight: 600;
+    border: 1px solid;
+  }
+  .tb-java { background: rgba(239,68,68,0.1); border-color: rgba(239,68,68,0.3); color: #fca5a5; }
+  .tb-spring { background: rgba(16,185,129,0.1); border-color: rgba(16,185,129,0.3); color: #6ee7b7; }
+  .tb-camel { background: rgba(245,158,11,0.1); border-color: rgba(245,158,11,0.3); color: #fcd34d; }
+  .tb-quarkus { background: rgba(139,92,246,0.1); border-color: rgba(139,92,246,0.3); color: #c4b5fd; }
+  .tb-node { background: rgba(16,185,129,0.1); border-color: rgba(16,185,129,0.3); color: #6ee7b7; }
+  .tb-kafka { background: rgba(37,99,235,0.1); border-color: rgba(37,99,235,0.3); color: #93c5fd; }
+  .tb-pg { background: rgba(6,182,212,0.1); border-color: rgba(6,182,212,0.3); color: #67e8f9; }
+  .tb-ocp { background: rgba(239,68,68,0.1); border-color: rgba(239,68,68,0.3); color: #fca5a5; }
+  .tb-drools { background: rgba(236,72,153,0.1); border-color: rgba(236,72,153,0.3); color: #f9a8d4; }
+  .tb-api { background: rgba(245,158,11,0.1); border-color: rgba(245,158,11,0.3); color: #fcd34d; }
+
+  /* ─── SECTION ─── */
+  .section {
+    padding: 4rem 0;
+  }
+  .section-header {
+    text-align: center;
+    margin-bottom: 3rem;
+  }
+  .section-header h2 {
+    font-size: 2rem;
+    font-weight: 700;
+    color: var(--white);
+    margin-bottom: 0.5rem;
+  }
+  .section-header p {
+    color: var(--gray-400);
+    font-size: 1rem;
+    max-width: 600px;
+    margin: 0 auto;
+  }
+  .section-label {
+    display: inline-block;
+    font-size: 0.7rem;
+    font-weight: 700;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: var(--light-blue);
+    margin-bottom: 0.75rem;
+  }
+
+  /* ─── ARCHITECTURE DIAGRAM ─── */
+  .arch-diagram {
+    position: relative;
+    background: linear-gradient(135deg, var(--dark-blue) 0%, var(--navy) 100%);
+    border: 1px solid var(--card-border);
+    border-radius: 16px;
+    padding: 2.5rem;
+    overflow: hidden;
+  }
+  .arch-diagram::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background:
+      radial-gradient(circle at 20% 50%, rgba(37,99,235,0.06) 0%, transparent 50%),
+      radial-gradient(circle at 80% 50%, rgba(6,182,212,0.06) 0%, transparent 50%);
+    pointer-events: none;
+  }
+  .arch-columns {
+    display: grid;
+    grid-template-columns: 220px 1fr 1fr;
+    gap: 1.5rem;
+    position: relative;
+    z-index: 1;
+  }
+  .arch-col {
+    position: relative;
+  }
+  .arch-col-title {
+    font-size: 0.7rem;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--gray-400);
+    margin-bottom: 1rem;
+    padding-bottom: 0.5rem;
+    border-bottom: 1px solid rgba(255,255,255,0.06);
+  }
+  .arch-node {
+    background: rgba(15, 36, 64, 0.8);
+    border: 1px solid;
+    border-radius: 10px;
+    padding: 0.85rem 1rem;
+    margin-bottom: 0.75rem;
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    font-size: 0.82rem;
+    font-weight: 600;
+    transition: transform 0.2s, box-shadow 0.2s;
+    position: relative;
+  }
+  .arch-node:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 24px rgba(0,0,0,0.3);
+  }
+  .arch-node .node-icon {
+    width: 32px;
+    height: 32px;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.85rem;
+    flex-shrink: 0;
+  }
+  .arch-node .node-info {
+    flex: 1;
+    min-width: 0;
+  }
+  .arch-node .node-name {
+    display: block;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .arch-node .node-detail {
+    display: block;
+    font-size: 0.68rem;
+    font-weight: 400;
+    color: var(--gray-400);
+    margin-top: 0.15rem;
+  }
+  .arch-node .node-port {
+    font-size: 0.65rem;
+    font-weight: 700;
+    padding: 0.15rem 0.45rem;
+    border-radius: 4px;
+    background: rgba(255,255,255,0.06);
+    color: var(--gray-300);
+    flex-shrink: 0;
+  }
+
+  /* Color variants */
+  .node-external { border-color: rgba(245,158,11,0.3); }
+  .node-external .node-icon { background: rgba(245,158,11,0.15); color: var(--accent-orange); }
+  .node-gateway { border-color: rgba(236,72,153,0.3); }
+  .node-gateway .node-icon { background: rgba(236,72,153,0.15); color: var(--accent-pink); }
+  .node-kafka { border-color: rgba(37,99,235,0.3); }
+  .node-kafka .node-icon { background: rgba(37,99,235,0.15); color: var(--light-blue); }
+  .node-db { border-color: rgba(6,182,212,0.3); }
+  .node-db .node-icon { background: rgba(6,182,212,0.15); color: var(--accent-cyan); }
+  .node-registry { border-color: rgba(139,92,246,0.3); }
+  .node-registry .node-icon { background: rgba(139,92,246,0.15); color: var(--accent-purple); }
+  .node-service { border-color: rgba(16,185,129,0.3); }
+  .node-service .node-icon { background: rgba(16,185,129,0.15); color: var(--accent-green); }
+  .node-camel { border-color: rgba(245,158,11,0.3); }
+  .node-camel .node-icon { background: rgba(245,158,11,0.15); color: var(--accent-orange); }
+  .node-drools { border-color: rgba(236,72,153,0.3); }
+  .node-drools .node-icon { background: rgba(236,72,153,0.15); color: var(--accent-pink); }
+
+  /* Connection arrows (SVG overlay) */
+  .arch-svg-overlay {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  /* Animated flow lines */
+  @keyframes flowRight {
+    0% { stroke-dashoffset: 20; }
+    100% { stroke-dashoffset: 0; }
+  }
+  @keyframes flowLeft {
+    0% { stroke-dashoffset: -20; }
+    100% { stroke-dashoffset: 0; }
+  }
+  .flow-line {
+    stroke-dasharray: 6 4;
+    animation: flowRight 1s linear infinite;
+  }
+  .flow-line-reverse {
+    stroke-dasharray: 6 4;
+    animation: flowLeft 1s linear infinite;
+  }
+
+  /* ─── COMPONENT CARDS ─── */
+  .comp-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(340px, 1fr));
+    gap: 1.25rem;
+  }
+  .comp-card {
+    background: linear-gradient(135deg, var(--card-bg) 0%, rgba(10,22,40,0.8) 100%);
+    border: 1px solid var(--card-border);
+    border-radius: 14px;
+    padding: 1.75rem;
+    transition: transform 0.2s, border-color 0.3s, box-shadow 0.3s;
+    position: relative;
+    overflow: hidden;
+  }
+  .comp-card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 3px;
+    border-radius: 14px 14px 0 0;
+  }
+  .comp-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 12px 40px rgba(0,0,0,0.3);
+  }
+  .comp-card-header {
+    display: flex;
+    align-items: center;
+    gap: 0.85rem;
+    margin-bottom: 1rem;
+  }
+  .comp-icon {
+    width: 44px;
+    height: 44px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.2rem;
+    flex-shrink: 0;
+  }
+  .comp-card-header h3 {
+    font-size: 1.05rem;
+    font-weight: 700;
+    color: var(--white);
+  }
+  .comp-card-header .port-badge {
+    margin-left: auto;
+    font-size: 0.72rem;
+    font-weight: 700;
+    padding: 0.25rem 0.6rem;
+    border-radius: 6px;
+    background: rgba(255,255,255,0.06);
+    color: var(--gray-300);
+    font-family: 'SFMono-Regular', Consolas, monospace;
+  }
+  .comp-stack {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.35rem;
+    margin-bottom: 0.85rem;
+  }
+  .comp-stack span {
+    font-size: 0.68rem;
+    font-weight: 600;
+    padding: 0.2rem 0.55rem;
+    border-radius: 4px;
+    background: rgba(255,255,255,0.05);
+    color: var(--gray-300);
+    border: 1px solid rgba(255,255,255,0.06);
+  }
+  .comp-endpoints {
+    list-style: none;
+    margin-top: 0.5rem;
+  }
+  .comp-endpoints li {
+    font-size: 0.78rem;
+    color: var(--gray-400);
+    padding: 0.3rem 0;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+  .comp-endpoints li::before {
+    content: '';
+    width: 5px;
+    height: 5px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+  .comp-desc {
+    font-size: 0.82rem;
+    color: var(--gray-400);
+    margin-bottom: 0.75rem;
+    line-height: 1.5;
+  }
+  .endpoint-method {
+    font-size: 0.62rem;
+    font-weight: 700;
+    padding: 0.1rem 0.4rem;
+    border-radius: 3px;
+    font-family: 'SFMono-Regular', Consolas, monospace;
+    flex-shrink: 0;
+  }
+  .method-get { background: rgba(16,185,129,0.15); color: var(--accent-green); }
+  .method-post { background: rgba(37,99,235,0.15); color: var(--light-blue); }
+  .method-soap { background: rgba(139,92,246,0.15); color: var(--accent-purple); }
+  .method-kafka { background: rgba(245,158,11,0.15); color: var(--accent-orange); }
+  .endpoint-path {
+    font-family: 'SFMono-Regular', Consolas, monospace;
+    font-size: 0.74rem;
+    color: var(--gray-300);
+  }
+
+  /* Card accent colors */
+  .card-camel::before { background: linear-gradient(90deg, var(--accent-orange), transparent); }
+  .card-camel .comp-icon { background: rgba(245,158,11,0.15); color: var(--accent-orange); }
+  .card-camel .comp-endpoints li::before { background: var(--accent-orange); }
+
+  .card-billing::before { background: linear-gradient(90deg, var(--accent-green), transparent); }
+  .card-billing .comp-icon { background: rgba(16,185,129,0.15); color: var(--accent-green); }
+  .card-billing .comp-endpoints li::before { background: var(--accent-green); }
+
+  .card-incidents::before { background: linear-gradient(90deg, var(--accent-red), transparent); }
+  .card-incidents .comp-icon { background: rgba(239,68,68,0.15); color: var(--accent-red); }
+  .card-incidents .comp-endpoints li::before { background: var(--accent-red); }
+
+  .card-customers::before { background: linear-gradient(90deg, var(--accent-cyan), transparent); }
+  .card-customers .comp-icon { background: rgba(6,182,212,0.15); color: var(--accent-cyan); }
+  .card-customers .comp-endpoints li::before { background: var(--accent-cyan); }
+
+  .card-drools::before { background: linear-gradient(90deg, var(--accent-purple), transparent); }
+  .card-drools .comp-icon { background: rgba(139,92,246,0.15); color: var(--accent-purple); }
+  .card-drools .comp-endpoints li::before { background: var(--accent-purple); }
+
+  /* ─── FLOW SECTION ─── */
+  .flows-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 1.25rem;
+  }
+  @media (max-width: 900px) { .flows-grid { grid-template-columns: 1fr; } }
+
+  .flow-card {
+    background: linear-gradient(135deg, var(--card-bg) 0%, rgba(10,22,40,0.8) 100%);
+    border: 1px solid var(--card-border);
+    border-radius: 14px;
+    padding: 1.75rem;
+    position: relative;
+    overflow: hidden;
+  }
+  .flow-card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 3px;
+    border-radius: 14px 14px 0 0;
+  }
+  .flow-number {
+    position: absolute;
+    top: 1rem;
+    right: 1.25rem;
+    font-size: 2.5rem;
+    font-weight: 800;
+    color: rgba(255,255,255,0.04);
+    line-height: 1;
+  }
+  .flow-card h3 {
+    font-size: 1rem;
+    font-weight: 700;
+    color: var(--white);
+    margin-bottom: 0.5rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+  .flow-type-badge {
+    font-size: 0.6rem;
+    font-weight: 700;
+    padding: 0.15rem 0.5rem;
+    border-radius: 4px;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+  .ftb-rest { background: rgba(16,185,129,0.15); color: var(--accent-green); border: 1px solid rgba(16,185,129,0.3); }
+  .ftb-soap { background: rgba(139,92,246,0.15); color: var(--accent-purple); border: 1px solid rgba(139,92,246,0.3); }
+  .ftb-async { background: rgba(245,158,11,0.15); color: var(--accent-orange); border: 1px solid rgba(245,158,11,0.3); }
+  .ftb-rules { background: rgba(236,72,153,0.15); color: var(--accent-pink); border: 1px solid rgba(236,72,153,0.3); }
+
+  .flow-card p {
+    font-size: 0.82rem;
+    color: var(--gray-400);
+    margin-bottom: 1rem;
+    line-height: 1.5;
+  }
+
+  .flow-steps {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.3rem;
+  }
+  .flow-step {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+    font-size: 0.72rem;
+    font-weight: 600;
+    padding: 0.3rem 0.65rem;
+    border-radius: 6px;
+    background: rgba(255,255,255,0.04);
+    border: 1px solid rgba(255,255,255,0.08);
+    color: var(--gray-200);
+    white-space: nowrap;
+  }
+  .flow-arrow {
+    color: var(--gray-500);
+    font-size: 0.8rem;
+    flex-shrink: 0;
+  }
+
+  .flow-rest::before { background: linear-gradient(90deg, var(--accent-green), transparent); }
+  .flow-soap::before { background: linear-gradient(90deg, var(--accent-purple), transparent); }
+  .flow-async::before { background: linear-gradient(90deg, var(--accent-orange), transparent); }
+  .flow-rules::before { background: linear-gradient(90deg, var(--accent-pink), transparent); }
+
+  /* ─── INFRA SECTION ─── */
+  .infra-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1.25rem;
+  }
+  @media (max-width: 1000px) { .infra-grid { grid-template-columns: 1fr; } }
+
+  .infra-card {
+    background: linear-gradient(135deg, var(--card-bg) 0%, rgba(10,22,40,0.8) 100%);
+    border: 1px solid var(--card-border);
+    border-radius: 14px;
+    padding: 1.5rem;
+  }
+  .infra-card h3 {
+    font-size: 0.95rem;
+    font-weight: 700;
+    color: var(--white);
+    margin-bottom: 0.35rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+  .infra-card .infra-sub {
+    font-size: 0.75rem;
+    color: var(--gray-500);
+    margin-bottom: 1rem;
+  }
+  .infra-list {
+    list-style: none;
+  }
+  .infra-list li {
+    font-size: 0.78rem;
+    font-family: 'SFMono-Regular', Consolas, monospace;
+    color: var(--gray-300);
+    padding: 0.4rem 0.6rem;
+    margin-bottom: 0.3rem;
+    border-radius: 6px;
+    background: rgba(255,255,255,0.03);
+    border-left: 3px solid;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .infra-list li .il-label {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    font-size: 0.68rem;
+    color: var(--gray-500);
+    font-weight: 400;
+  }
+
+  .il-billing { border-left-color: var(--accent-green); }
+  .il-incidents { border-left-color: var(--accent-red); }
+  .il-customers { border-left-color: var(--accent-cyan); }
+  .il-policies { border-left-color: var(--accent-orange); }
+  .il-system { border-left-color: var(--gray-500); }
+  .il-db-billing { border-left-color: var(--accent-green); }
+  .il-db-incidents { border-left-color: var(--accent-red); }
+  .il-db-customers { border-left-color: var(--accent-cyan); }
+  .il-db-drools { border-left-color: var(--accent-purple); }
+  .il-avro { border-left-color: var(--accent-purple); }
+
+  /* ─── 3SCALE SECTION ─── */
+  .threescale-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 1rem;
+  }
+  .ts-card {
+    background: linear-gradient(135deg, var(--card-bg) 0%, rgba(10,22,40,0.8) 100%);
+    border: 1px solid var(--card-border);
+    border-radius: 12px;
+    padding: 1.25rem;
+    position: relative;
+    overflow: hidden;
+  }
+  .ts-card::after {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 2px;
+  }
+  .ts-card h4 {
+    font-size: 0.88rem;
+    font-weight: 700;
+    color: var(--white);
+    margin-bottom: 0.5rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .ts-rules {
+    font-size: 0.65rem;
+    font-weight: 700;
+    padding: 0.15rem 0.5rem;
+    border-radius: 4px;
+    background: rgba(37,99,235,0.12);
+    color: var(--light-blue);
+  }
+  .ts-rate {
+    font-size: 0.72rem;
+    color: var(--gray-500);
+    margin-bottom: 0.75rem;
+  }
+  .ts-bar-track {
+    height: 6px;
+    background: rgba(255,255,255,0.04);
+    border-radius: 3px;
+    overflow: hidden;
+  }
+  .ts-bar-fill {
+    height: 100%;
+    border-radius: 3px;
+    transition: width 1s ease-out;
+  }
+  .ts1::after { background: var(--accent-orange); }
+  .ts1 .ts-bar-fill { background: var(--accent-orange); width: 33%; }
+  .ts2::after { background: var(--accent-green); }
+  .ts2 .ts-bar-fill { background: var(--accent-green); width: 67%; }
+  .ts3::after { background: var(--accent-red); }
+  .ts3 .ts-bar-fill { background: var(--accent-red); width: 67%; }
+  .ts4::after { background: var(--accent-cyan); }
+  .ts4 .ts-bar-fill { background: var(--accent-cyan); width: 67%; }
+  .ts5::after { background: var(--accent-purple); }
+  .ts5 .ts-bar-fill { background: var(--accent-purple); width: 100%; }
+
+  /* ─── METRICS ─── */
+  .metrics-row {
+    display: grid;
+    grid-template-columns: repeat(6, 1fr);
+    gap: 1rem;
+  }
+  @media (max-width: 1000px) { .metrics-row { grid-template-columns: repeat(3, 1fr); } }
+  @media (max-width: 600px) { .metrics-row { grid-template-columns: repeat(2, 1fr); } }
+
+  .metric-card {
+    background: linear-gradient(135deg, var(--card-bg) 0%, rgba(10,22,40,0.8) 100%);
+    border: 1px solid var(--card-border);
+    border-radius: 14px;
+    padding: 1.5rem 1rem;
+    text-align: center;
+    position: relative;
+    overflow: hidden;
+  }
+  .metric-card::before {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 100px;
+    height: 100px;
+    border-radius: 50%;
+    pointer-events: none;
+  }
+  .metric-value {
+    font-size: 2.5rem;
+    font-weight: 800;
+    line-height: 1;
+    margin-bottom: 0.35rem;
+  }
+  .metric-label {
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: var(--gray-400);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+  }
+  .m1 .metric-value { color: var(--accent-green); }
+  .m1::before { background: radial-gradient(circle, rgba(16,185,129,0.08) 0%, transparent 70%); }
+  .m2 .metric-value { color: var(--light-blue); }
+  .m2::before { background: radial-gradient(circle, rgba(37,99,235,0.08) 0%, transparent 70%); }
+  .m3 .metric-value { color: var(--accent-orange); }
+  .m3::before { background: radial-gradient(circle, rgba(245,158,11,0.08) 0%, transparent 70%); }
+  .m4 .metric-value { color: var(--accent-purple); }
+  .m4::before { background: radial-gradient(circle, rgba(139,92,246,0.08) 0%, transparent 70%); }
+  .m5 .metric-value { color: var(--accent-cyan); }
+  .m5::before { background: radial-gradient(circle, rgba(6,182,212,0.08) 0%, transparent 70%); }
+  .m6 .metric-value { color: var(--accent-pink); }
+  .m6::before { background: radial-gradient(circle, rgba(236,72,153,0.08) 0%, transparent 70%); }
+
+  /* ─── TECH RADAR ─── */
+  .radar-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 1rem;
+  }
+  @media (max-width: 900px) { .radar-grid { grid-template-columns: repeat(2, 1fr); } }
+
+  .radar-category {
+    background: linear-gradient(135deg, var(--card-bg) 0%, rgba(10,22,40,0.8) 100%);
+    border: 1px solid var(--card-border);
+    border-radius: 14px;
+    padding: 1.5rem;
+  }
+  .radar-category h3 {
+    font-size: 0.82rem;
+    font-weight: 700;
+    color: var(--gray-300);
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    margin-bottom: 1rem;
+    padding-bottom: 0.5rem;
+    border-bottom: 1px solid rgba(255,255,255,0.06);
+  }
+  .radar-item {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    padding: 0.45rem 0;
+  }
+  .radar-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+  .rd-adopt { background: var(--accent-green); box-shadow: 0 0 6px rgba(16,185,129,0.4); }
+  .rd-trial { background: var(--accent-orange); box-shadow: 0 0 6px rgba(245,158,11,0.4); }
+  .radar-item-name {
+    font-size: 0.82rem;
+    font-weight: 600;
+    color: var(--gray-200);
+  }
+  .radar-item-ver {
+    font-size: 0.68rem;
+    color: var(--gray-500);
+    margin-left: auto;
+    font-family: 'SFMono-Regular', Consolas, monospace;
+  }
+
+  /* ─── NAMESPACE LABELS ─── */
+  .ns-label {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    font-size: 0.68rem;
+    font-weight: 700;
+    padding: 0.2rem 0.6rem;
+    border-radius: 4px;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+  }
+  .ns-infra {
+    background: rgba(37,99,235,0.12);
+    color: var(--light-blue);
+    border: 1px solid rgba(37,99,235,0.25);
+  }
+  .ns-apps {
+    background: rgba(16,185,129,0.12);
+    color: var(--accent-green);
+    border: 1px solid rgba(16,185,129,0.25);
+  }
+
+  /* ─── DIVIDER ─── */
+  .divider {
+    height: 1px;
+    background: linear-gradient(90deg, transparent, rgba(37,99,235,0.2), transparent);
+    margin: 1rem 0;
+  }
+
+  /* ─── FOOTER ─── */
+  .footer {
+    text-align: center;
+    padding: 3rem 0;
+    border-top: 1px solid rgba(255,255,255,0.04);
+    margin-top: 2rem;
+  }
+  .footer p {
+    font-size: 0.78rem;
+    color: var(--gray-600);
+  }
+
+  /* ─── SVG ARCHITECTURE ─── */
+  .arch-visual {
+    width: 100%;
+    overflow-x: auto;
+  }
+  .arch-visual svg {
+    width: 100%;
+    height: auto;
+    min-width: 1000px;
+  }
+  .arch-visual text {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  }
+
+  @keyframes pulse-glow {
+    0%, 100% { opacity: 0.5; }
+    50% { opacity: 1; }
+  }
+  @keyframes dash-flow {
+    to { stroke-dashoffset: -20; }
+  }
+
+  /* Responsive */
+  @media (max-width: 1100px) {
+    .arch-columns { grid-template-columns: 1fr; }
+    .hero h1 { font-size: 2.5rem; }
+  }
+  @media (max-width: 700px) {
+    .comp-grid { grid-template-columns: 1fr; }
+    .hero h1 { font-size: 2rem; }
+    .container { padding: 0 1rem; }
+  }
+
+  /* Print */
+  @media print {
+    body { background: white; color: #1a1a1a; }
+    .arch-diagram, .comp-card, .flow-card, .infra-card, .metric-card, .radar-category, .ts-card {
+      background: white;
+      border-color: #ddd;
+      box-shadow: none;
+    }
+  }
+</style>
+</head>
+<body>
+
+<!-- ╔══════════════════════════════════════════════════════════════╗
+     ║  HERO SECTION                                              ║
+     ╚══════════════════════════════════════════════════════════════╝ -->
+<section class="hero">
+  <div class="container">
+    <div class="hero-badge">Proof of Concept &middot; OpenShift 4.21</div>
+    <h1>Guidewire Integration Platform</h1>
+    <p class="subtitle">Arquitectura de microservicios para la integracion con sistemas core Guidewire mediante Apache Camel, Kafka y motor de reglas Drools</p>
+    <div class="tech-badges">
+      <span class="tech-badge tb-java">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 12h20M12 2v20"/></svg>
+        Java 21
+      </span>
+      <span class="tech-badge tb-spring">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M12 2v4m0 12v4m-7.07-15.07l2.83 2.83m8.48 8.48l2.83 2.83M2 12h4m12 0h4M4.93 4.93l2.83 2.83m8.48 8.48l2.83 2.83"/></svg>
+        Spring Boot 3.3
+      </span>
+      <span class="tech-badge tb-camel">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 17h4l3-6 4 10 3-8h4"/></svg>
+        Camel 4.18
+      </span>
+      <span class="tech-badge tb-drools">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2l3 7h7l-5.5 4 2 7L12 16l-6.5 4 2-7L2 9h7z"/></svg>
+        Drools 8.44
+      </span>
+      <span class="tech-badge tb-quarkus">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10"/></svg>
+        Quarkus 3.8
+      </span>
+      <span class="tech-badge tb-node">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M9 9h6v6H9z"/></svg>
+        Node.js 20 + TS
+      </span>
+      <span class="tech-badge tb-kafka">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h16v16H4z"/><path d="M4 12h16M12 4v16"/></svg>
+        Kafka 4.0 KRaft
+      </span>
+      <span class="tech-badge tb-pg">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><ellipse cx="12" cy="6" rx="8" ry="3"/><path d="M4 6v6c0 1.66 3.58 3 8 3s8-1.34 8-3V6"/><path d="M4 12v6c0 1.66 3.58 3 8 3s8-1.34 8-3v-6"/></svg>
+        PostgreSQL 16
+      </span>
+      <span class="tech-badge tb-ocp">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
+        OpenShift 4.21
+      </span>
+      <span class="tech-badge tb-api">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+        Apicurio 2.5
+      </span>
+    </div>
+  </div>
+</section>
+
+<!-- ╔══════════════════════════════════════════════════════════════╗
+     ║  METRICS                                                   ║
+     ╚══════════════════════════════════════════════════════════════╝ -->
+<section class="section">
+  <div class="container">
+    <div class="metrics-row">
+      <div class="metric-card m1">
+        <div class="metric-value">5</div>
+        <div class="metric-label">Microservicios</div>
+      </div>
+      <div class="metric-card m2">
+        <div class="metric-value">9</div>
+        <div class="metric-label">Kafka Topics</div>
+      </div>
+      <div class="metric-card m3">
+        <div class="metric-value">28</div>
+        <div class="metric-label">Proxy Rules</div>
+      </div>
+      <div class="metric-card m4">
+        <div class="metric-value">15</div>
+        <div class="metric-label">API Artifacts</div>
+      </div>
+      <div class="metric-card m5">
+        <div class="metric-value">277</div>
+        <div class="metric-label">Tests</div>
+      </div>
+      <div class="metric-card m6">
+        <div class="metric-value">12</div>
+        <div class="metric-label">Pods Running</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ╔══════════════════════════════════════════════════════════════╗
+     ║  ARCHITECTURE DIAGRAM (SVG)                                ║
+     ╚══════════════════════════════════════════════════════════════╝ -->
+<section class="section">
+  <div class="container">
+    <div class="section-header">
+      <span class="section-label">Diagrama de Arquitectura</span>
+      <h2>Vista General del Sistema</h2>
+      <p>Dos namespaces en OpenShift: infraestructura compartida y aplicaciones de negocio</p>
+    </div>
+
+    <div class="arch-visual">
+      <svg viewBox="0 0 1200 700" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          <filter id="glow">
+            <feGaussianBlur stdDeviation="3" result="blur"/>
+            <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+          </filter>
+          <marker id="arrowBlue" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto">
+            <polygon points="0 0, 8 3, 0 6" fill="#3b82f6" opacity="0.7"/>
+          </marker>
+          <marker id="arrowGreen" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto">
+            <polygon points="0 0, 8 3, 0 6" fill="#10b981" opacity="0.7"/>
+          </marker>
+          <marker id="arrowOrange" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto">
+            <polygon points="0 0, 8 3, 0 6" fill="#f59e0b" opacity="0.7"/>
+          </marker>
+          <marker id="arrowCyan" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto">
+            <polygon points="0 0, 8 3, 0 6" fill="#06b6d4" opacity="0.7"/>
+          </marker>
+          <linearGradient id="bgGrad" x1="0" y1="0" x2="1" y2="1">
+            <stop offset="0%" stop-color="#0f2440"/>
+            <stop offset="100%" stop-color="#0a1628"/>
+          </linearGradient>
+        </defs>
+
+        <!-- Background -->
+        <rect width="1200" height="700" rx="16" fill="url(#bgGrad)" stroke="#1a3a5c" stroke-width="1"/>
+
+        <!-- ── External Zone ── -->
+        <rect x="20" y="20" width="195" height="660" rx="12" fill="rgba(245,158,11,0.04)" stroke="rgba(245,158,11,0.15)" stroke-width="1" stroke-dasharray="4 2"/>
+        <text x="117" y="50" text-anchor="middle" fill="#f59e0b" font-size="11" font-weight="700" letter-spacing="0.1em" opacity="0.8">EXTERNAL SYSTEMS</text>
+
+        <!-- External nodes -->
+        <rect x="35" y="75" width="165" height="52" rx="8" fill="rgba(245,158,11,0.08)" stroke="rgba(245,158,11,0.25)" stroke-width="1"/>
+        <text x="117" y="97" text-anchor="middle" fill="#fcd34d" font-size="12" font-weight="700">PolicyCenter</text>
+        <text x="117" y="115" text-anchor="middle" fill="#94a3b8" font-size="9" font-weight="600">SOAP / XML</text>
+
+        <rect x="35" y="140" width="165" height="52" rx="8" fill="rgba(245,158,11,0.08)" stroke="rgba(245,158,11,0.25)" stroke-width="1"/>
+        <text x="117" y="162" text-anchor="middle" fill="#fcd34d" font-size="12" font-weight="700">ClaimCenter</text>
+        <text x="117" y="180" text-anchor="middle" fill="#94a3b8" font-size="9" font-weight="600">SOAP / XML</text>
+
+        <rect x="35" y="205" width="165" height="52" rx="8" fill="rgba(245,158,11,0.08)" stroke="rgba(245,158,11,0.25)" stroke-width="1"/>
+        <text x="117" y="227" text-anchor="middle" fill="#fcd34d" font-size="12" font-weight="700">BillingCenter</text>
+        <text x="117" y="245" text-anchor="middle" fill="#94a3b8" font-size="9" font-weight="600">SOAP / XML</text>
+
+        <rect x="35" y="290" width="165" height="52" rx="8" fill="rgba(245,158,11,0.08)" stroke="rgba(245,158,11,0.25)" stroke-width="1"/>
+        <text x="117" y="312" text-anchor="middle" fill="#fcd34d" font-size="12" font-weight="700">REST Clients</text>
+        <text x="117" y="330" text-anchor="middle" fill="#94a3b8" font-size="9" font-weight="600">JSON / HTTP</text>
+
+        <!-- ── Infra Namespace ── -->
+        <rect x="240" y="20" width="400" height="660" rx="12" fill="rgba(37,99,235,0.03)" stroke="rgba(37,99,235,0.15)" stroke-width="1" stroke-dasharray="4 2"/>
+        <text x="440" y="50" text-anchor="middle" fill="#3b82f6" font-size="11" font-weight="700" letter-spacing="0.1em" opacity="0.8">GUIDEWIRE-INFRA</text>
+
+        <!-- 3Scale APIcast -->
+        <rect x="260" y="75" width="175" height="60" rx="8" fill="rgba(236,72,153,0.08)" stroke="rgba(236,72,153,0.25)" stroke-width="1"/>
+        <text x="347" y="100" text-anchor="middle" fill="#f9a8d4" font-size="12" font-weight="700">3Scale APIcast</text>
+        <text x="347" y="118" text-anchor="middle" fill="#94a3b8" font-size="9">API Gateway &middot; CORS &middot; Rate Limit</text>
+
+        <!-- Kafka -->
+        <rect x="260" y="195" width="360" height="210" rx="10" fill="rgba(37,99,235,0.06)" stroke="rgba(37,99,235,0.2)" stroke-width="1"/>
+        <text x="440" y="220" text-anchor="middle" fill="#93c5fd" font-size="12" font-weight="700">Kafka 4.0 (KRaft) &mdash; Strimzi v0.50.0</text>
+
+        <!-- Kafka topics -->
+        <rect x="275" y="235" width="160" height="24" rx="4" fill="rgba(16,185,129,0.08)" stroke="rgba(16,185,129,0.2)" stroke-width="0.5"/>
+        <text x="355" y="251" text-anchor="middle" fill="#6ee7b7" font-size="9" font-weight="600">billing.invoice-created</text>
+
+        <rect x="275" y="264" width="160" height="24" rx="4" fill="rgba(16,185,129,0.08)" stroke="rgba(16,185,129,0.2)" stroke-width="0.5"/>
+        <text x="355" y="280" text-anchor="middle" fill="#6ee7b7" font-size="9" font-weight="600">billing.invoice-status-changed</text>
+
+        <rect x="275" y="293" width="160" height="24" rx="4" fill="rgba(239,68,68,0.08)" stroke="rgba(239,68,68,0.2)" stroke-width="0.5"/>
+        <text x="355" y="309" text-anchor="middle" fill="#fca5a5" font-size="9" font-weight="600">incidents.incident-created</text>
+
+        <rect x="275" y="322" width="160" height="24" rx="4" fill="rgba(239,68,68,0.08)" stroke="rgba(239,68,68,0.2)" stroke-width="0.5"/>
+        <text x="355" y="338" text-anchor="middle" fill="#fca5a5" font-size="8.5" font-weight="600">incidents.incident-status-chg</text>
+
+        <rect x="445" y="235" width="160" height="24" rx="4" fill="rgba(6,182,212,0.08)" stroke="rgba(6,182,212,0.2)" stroke-width="0.5"/>
+        <text x="525" y="251" text-anchor="middle" fill="#67e8f9" font-size="9" font-weight="600">customers.customer-registered</text>
+
+        <rect x="445" y="264" width="160" height="24" rx="4" fill="rgba(6,182,212,0.08)" stroke="rgba(6,182,212,0.2)" stroke-width="0.5"/>
+        <text x="525" y="280" text-anchor="middle" fill="#67e8f9" font-size="8.5" font-weight="600">customers.customer-status-chg</text>
+
+        <rect x="445" y="293" width="160" height="24" rx="4" fill="rgba(245,158,11,0.08)" stroke="rgba(245,158,11,0.2)" stroke-width="0.5"/>
+        <text x="525" y="309" text-anchor="middle" fill="#fcd34d" font-size="9" font-weight="600">policies.policy-events</text>
+
+        <rect x="445" y="322" width="160" height="24" rx="4" fill="rgba(148,163,184,0.08)" stroke="rgba(148,163,184,0.2)" stroke-width="0.5"/>
+        <text x="525" y="338" text-anchor="middle" fill="#94a3b8" font-size="9" font-weight="600">events.unclassified</text>
+
+        <rect x="445" y="351" width="160" height="24" rx="4" fill="rgba(148,163,184,0.08)" stroke="rgba(148,163,184,0.2)" stroke-width="0.5"/>
+        <text x="525" y="367" text-anchor="middle" fill="#94a3b8" font-size="9" font-weight="600">dlq.errors</text>
+
+        <!-- PostgreSQL -->
+        <rect x="260" y="430" width="175" height="140" rx="10" fill="rgba(6,182,212,0.06)" stroke="rgba(6,182,212,0.2)" stroke-width="1"/>
+        <text x="347" y="455" text-anchor="middle" fill="#67e8f9" font-size="12" font-weight="700">PostgreSQL 16</text>
+        <rect x="275" y="468" width="145" height="22" rx="3" fill="rgba(16,185,129,0.08)" stroke="rgba(16,185,129,0.15)" stroke-width="0.5"/>
+        <text x="347" y="483" text-anchor="middle" fill="#6ee7b7" font-size="9" font-weight="600">billing_db</text>
+        <rect x="275" y="494" width="145" height="22" rx="3" fill="rgba(239,68,68,0.08)" stroke="rgba(239,68,68,0.15)" stroke-width="0.5"/>
+        <text x="347" y="509" text-anchor="middle" fill="#fca5a5" font-size="9" font-weight="600">incidents_db</text>
+        <rect x="275" y="520" width="145" height="22" rx="3" fill="rgba(6,182,212,0.08)" stroke="rgba(6,182,212,0.15)" stroke-width="0.5"/>
+        <text x="347" y="535" text-anchor="middle" fill="#67e8f9" font-size="9" font-weight="600">customers_db</text>
+        <rect x="275" y="546" width="145" height="22" rx="3" fill="rgba(139,92,246,0.08)" stroke="rgba(139,92,246,0.15)" stroke-width="0.5"/>
+        <text x="347" y="561" text-anchor="middle" fill="#c4b5fd" font-size="9" font-weight="600">drools_audit_db</text>
+
+        <!-- Apicurio -->
+        <rect x="460" y="430" width="165" height="60" rx="8" fill="rgba(139,92,246,0.06)" stroke="rgba(139,92,246,0.2)" stroke-width="1"/>
+        <text x="542" y="457" text-anchor="middle" fill="#c4b5fd" font-size="12" font-weight="700">Apicurio Registry</text>
+        <text x="542" y="475" text-anchor="middle" fill="#94a3b8" font-size="9">Schema Governance &middot; 15 artifacts</text>
+
+        <!-- Kafdrop -->
+        <rect x="460" y="510" width="165" height="48" rx="8" fill="rgba(37,99,235,0.06)" stroke="rgba(37,99,235,0.2)" stroke-width="1"/>
+        <text x="542" y="535" text-anchor="middle" fill="#93c5fd" font-size="12" font-weight="700">Kafdrop</text>
+        <text x="542" y="549" text-anchor="middle" fill="#94a3b8" font-size="9">Kafka UI</text>
+
+        <!-- ── Apps Namespace ── -->
+        <rect x="670" y="20" width="510" height="660" rx="12" fill="rgba(16,185,129,0.03)" stroke="rgba(16,185,129,0.15)" stroke-width="1" stroke-dasharray="4 2"/>
+        <text x="925" y="50" text-anchor="middle" fill="#10b981" font-size="11" font-weight="700" letter-spacing="0.1em" opacity="0.8">GUIDEWIRE-APPS</text>
+
+        <!-- Camel Gateway -->
+        <rect x="695" y="75" width="235" height="115" rx="10" fill="rgba(245,158,11,0.06)" stroke="rgba(245,158,11,0.25)" stroke-width="1"/>
+        <text x="812" y="100" text-anchor="middle" fill="#fcd34d" font-size="13" font-weight="700">Camel Gateway</text>
+        <text x="812" y="116" text-anchor="middle" fill="#94a3b8" font-size="9">Apache Camel 4.18 &middot; Spring Boot 3.3</text>
+        <text x="720" y="138" fill="#6ee7b7" font-size="8.5" font-weight="600">REST</text>
+        <text x="750" y="138" fill="#94a3b8" font-size="8.5">/api/v1/policies</text>
+        <text x="720" y="152" fill="#6ee7b7" font-size="8.5" font-weight="600">REST</text>
+        <text x="750" y="152" fill="#94a3b8" font-size="8.5">/api/v1/claims</text>
+        <text x="720" y="166" fill="#6ee7b7" font-size="8.5" font-weight="600">REST</text>
+        <text x="750" y="166" fill="#94a3b8" font-size="8.5">/api/v1/gw-invoices</text>
+        <text x="720" y="180" fill="#c4b5fd" font-size="8.5" font-weight="600">SOAP</text>
+        <text x="752" y="180" fill="#94a3b8" font-size="8.5">/ws/policycenter</text>
+        <!-- Port badge -->
+        <rect x="890" y="82" width="32" height="18" rx="4" fill="rgba(255,255,255,0.06)"/>
+        <text x="906" y="95" text-anchor="middle" fill="#cbd5e1" font-size="9" font-weight="700">8083</text>
+
+        <!-- Billing Service -->
+        <rect x="950" y="75" width="215" height="80" rx="10" fill="rgba(16,185,129,0.06)" stroke="rgba(16,185,129,0.25)" stroke-width="1"/>
+        <text x="1057" y="100" text-anchor="middle" fill="#6ee7b7" font-size="13" font-weight="700">Billing Service</text>
+        <text x="1057" y="116" text-anchor="middle" fill="#94a3b8" font-size="9">Spring Boot 3.3 &middot; Java 21</text>
+        <text x="975" y="138" fill="#6ee7b7" font-size="8.5" font-weight="600">REST</text>
+        <text x="1005" y="138" fill="#94a3b8" font-size="8.5">/api/v1/invoices</text>
+        <text x="975" y="152" fill="#fcd34d" font-size="8.5" font-weight="600">KAFKA</text>
+        <text x="1012" y="152" fill="#94a3b8" font-size="8.5">consumer + producer</text>
+        <rect x="1125" y="82" width="32" height="18" rx="4" fill="rgba(255,255,255,0.06)"/>
+        <text x="1141" y="95" text-anchor="middle" fill="#cbd5e1" font-size="9" font-weight="700">8082</text>
+
+        <!-- Incidents Service -->
+        <rect x="695" y="215" width="235" height="80" rx="10" fill="rgba(239,68,68,0.06)" stroke="rgba(239,68,68,0.25)" stroke-width="1"/>
+        <text x="812" y="240" text-anchor="middle" fill="#fca5a5" font-size="13" font-weight="700">Incidents Service</text>
+        <text x="812" y="256" text-anchor="middle" fill="#94a3b8" font-size="9">Quarkus 3.8 &middot; Java 21</text>
+        <text x="720" y="278" fill="#6ee7b7" font-size="8.5" font-weight="600">REST</text>
+        <text x="750" y="278" fill="#94a3b8" font-size="8.5">/api/v1/incidents</text>
+        <text x="720" y="292" fill="#fcd34d" font-size="8.5" font-weight="600">KAFKA</text>
+        <text x="757" y="292" fill="#94a3b8" font-size="8.5">consumer + producer</text>
+        <rect x="890" y="222" width="32" height="18" rx="4" fill="rgba(255,255,255,0.06)"/>
+        <text x="906" y="235" text-anchor="middle" fill="#cbd5e1" font-size="9" font-weight="700">8084</text>
+
+        <!-- Customers Service -->
+        <rect x="950" y="215" width="215" height="80" rx="10" fill="rgba(6,182,212,0.06)" stroke="rgba(6,182,212,0.25)" stroke-width="1"/>
+        <text x="1057" y="240" text-anchor="middle" fill="#67e8f9" font-size="13" font-weight="700">Customers Service</text>
+        <text x="1057" y="256" text-anchor="middle" fill="#94a3b8" font-size="9">Node.js 20 &middot; TypeScript &middot; Prisma</text>
+        <text x="975" y="278" fill="#6ee7b7" font-size="8.5" font-weight="600">REST</text>
+        <text x="1005" y="278" fill="#94a3b8" font-size="8.5">/api/v1/customers</text>
+        <text x="975" y="292" fill="#fcd34d" font-size="8.5" font-weight="600">KAFKA</text>
+        <text x="1012" y="292" fill="#94a3b8" font-size="8.5">consumer + producer</text>
+        <rect x="1125" y="222" width="32" height="18" rx="4" fill="rgba(255,255,255,0.06)"/>
+        <text x="1141" y="235" text-anchor="middle" fill="#cbd5e1" font-size="9" font-weight="700">8085</text>
+
+        <!-- Drools Engine -->
+        <rect x="695" y="320" width="235" height="80" rx="10" fill="rgba(139,92,246,0.06)" stroke="rgba(139,92,246,0.25)" stroke-width="1"/>
+        <text x="812" y="345" text-anchor="middle" fill="#c4b5fd" font-size="13" font-weight="700">Drools Engine</text>
+        <text x="812" y="361" text-anchor="middle" fill="#94a3b8" font-size="9">Drools 8.44 &middot; Spring Boot 3.3</text>
+        <text x="720" y="383" fill="#6ee7b7" font-size="8.5" font-weight="600">REST</text>
+        <text x="750" y="383" fill="#94a3b8" font-size="8.5">/api/v1/rules/fraud-check</text>
+        <rect x="890" y="327" width="32" height="18" rx="4" fill="rgba(255,255,255,0.06)"/>
+        <text x="906" y="340" text-anchor="middle" fill="#cbd5e1" font-size="9" font-weight="700">8086</text>
+
+        <!-- ── CONNECTION ARROWS ── -->
+        <!-- External to APIcast -->
+        <line x1="200" y1="101" x2="258" y2="101" stroke="#f59e0b" stroke-width="1.5" stroke-dasharray="5 3" opacity="0.5" marker-end="url(#arrowOrange)">
+          <animate attributeName="stroke-dashoffset" from="16" to="0" dur="1.5s" repeatCount="indefinite"/>
+        </line>
+        <line x1="200" y1="166" x2="258" y2="105" stroke="#f59e0b" stroke-width="1.5" stroke-dasharray="5 3" opacity="0.4" marker-end="url(#arrowOrange)">
+          <animate attributeName="stroke-dashoffset" from="16" to="0" dur="1.5s" repeatCount="indefinite"/>
+        </line>
+        <line x1="200" y1="231" x2="258" y2="110" stroke="#f59e0b" stroke-width="1.5" stroke-dasharray="5 3" opacity="0.4" marker-end="url(#arrowOrange)">
+          <animate attributeName="stroke-dashoffset" from="16" to="0" dur="1.5s" repeatCount="indefinite"/>
+        </line>
+        <line x1="200" y1="316" x2="258" y2="115" stroke="#f59e0b" stroke-width="1.5" stroke-dasharray="5 3" opacity="0.4" marker-end="url(#arrowOrange)">
+          <animate attributeName="stroke-dashoffset" from="16" to="0" dur="1.5s" repeatCount="indefinite"/>
+        </line>
+
+        <!-- APIcast to Camel -->
+        <line x1="435" y1="105" x2="693" y2="105" stroke="#ec4899" stroke-width="1.5" stroke-dasharray="5 3" opacity="0.5" marker-end="url(#arrowBlue)">
+          <animate attributeName="stroke-dashoffset" from="16" to="0" dur="1.2s" repeatCount="indefinite"/>
+        </line>
+
+        <!-- Camel to Kafka (produce) -->
+        <line x1="812" y1="190" x2="620" y2="250" stroke="#f59e0b" stroke-width="1.5" stroke-dasharray="5 3" opacity="0.4">
+          <animate attributeName="stroke-dashoffset" from="0" to="-16" dur="1.5s" repeatCount="indefinite"/>
+        </line>
+
+        <!-- Kafka to Billing -->
+        <line x1="620" y1="247" x2="948" y2="130" stroke="#10b981" stroke-width="1.5" stroke-dasharray="5 3" opacity="0.4" marker-end="url(#arrowGreen)">
+          <animate attributeName="stroke-dashoffset" from="16" to="0" dur="1.5s" repeatCount="indefinite"/>
+        </line>
+
+        <!-- Kafka to Incidents -->
+        <line x1="620" y1="305" x2="693" y2="255" stroke="#ef4444" stroke-width="1.5" stroke-dasharray="5 3" opacity="0.4">
+          <animate attributeName="stroke-dashoffset" from="16" to="0" dur="1.5s" repeatCount="indefinite"/>
+        </line>
+
+        <!-- Kafka to Customers -->
+        <line x1="620" y1="260" x2="948" y2="260" stroke="#06b6d4" stroke-width="1.5" stroke-dasharray="5 3" opacity="0.4" marker-end="url(#arrowCyan)">
+          <animate attributeName="stroke-dashoffset" from="16" to="0" dur="1.5s" repeatCount="indefinite"/>
+        </line>
+
+        <!-- Services to PostgreSQL -->
+        <line x1="950" y1="155" x2="435" y2="480" stroke="#06b6d4" stroke-width="1" stroke-dasharray="3 3" opacity="0.25">
+          <animate attributeName="stroke-dashoffset" from="0" to="-12" dur="2s" repeatCount="indefinite"/>
+        </line>
+        <line x1="695" y1="295" x2="435" y2="505" stroke="#06b6d4" stroke-width="1" stroke-dasharray="3 3" opacity="0.25">
+          <animate attributeName="stroke-dashoffset" from="0" to="-12" dur="2s" repeatCount="indefinite"/>
+        </line>
+        <line x1="950" y1="295" x2="435" y2="530" stroke="#06b6d4" stroke-width="1" stroke-dasharray="3 3" opacity="0.25">
+          <animate attributeName="stroke-dashoffset" from="0" to="-12" dur="2s" repeatCount="indefinite"/>
+        </line>
+        <line x1="695" y1="400" x2="435" y2="555" stroke="#06b6d4" stroke-width="1" stroke-dasharray="3 3" opacity="0.25">
+          <animate attributeName="stroke-dashoffset" from="0" to="-12" dur="2s" repeatCount="indefinite"/>
+        </line>
+
+        <!-- Legend -->
+        <rect x="695" y="440" width="470" height="100" rx="10" fill="rgba(255,255,255,0.02)" stroke="rgba(255,255,255,0.06)" stroke-width="0.5"/>
+        <text x="715" y="465" fill="#64748b" font-size="10" font-weight="700" letter-spacing="0.08em">LEGEND</text>
+
+        <line x1="715" y1="485" x2="755" y2="485" stroke="#f59e0b" stroke-width="1.5" stroke-dasharray="5 3"/>
+        <text x="765" y="489" fill="#94a3b8" font-size="9">HTTP / SOAP Request</text>
+
+        <line x1="715" y1="505" x2="755" y2="505" stroke="#10b981" stroke-width="1.5" stroke-dasharray="5 3"/>
+        <text x="765" y="509" fill="#94a3b8" font-size="9">Kafka Event (Async)</text>
+
+        <line x1="715" y1="525" x2="755" y2="525" stroke="#06b6d4" stroke-width="1" stroke-dasharray="3 3"/>
+        <text x="765" y="529" fill="#94a3b8" font-size="9">Database Connection (JDBC / Prisma)</text>
+
+        <rect x="900" y="476" width="12" height="12" rx="3" fill="rgba(245,158,11,0.08)" stroke="rgba(245,158,11,0.25)" stroke-width="0.5"/>
+        <text x="920" y="487" fill="#94a3b8" font-size="9">External System</text>
+
+        <rect x="900" y="496" width="12" height="12" rx="3" fill="rgba(16,185,129,0.08)" stroke="rgba(16,185,129,0.25)" stroke-width="0.5"/>
+        <text x="920" y="507" fill="#94a3b8" font-size="9">Application Service</text>
+
+        <rect x="900" y="516" width="12" height="12" rx="3" fill="rgba(37,99,235,0.08)" stroke="rgba(37,99,235,0.25)" stroke-width="0.5"/>
+        <text x="920" y="527" fill="#94a3b8" font-size="9">Infrastructure Component</text>
+
+        <!-- OpenShift routes label -->
+        <rect x="695" y="560" width="470" height="55" rx="8" fill="rgba(239,68,68,0.04)" stroke="rgba(239,68,68,0.12)" stroke-width="0.5"/>
+        <text x="715" y="582" fill="#fca5a5" font-size="10" font-weight="700">OpenShift Routes</text>
+        <text x="715" y="600" fill="#94a3b8" font-size="8.5">*.apps-crc.testing &mdash; TLS edge termination &mdash; Cross-namespace DNS: &lt;svc&gt;.guidewire-infra.svc.cluster.local</text>
+
+      </svg>
+    </div>
+  </div>
+</section>
+
+<!-- ╔══════════════════════════════════════════════════════════════╗
+     ║  COMPONENT CARDS                                           ║
+     ╚══════════════════════════════════════════════════════════════╝ -->
+<section class="section">
+  <div class="container">
+    <div class="section-header">
+      <span class="section-label">Microservicios</span>
+      <h2>Componentes de la Plataforma</h2>
+      <p>Cinco servicios desplegados en el namespace <code style="background:rgba(16,185,129,0.12);padding:0.15rem 0.45rem;border-radius:4px;color:#6ee7b7;font-size:0.85rem;">guidewire-apps</code></p>
+    </div>
+
+    <div class="comp-grid">
+
+      <!-- Camel Gateway -->
+      <div class="comp-card card-camel">
+        <div class="comp-card-header">
+          <div class="comp-icon">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 17h4l3-6 4 10 3-8h4"/></svg>
+          </div>
+          <div>
+            <h3>Camel Gateway</h3>
+          </div>
+          <span class="port-badge">:8083</span>
+        </div>
+        <div class="comp-stack">
+          <span>Apache Camel 4.18</span>
+          <span>Spring Boot 3.3</span>
+          <span>Java 21</span>
+          <span>CXF SOAP</span>
+        </div>
+        <p class="comp-desc">Gateway central de integracion. Expone endpoints REST y SOAP, transforma entre formatos XML/JSON, y produce eventos Avro a Kafka.</p>
+        <ul class="comp-endpoints">
+          <li><span class="endpoint-method method-post">POST</span> <span class="endpoint-path">/api/v1/policies</span></li>
+          <li><span class="endpoint-method method-post">POST</span> <span class="endpoint-path">/api/v1/claims</span></li>
+          <li><span class="endpoint-method method-post">POST</span> <span class="endpoint-path">/api/v1/gw-invoices</span></li>
+          <li><span class="endpoint-method method-get">GET</span> <span class="endpoint-path">/api/v1/gw-invoices/{id}</span></li>
+          <li><span class="endpoint-method method-soap">SOAP</span> <span class="endpoint-path">/ws/policycenter</span></li>
+          <li><span class="endpoint-method method-kafka">KAFKA</span> <span class="endpoint-path">billing.invoice-created (producer)</span></li>
+        </ul>
+      </div>
+
+      <!-- Billing Service -->
+      <div class="comp-card card-billing">
+        <div class="comp-card-header">
+          <div class="comp-icon">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="5" width="20" height="14" rx="2"/><path d="M2 10h20"/></svg>
+          </div>
+          <div>
+            <h3>Billing Service</h3>
+          </div>
+          <span class="port-badge">:8082</span>
+        </div>
+        <div class="comp-stack">
+          <span>Spring Boot 3.3</span>
+          <span>Java 21</span>
+          <span>JPA / Hibernate</span>
+          <span>Avro</span>
+        </div>
+        <p class="comp-desc">Gestiona facturas y ciclos de facturacion. Consume eventos de Kafka, persiste en PostgreSQL, y publica cambios de estado.</p>
+        <ul class="comp-endpoints">
+          <li><span class="endpoint-method method-get">GET</span> <span class="endpoint-path">/api/v1/invoices</span></li>
+          <li><span class="endpoint-method method-get">GET</span> <span class="endpoint-path">/api/v1/invoices/{id}</span></li>
+          <li><span class="endpoint-method method-post">POST</span> <span class="endpoint-path">/api/v1/invoices</span></li>
+          <li><span class="endpoint-method method-kafka">KAFKA</span> <span class="endpoint-path">billing.invoice-created (consumer)</span></li>
+          <li><span class="endpoint-method method-kafka">KAFKA</span> <span class="endpoint-path">billing.invoice-status-changed (producer)</span></li>
+        </ul>
+      </div>
+
+      <!-- Incidents Service -->
+      <div class="comp-card card-incidents">
+        <div class="comp-card-header">
+          <div class="comp-icon">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+          </div>
+          <div>
+            <h3>Incidents Service</h3>
+          </div>
+          <span class="port-badge">:8084</span>
+        </div>
+        <div class="comp-stack">
+          <span>Quarkus 3.8</span>
+          <span>Java 21</span>
+          <span>Panache</span>
+          <span>Avro</span>
+        </div>
+        <p class="comp-desc">Gestion de incidentes y siniestros. Construido con Quarkus para optimizar tiempos de arranque y consumo de memoria en contenedores.</p>
+        <ul class="comp-endpoints">
+          <li><span class="endpoint-method method-get">GET</span> <span class="endpoint-path">/api/v1/incidents</span></li>
+          <li><span class="endpoint-method method-post">POST</span> <span class="endpoint-path">/api/v1/incidents</span></li>
+          <li><span class="endpoint-method method-kafka">KAFKA</span> <span class="endpoint-path">incidents.incident-created</span></li>
+          <li><span class="endpoint-method method-kafka">KAFKA</span> <span class="endpoint-path">incidents.incident-status-changed</span></li>
+        </ul>
+      </div>
+
+      <!-- Customers Service -->
+      <div class="comp-card card-customers">
+        <div class="comp-card-header">
+          <div class="comp-icon">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+          </div>
+          <div>
+            <h3>Customers Service</h3>
+          </div>
+          <span class="port-badge">:8085</span>
+        </div>
+        <div class="comp-stack">
+          <span>Node.js 20</span>
+          <span>TypeScript</span>
+          <span>Prisma ORM</span>
+          <span>KafkaJS</span>
+        </div>
+        <p class="comp-desc">Servicio de clientes implementado en Node.js con TypeScript y Prisma. Demuestra la interoperabilidad del ecosistema poliglota.</p>
+        <ul class="comp-endpoints">
+          <li><span class="endpoint-method method-get">GET</span> <span class="endpoint-path">/api/v1/customers</span></li>
+          <li><span class="endpoint-method method-post">POST</span> <span class="endpoint-path">/api/v1/customers</span></li>
+          <li><span class="endpoint-method method-kafka">KAFKA</span> <span class="endpoint-path">customers.customer-registered</span></li>
+          <li><span class="endpoint-method method-kafka">KAFKA</span> <span class="endpoint-path">customers.customer-status-changed</span></li>
+        </ul>
+      </div>
+
+      <!-- Drools Engine -->
+      <div class="comp-card card-drools">
+        <div class="comp-card-header">
+          <div class="comp-icon">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2l3 7h7l-5.5 4 2 7L12 16l-6.5 4 2-7L2 9h7z"/></svg>
+          </div>
+          <div>
+            <h3>Drools Engine</h3>
+          </div>
+          <span class="port-badge">:8086</span>
+        </div>
+        <div class="comp-stack">
+          <span>Drools 8.44</span>
+          <span>Spring Boot 3.3</span>
+          <span>Java 21</span>
+          <span>DRL Rules</span>
+        </div>
+        <p class="comp-desc">Motor de reglas de negocio. Evalua reglas DRL para deteccion de fraude, validacion de polizas y calificacion de riesgo.</p>
+        <ul class="comp-endpoints">
+          <li><span class="endpoint-method method-post">POST</span> <span class="endpoint-path">/api/v1/rules/fraud-check</span></li>
+          <li><span class="endpoint-method method-post">POST</span> <span class="endpoint-path">/api/v1/rules/policy-validation</span></li>
+          <li><span class="endpoint-method method-get">GET</span> <span class="endpoint-path">/api/v1/rules/audit</span></li>
+        </ul>
+      </div>
+
+    </div>
+  </div>
+</section>
+
+<!-- ╔══════════════════════════════════════════════════════════════╗
+     ║  COMMUNICATION FLOWS                                       ║
+     ╚══════════════════════════════════════════════════════════════╝ -->
+<section class="section">
+  <div class="container">
+    <div class="section-header">
+      <span class="section-label">Patrones de Comunicacion</span>
+      <h2>Flujos de Integracion</h2>
+      <p>Cuatro patrones principales: REST sincrono, puente SOAP, eventos asincrono y reglas de negocio</p>
+    </div>
+
+    <div class="flows-grid">
+
+      <!-- Flow 1: Sync REST -->
+      <div class="flow-card flow-rest">
+        <div class="flow-number">01</div>
+        <h3>
+          <span class="flow-type-badge ftb-rest">REST Sync</span>
+          REST Sincrono
+        </h3>
+        <p>Flujo request-response clasico. El cliente envia una peticion REST que atraviesa el API Gateway, llega al Camel Gateway y se enruta al servicio correspondiente.</p>
+        <div class="flow-steps">
+          <span class="flow-step">Client</span>
+          <span class="flow-arrow">&rarr;</span>
+          <span class="flow-step">3Scale APIcast</span>
+          <span class="flow-arrow">&rarr;</span>
+          <span class="flow-step">Camel Gateway</span>
+          <span class="flow-arrow">&rarr;</span>
+          <span class="flow-step">PolicyCenter Mock</span>
+          <span class="flow-arrow">&rarr;</span>
+          <span class="flow-step">JSON Response</span>
+        </div>
+        <div style="margin-top:0.75rem;padding:0.6rem;background:rgba(16,185,129,0.06);border-radius:6px;border:1px solid rgba(16,185,129,0.12);">
+          <code style="font-size:0.72rem;color:#6ee7b7;">POST /api/v1/policies</code>
+          <span style="font-size:0.7rem;color:#64748b;margin-left:0.5rem;">Content-Type: application/json</span>
+        </div>
+      </div>
+
+      <!-- Flow 2: SOAP Bridge -->
+      <div class="flow-card flow-soap">
+        <div class="flow-number">02</div>
+        <h3>
+          <span class="flow-type-badge ftb-soap">SOAP</span>
+          Puente SOAP/REST
+        </h3>
+        <p>Guidewire envia mensajes SOAP/XML. Camel CXF los recibe, transforma XML a JSON mediante dataFormat=PAYLOAD, y enruta al backend REST correspondiente.</p>
+        <div class="flow-steps">
+          <span class="flow-step">PolicyCenter</span>
+          <span class="flow-arrow">&rarr;</span>
+          <span class="flow-step">CXF Endpoint</span>
+          <span class="flow-arrow">&rarr;</span>
+          <span class="flow-step">XML/JSON Transform</span>
+          <span class="flow-arrow">&rarr;</span>
+          <span class="flow-step">REST Backend</span>
+        </div>
+        <div style="margin-top:0.75rem;padding:0.6rem;background:rgba(139,92,246,0.06);border-radius:6px;border:1px solid rgba(139,92,246,0.12);">
+          <code style="font-size:0.72rem;color:#c4b5fd;">POST /ws/policycenter</code>
+          <span style="font-size:0.7rem;color:#64748b;margin-left:0.5rem;">Content-Type: text/xml</span>
+        </div>
+      </div>
+
+      <!-- Flow 3: Async Events -->
+      <div class="flow-card flow-async">
+        <div class="flow-number">03</div>
+        <h3>
+          <span class="flow-type-badge ftb-async">Async</span>
+          Eventos Asincrono (Kafka)
+        </h3>
+        <p>Flujo event-driven completo. Una factura llega por REST, Camel produce un evento Avro a Kafka, Billing Service consume, persiste en PostgreSQL y publica el cambio de estado.</p>
+        <div class="flow-steps">
+          <span class="flow-step">POST /gw-invoices</span>
+          <span class="flow-arrow">&rarr;</span>
+          <span class="flow-step">Camel</span>
+          <span class="flow-arrow">&rarr;</span>
+          <span class="flow-step">InvoiceCreated</span>
+          <span class="flow-arrow">&rarr;</span>
+          <span class="flow-step">Kafka</span>
+          <span class="flow-arrow">&rarr;</span>
+          <span class="flow-step">Billing</span>
+          <span class="flow-arrow">&rarr;</span>
+          <span class="flow-step">PostgreSQL</span>
+          <span class="flow-arrow">&rarr;</span>
+          <span class="flow-step">StatusChanged</span>
+        </div>
+        <div style="margin-top:0.75rem;padding:0.6rem;background:rgba(245,158,11,0.06);border-radius:6px;border:1px solid rgba(245,158,11,0.12);">
+          <code style="font-size:0.72rem;color:#fcd34d;">AVRO Schema: InvoiceCreated</code>
+          <span style="font-size:0.7rem;color:#64748b;margin-left:0.5rem;">Apicurio Registry validated</span>
+        </div>
+      </div>
+
+      <!-- Flow 4: Business Rules -->
+      <div class="flow-card flow-rules">
+        <div class="flow-number">04</div>
+        <h3>
+          <span class="flow-type-badge ftb-rules">Rules</span>
+          Reglas de Negocio (Drools)
+        </h3>
+        <p>Evaluacion de reglas en tiempo real. Un servicio envia datos al motor Drools, que ejecuta reglas DRL y devuelve un score de fraude o validacion de poliza.</p>
+        <div class="flow-steps">
+          <span class="flow-step">POST /rules/fraud-check</span>
+          <span class="flow-arrow">&rarr;</span>
+          <span class="flow-step">Drools Engine</span>
+          <span class="flow-arrow">&rarr;</span>
+          <span class="flow-step">DRL Rules</span>
+          <span class="flow-arrow">&rarr;</span>
+          <span class="flow-step">Fraud Score</span>
+        </div>
+        <div style="margin-top:0.75rem;padding:0.6rem;background:rgba(236,72,153,0.06);border-radius:6px;border:1px solid rgba(236,72,153,0.12);">
+          <code style="font-size:0.72rem;color:#f9a8d4;">Response: { "fraudScore": 0.87, "riskLevel": "HIGH" }</code>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</section>
+
+<!-- ╔══════════════════════════════════════════════════════════════╗
+     ║  INFRASTRUCTURE                                            ║
+     ╚══════════════════════════════════════════════════════════════╝ -->
+<section class="section">
+  <div class="container">
+    <div class="section-header">
+      <span class="section-label">Infraestructura</span>
+      <h2>Componentes de Infraestructura</h2>
+      <p>Desplegados en el namespace <code style="background:rgba(37,99,235,0.12);padding:0.15rem 0.45rem;border-radius:4px;color:#93c5fd;font-size:0.85rem;">guidewire-infra</code></p>
+    </div>
+
+    <div class="infra-grid">
+
+      <!-- Kafka Topics -->
+      <div class="infra-card">
+        <h3>
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#93c5fd" stroke-width="2"><path d="M4 4h16v16H4z"/><path d="M4 12h16M12 4v16"/></svg>
+          Kafka Topics
+        </h3>
+        <div class="infra-sub">Strimzi v0.50.0 &middot; KRaft mode &middot; 9 topics</div>
+        <ul class="infra-list">
+          <li class="il-billing">billing.invoice-created <span class="il-label">Avro</span></li>
+          <li class="il-billing">billing.invoice-status-changed <span class="il-label">Avro</span></li>
+          <li class="il-incidents">incidents.incident-created <span class="il-label">Avro</span></li>
+          <li class="il-incidents">incidents.incident-status-changed <span class="il-label">Avro</span></li>
+          <li class="il-customers">customers.customer-registered <span class="il-label">Avro</span></li>
+          <li class="il-customers">customers.customer-status-changed <span class="il-label">Avro</span></li>
+          <li class="il-policies">policies.policy-events <span class="il-label">JSON</span></li>
+          <li class="il-system">events.unclassified <span class="il-label">JSON</span></li>
+          <li class="il-system">dlq.errors <span class="il-label">DLQ</span></li>
+        </ul>
+      </div>
+
+      <!-- PostgreSQL Databases -->
+      <div class="infra-card">
+        <h3>
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#67e8f9" stroke-width="2"><ellipse cx="12" cy="6" rx="8" ry="3"/><path d="M4 6v6c0 1.66 3.58 3 8 3s8-1.34 8-3V6"/><path d="M4 12v6c0 1.66 3.58 3 8 3s8-1.34 8-3v-6"/></svg>
+          PostgreSQL 16
+        </h3>
+        <div class="infra-sub">4 databases &middot; JDBC + Prisma</div>
+        <ul class="infra-list">
+          <li class="il-db-billing">billing_db <span class="il-label">Billing Service &middot; JPA</span></li>
+          <li class="il-db-incidents">incidents_db <span class="il-label">Incidents Service &middot; Panache</span></li>
+          <li class="il-db-customers">customers_db <span class="il-label">Customers Service &middot; Prisma</span></li>
+          <li class="il-db-drools">drools_audit_db <span class="il-label">Drools Engine &middot; JPA</span></li>
+        </ul>
+        <div style="margin-top:1rem;padding:0.6rem;background:rgba(6,182,212,0.06);border-radius:6px;border:1px solid rgba(6,182,212,0.1);">
+          <div style="font-size:0.72rem;color:#67e8f9;font-weight:600;margin-bottom:0.25rem;">Cross-Namespace DNS</div>
+          <code style="font-size:0.7rem;color:#94a3b8;">postgresql.guidewire-infra.svc.cluster.local:5432</code>
+        </div>
+      </div>
+
+      <!-- Apicurio Artifacts -->
+      <div class="infra-card">
+        <h3>
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#c4b5fd" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+          Apicurio Registry
+        </h3>
+        <div class="infra-sub">15 artifacts &middot; Schema governance</div>
+        <ul class="infra-list">
+          <li class="il-avro">InvoiceCreated <span class="il-label">AVRO</span></li>
+          <li class="il-avro">InvoiceStatusChanged <span class="il-label">AVRO</span></li>
+          <li class="il-avro">IncidentCreated <span class="il-label">AVRO</span></li>
+          <li class="il-avro">IncidentStatusChanged <span class="il-label">AVRO</span></li>
+          <li class="il-avro">CustomerRegistered <span class="il-label">AVRO</span></li>
+          <li class="il-avro">CustomerStatusChanged <span class="il-label">AVRO</span></li>
+        </ul>
+        <div style="margin-top:0.75rem;display:flex;gap:0.35rem;flex-wrap:wrap;">
+          <span style="font-size:0.65rem;font-weight:600;padding:0.2rem 0.5rem;border-radius:4px;background:rgba(37,99,235,0.1);color:#93c5fd;border:1px solid rgba(37,99,235,0.2);">8 OPENAPI</span>
+          <span style="font-size:0.65rem;font-weight:600;padding:0.2rem 0.5rem;border-radius:4px;background:rgba(139,92,246,0.1);color:#c4b5fd;border:1px solid rgba(139,92,246,0.2);">6 AVRO</span>
+          <span style="font-size:0.65rem;font-weight:600;padding:0.2rem 0.5rem;border-radius:4px;background:rgba(245,158,11,0.1);color:#fcd34d;border:1px solid rgba(245,158,11,0.2);">1 ASYNCAPI</span>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</section>
+
+<!-- ╔══════════════════════════════════════════════════════════════╗
+     ║  3SCALE API GATEWAY                                        ║
+     ╚══════════════════════════════════════════════════════════════╝ -->
+<section class="section">
+  <div class="container">
+    <div class="section-header">
+      <span class="section-label">API Management</span>
+      <h2>3Scale APIcast &mdash; Proxy Rules</h2>
+      <p>28 reglas de proxy distribuidas en 5 servicios con rate limiting por servicio</p>
+    </div>
+
+    <div class="threescale-grid">
+      <div class="ts-card ts1">
+        <h4>
+          Camel Gateway
+          <span class="ts-rules">8 rules</span>
+        </h4>
+        <div class="ts-rate">Rate limit: 100 req/min</div>
+        <div class="ts-bar-track"><div class="ts-bar-fill"></div></div>
+        <div style="margin-top:0.75rem;font-size:0.72rem;color:#94a3b8;line-height:1.7;">
+          /api/v1/policies, /api/v1/claims,<br>
+          /api/v1/gw-invoices, /ws/policycenter,<br>
+          + 4 health/docs endpoints
+        </div>
+      </div>
+      <div class="ts-card ts2">
+        <h4>
+          Billing Service
+          <span class="ts-rules">4 rules</span>
+        </h4>
+        <div class="ts-rate">Rate limit: 200 req/min</div>
+        <div class="ts-bar-track"><div class="ts-bar-fill"></div></div>
+        <div style="margin-top:0.75rem;font-size:0.72rem;color:#94a3b8;line-height:1.7;">
+          /api/v1/invoices (CRUD)<br>
+          + health endpoint
+        </div>
+      </div>
+      <div class="ts-card ts3">
+        <h4>
+          Incidents Service
+          <span class="ts-rules">4 rules</span>
+        </h4>
+        <div class="ts-rate">Rate limit: 200 req/min</div>
+        <div class="ts-bar-track"><div class="ts-bar-fill"></div></div>
+        <div style="margin-top:0.75rem;font-size:0.72rem;color:#94a3b8;line-height:1.7;">
+          /api/v1/incidents (CRUD)<br>
+          + health endpoint
+        </div>
+      </div>
+      <div class="ts-card ts4">
+        <h4>
+          Customers Service
+          <span class="ts-rules">4 rules</span>
+        </h4>
+        <div class="ts-rate">Rate limit: 200 req/min</div>
+        <div class="ts-bar-track"><div class="ts-bar-fill"></div></div>
+        <div style="margin-top:0.75rem;font-size:0.72rem;color:#94a3b8;line-height:1.7;">
+          /api/v1/customers (CRUD)<br>
+          + health endpoint
+        </div>
+      </div>
+      <div class="ts-card ts5">
+        <h4>
+          Drools Engine
+          <span class="ts-rules">4 rules</span>
+        </h4>
+        <div class="ts-rate">Rate limit: 300 req/min</div>
+        <div class="ts-bar-track"><div class="ts-bar-fill"></div></div>
+        <div style="margin-top:0.75rem;font-size:0.72rem;color:#94a3b8;line-height:1.7;">
+          /api/v1/rules/* (fraud, validation)<br>
+          + health endpoint
+        </div>
+      </div>
+    </div>
+
+    <!-- Total bar -->
+    <div style="margin-top:1.5rem;background:linear-gradient(135deg,var(--card-bg) 0%,rgba(10,22,40,0.8) 100%);border:1px solid var(--card-border);border-radius:12px;padding:1.25rem 1.5rem;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:1rem;">
+      <div>
+        <div style="font-size:0.92rem;font-weight:700;color:var(--white);">Total: 28 Proxy Rules &middot; 5 Backend Services</div>
+        <div style="font-size:0.78rem;color:var(--gray-400);margin-top:0.25rem;">CORS habilitado &middot; API Key authentication &middot; Path-based routing</div>
+      </div>
+      <div style="display:flex;gap:0.75rem;align-items:center;">
+        <div style="text-align:center;">
+          <div style="font-size:1.5rem;font-weight:800;color:var(--accent-orange);">1,100</div>
+          <div style="font-size:0.65rem;color:var(--gray-500);text-transform:uppercase;letter-spacing:0.08em;">req/min total</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ╔══════════════════════════════════════════════════════════════╗
+     ║  TECHNOLOGY RADAR                                          ║
+     ╚══════════════════════════════════════════════════════════════╝ -->
+<section class="section">
+  <div class="container">
+    <div class="section-header">
+      <span class="section-label">Stack Tecnologico</span>
+      <h2>Technology Radar</h2>
+      <p>Tecnologias adoptadas y en evaluacion para la plataforma de integracion</p>
+    </div>
+
+    <div class="radar-grid">
+
+      <!-- Languages & Frameworks -->
+      <div class="radar-category">
+        <h3>Languages &amp; Frameworks</h3>
+        <div class="radar-item">
+          <span class="radar-dot rd-adopt"></span>
+          <span class="radar-item-name">Java</span>
+          <span class="radar-item-ver">21 LTS</span>
+        </div>
+        <div class="radar-item">
+          <span class="radar-dot rd-adopt"></span>
+          <span class="radar-item-name">Spring Boot</span>
+          <span class="radar-item-ver">3.3.x</span>
+        </div>
+        <div class="radar-item">
+          <span class="radar-dot rd-adopt"></span>
+          <span class="radar-item-name">Apache Camel</span>
+          <span class="radar-item-ver">4.18</span>
+        </div>
+        <div class="radar-item">
+          <span class="radar-dot rd-adopt"></span>
+          <span class="radar-item-name">Quarkus</span>
+          <span class="radar-item-ver">3.8</span>
+        </div>
+        <div class="radar-item">
+          <span class="radar-dot rd-adopt"></span>
+          <span class="radar-item-name">Node.js + TS</span>
+          <span class="radar-item-ver">20 LTS</span>
+        </div>
+        <div class="radar-item">
+          <span class="radar-dot rd-adopt"></span>
+          <span class="radar-item-name">Drools</span>
+          <span class="radar-item-ver">8.44</span>
+        </div>
+      </div>
+
+      <!-- Messaging & Events -->
+      <div class="radar-category">
+        <h3>Messaging &amp; Events</h3>
+        <div class="radar-item">
+          <span class="radar-dot rd-adopt"></span>
+          <span class="radar-item-name">Apache Kafka</span>
+          <span class="radar-item-ver">4.0</span>
+        </div>
+        <div class="radar-item">
+          <span class="radar-dot rd-adopt"></span>
+          <span class="radar-item-name">Strimzi Operator</span>
+          <span class="radar-item-ver">v0.50.0</span>
+        </div>
+        <div class="radar-item">
+          <span class="radar-dot rd-adopt"></span>
+          <span class="radar-item-name">KRaft Mode</span>
+          <span class="radar-item-ver">no ZooKeeper</span>
+        </div>
+        <div class="radar-item">
+          <span class="radar-dot rd-adopt"></span>
+          <span class="radar-item-name">Apache Avro</span>
+          <span class="radar-item-ver">1.12</span>
+        </div>
+        <div class="radar-item">
+          <span class="radar-dot rd-adopt"></span>
+          <span class="radar-item-name">Kafdrop</span>
+          <span class="radar-item-ver">UI</span>
+        </div>
+      </div>
+
+      <!-- Data & Storage -->
+      <div class="radar-category">
+        <h3>Data &amp; Storage</h3>
+        <div class="radar-item">
+          <span class="radar-dot rd-adopt"></span>
+          <span class="radar-item-name">PostgreSQL</span>
+          <span class="radar-item-ver">16</span>
+        </div>
+        <div class="radar-item">
+          <span class="radar-dot rd-adopt"></span>
+          <span class="radar-item-name">Hibernate / JPA</span>
+          <span class="radar-item-ver">6.x</span>
+        </div>
+        <div class="radar-item">
+          <span class="radar-dot rd-adopt"></span>
+          <span class="radar-item-name">Panache (Quarkus)</span>
+          <span class="radar-item-ver">3.8</span>
+        </div>
+        <div class="radar-item">
+          <span class="radar-dot rd-adopt"></span>
+          <span class="radar-item-name">Prisma ORM</span>
+          <span class="radar-item-ver">5.x</span>
+        </div>
+      </div>
+
+      <!-- Platform & API -->
+      <div class="radar-category">
+        <h3>Platform &amp; API Management</h3>
+        <div class="radar-item">
+          <span class="radar-dot rd-adopt"></span>
+          <span class="radar-item-name">OpenShift</span>
+          <span class="radar-item-ver">4.21</span>
+        </div>
+        <div class="radar-item">
+          <span class="radar-dot rd-adopt"></span>
+          <span class="radar-item-name">3Scale APIcast</span>
+          <span class="radar-item-ver">gateway</span>
+        </div>
+        <div class="radar-item">
+          <span class="radar-dot rd-adopt"></span>
+          <span class="radar-item-name">Apicurio Registry</span>
+          <span class="radar-item-ver">2.5.x</span>
+        </div>
+        <div class="radar-item">
+          <span class="radar-dot rd-adopt"></span>
+          <span class="radar-item-name">OpenAPI</span>
+          <span class="radar-item-ver">3.0</span>
+        </div>
+        <div class="radar-item">
+          <span class="radar-dot rd-adopt"></span>
+          <span class="radar-item-name">AsyncAPI</span>
+          <span class="radar-item-ver">2.6</span>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</section>
+
+<!-- ╔══════════════════════════════════════════════════════════════╗
+     ║  FOOTER                                                    ║
+     ╚══════════════════════════════════════════════════════════════╝ -->
+<footer class="footer">
+  <div class="container">
+    <div style="display:flex;justify-content:center;gap:1.5rem;margin-bottom:1.25rem;flex-wrap:wrap;">
+      <span class="ns-label ns-infra">
+        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/></svg>
+        guidewire-infra
+      </span>
+      <span class="ns-label ns-apps">
+        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/></svg>
+        guidewire-apps
+      </span>
+    </div>
+    <p>Guidewire Integration POC &mdash; Red Hat OpenShift Local (CRC) &mdash; Febrero 2026</p>
+    <p style="margin-top:0.35rem;font-size:0.72rem;color:var(--gray-700);">5 microservicios &middot; 9 Kafka topics &middot; 28 proxy rules &middot; 15 API artifacts &middot; 277 tests</p>
+  </div>
+</footer>
+
+</body>
+</html>

@@ -13,7 +13,7 @@ Especificaciones como fuente de verdad para el desarrollo Spec-Driven con IA del
 | [Arquitectura](docs/architecture/README.md) | Diagramas, ADRs, flujos de datos |
 | [Infraestructura](#infraestructura) | Kafka, PostgreSQL, Apicurio, 3Scale |
 | [Contratos API-First](#contratos-api-first-design) | OpenAPI, AsyncAPI, AVRO |
-| [Componentes](#componentes-aplicativos) | 5 microservicios |
+| [Componentes](#componentes-aplicativos) | 5 microservicios + 1 frontend |
 | [Integracion y DevOps](#integracion-y-cross-cutting) | CI/CD, E2E, 3Scale |
 | [Resoluciones](docs/resolutions/README.md) | Guias paso a paso para issues |
 
@@ -36,10 +36,12 @@ graph TD
             gwmock["Guidewire Mock APIs<br/>Policy / Claim / Billing"]
             drools["Drools Rules Engine"]
             billing["Billing Service<br/>Spring Boot 3.3"]
-            incidents["Incidents Service<br/>Quarkus 3.8"]
+            incidents["Incidents Service<br/>Quarkus 3.32"]
             customers["Customers Service<br/>Node.js 20 + TS"]
+            simulator["Guidewire Simulator<br/>Angular 21 + Material"]
         end
 
+        simulator -->|HTTP| threescale
         threescale -->|proxy| camel
         camel -->|SOAP/REST| gwmock
         camel -->|validate / route| drools
@@ -90,6 +92,7 @@ openspecs/
 │   ├── billing-service/spec.yml
 │   ├── incidents-service/spec.yml
 │   └── customers-service/spec.yml
+│   (guidewire-simulator no tiene spec — es un frontend sin contrato API)
 │
 ├── integration/                       ← Testing y registro de APIs
 │   ├── threescale-registration/spec.yml
@@ -99,9 +102,9 @@ openspecs/
 │   └── ci-cd/spec.yml
 │
 └── docs/                             ← Documentacion detallada
-    ├── architecture/                  ← ADRs, diagramas, flujos
+    ├── architecture/                  ← ADRs, diagramas, flujos, infografia HTML
     ├── infra/                         ← Kafka, Apicurio, 3Scale, PostgreSQL, Lab
-    ├── components/                    ← 5 microservicios
+    ├── components/                    ← 5 microservicios + 1 frontend
     ├── design/                        ← OpenAPI, AsyncAPI, AVRO
     ├── integration/                   ← E2E, 3Scale registration
     ├── devops/                        ← CI/CD pipelines
@@ -156,8 +159,9 @@ openspecs/
 | Camel Gateway | Java 21 + Spring Boot + Camel 4 | [spec.yml](components/camel-gateway/spec.yml) | [docs](docs/components/camel-gateway/README.md) | [#45-#51](../../issues/45) |
 | Drools Engine | Java 21 + Drools 8 | [spec.yml](components/drools-engine/spec.yml) | [docs](docs/components/drools-engine/README.md) | [#52-#53](../../issues/52) |
 | Billing Service | Java 21 + Spring Boot 3.3 | [spec.yml](components/billing-service/spec.yml) | [docs](docs/components/billing-service/README.md) | [#54-#57](../../issues/54) |
-| Incidents Service | Java 21 + Quarkus 3.8 | [spec.yml](components/incidents-service/spec.yml) | [docs](docs/components/incidents-service/README.md) | [#58-#61](../../issues/58) |
+| Incidents Service | Java 21 + Quarkus 3.32 | [spec.yml](components/incidents-service/spec.yml) | [docs](docs/components/incidents-service/README.md) | [#58-#61](../../issues/58) |
 | Customers Service | Node.js 20 + TypeScript + Express | [spec.yml](components/customers-service/spec.yml) | [docs](docs/components/customers-service/README.md) | [#62-#65](../../issues/62) |
+| Guidewire Simulator | Angular 21 + Material + TypeScript | — | [src](../components/guidewire-simulator/) | — |
 
 ### Integracion y Cross-Cutting
 
@@ -193,6 +197,7 @@ graph LR
         BS["Billing Service"]
         IS["Incidents Service"]
         CS["Customers Service"]
+        SIM["Guidewire Simulator"]
     end
 
     subgraph Fase4["Fase 4: Integracion"]
@@ -247,6 +252,7 @@ graph LR
 | Incidents Service | `https://incidents-service-guidewire-apps.apps-crc.testing/api/v1/incidents` |
 | Customers Service | `https://customers-service-guidewire-apps.apps-crc.testing/api/v1/customers` |
 | Drools Engine | `https://drools-engine-guidewire-apps.apps-crc.testing/api/v1/rules` |
+| Guidewire Simulator | `http://guidewire-simulator-guidewire-apps.apps-crc.testing` |
 
 > **Nota:** Dentro del cluster, los servicios se comunican via DNS interno:
 > `<service>.guidewire-infra.svc.cluster.local` / `<service>.guidewire-apps.svc.cluster.local`
@@ -257,18 +263,18 @@ graph LR
 
 | Capa | Tecnologia | Version |
 |------|-----------|---------|
-| Plataforma | Red Hat OpenShift Local (CRC) | 4.x |
-| Orquestacion | Kubernetes / OpenShift | 4.x |
+| Plataforma | Red Hat OpenShift Local (CRC) | 4.21.0 |
+| Orquestacion | Kubernetes / OpenShift | 4.21.0 |
 | API Gateway | Red Hat 3Scale (APIcast) | latest |
-| Integracion | Apache Camel | 4.4 |
+| Integracion | Apache Camel | 4.18.0 |
 | Event Streaming | Apache Kafka (KRaft) | 4.0 (Strimzi v0.50.0) |
-| Reglas de Negocio | Drools | 8.x |
-| Schema Registry | Apicurio Service Registry | 2.5 |
+| Reglas de Negocio | Drools | 8.44.0.Final |
+| Schema Registry | Apicurio Service Registry | 2.5.11.Final |
 | Base de Datos | PostgreSQL | 16 |
 | Runtime Java | Eclipse Temurin | 21 |
 | Runtime Node.js | Node.js LTS | 20 |
-| Frameworks | Spring Boot 3.3 · Quarkus 3.8 · Express 4 | — |
-| Specs | OpenAPI 3.1 · AsyncAPI 3.0 · Apache AVRO | — |
+| Frameworks | Spring Boot 3.3 · Quarkus 3.32 · Express 4 · Angular 21 | — |
+| Specs | OpenAPI 3.1 · AsyncAPI 2.6.0 · Apache AVRO | — |
 
 ---
 

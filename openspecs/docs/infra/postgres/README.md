@@ -114,3 +114,14 @@ erDiagram
 
 - [spec.yml](../../../infra/postgres/spec.yml)
 - Issue: [#33](../../../../issues/33)
+
+---
+
+## Documentacion relacionada
+
+- [Kafka](../kafka/README.md) — Backbone de eventos (no usa PostgreSQL)
+- [Apicurio Service Registry](../apicurio/README.md) — Usa la base de datos `apicurio`
+- [Billing Service](../../components/billing-service/README.md) — Usa la base de datos `billing`
+- [Incidents Service](../../components/incidents-service/README.md) — Usa la base de datos `incidents`
+- [Customers Service](../../components/customers-service/README.md) — Usa la base de datos `customers`
+- [Drools Engine](../../components/drools-engine/README.md) — Usa la base de datos `drools_audit`

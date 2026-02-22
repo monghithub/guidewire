@@ -145,15 +145,15 @@ deploy_apps() {
   info "============================================================"
   info " Phase 9: Application ImageStreams + BuildConfigs"
   info "============================================================"
-  for svc in billing-service camel-gateway incidents-service customers-service drools-engine; do
+  for svc in billing-service camel-gateway incidents-service customers-service drools-engine guidewire-simulator; do
     info "Applying BuildConfig for $svc..."
-    oc apply -f apps/$svc/buildconfig.yml
+    oc apply -f apps/$svc/buildconfig.yml 2>/dev/null || oc apply -f apps/$svc/buildconfig.yaml 2>/dev/null || warn "No buildconfig found for $svc"
   done
 
   info "============================================================"
   info " Phase 10: Build Application Images"
   info "============================================================"
-  for svc in billing-service camel-gateway incidents-service customers-service drools-engine; do
+  for svc in billing-service camel-gateway incidents-service customers-service drools-engine guidewire-simulator; do
     info "Building $svc from $PROJECT_ROOT/components/$svc ..."
     if oc start-build $svc -n guidewire-apps \
       --from-dir="$PROJECT_ROOT/components/$svc" \
@@ -168,11 +168,11 @@ deploy_apps() {
   info "============================================================"
   info " Phase 11: Deploy Applications"
   info "============================================================"
-  for svc in billing-service camel-gateway incidents-service customers-service drools-engine; do
+  for svc in billing-service camel-gateway incidents-service customers-service drools-engine guidewire-simulator; do
     info "Deploying $svc..."
-    oc apply -f apps/$svc/deployment.yml
-    oc apply -f apps/$svc/service.yml
-    oc apply -f apps/$svc/route.yml
+    oc apply -f apps/$svc/deployment.yml 2>/dev/null || oc apply -f apps/$svc/deployment.yaml 2>/dev/null || warn "No deployment found for $svc"
+    oc apply -f apps/$svc/service.yml 2>/dev/null || oc apply -f apps/$svc/service.yaml 2>/dev/null || true
+    oc apply -f apps/$svc/route.yml 2>/dev/null || oc apply -f apps/$svc/route.yaml 2>/dev/null || true
   done
 
   wait_for_pods guidewire-apps 300

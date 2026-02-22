@@ -1,10 +1,12 @@
 # AsyncAPI Spec — Documentación
 
-> [Volver a OpenSpecs](../../../README.md) · [Volver al README principal](../../../../../README.md)
+> [Volver a OpenSpecs](../../../README.md) · [Volver al README principal](../../../../README.md)
 
 ## Descripción
 
-Especificación AsyncAPI 3.0 que documenta todos los canales de eventos Kafka del ecosistema Guidewire. Referencia los schemas AVRO registrados en Apicurio.
+Especificacion AsyncAPI **2.6.0** que documenta todos los canales de eventos Kafka del ecosistema Guidewire. Referencia los schemas AVRO registrados en Apicurio.
+
+> **Nota**: Apicurio 2.5.x no soporta la visualizacion de AsyncAPI 3.0. El archivo en git (`contracts/asyncapi/guidewire-events.yml`) puede estar en 3.0, pero la version registrada en Apicurio es 2.6.0.
 
 ## Canales
 
@@ -16,6 +18,8 @@ Especificación AsyncAPI 3.0 que documenta todos los canales de eventos Kafka de
 | incidents-incident-status-changed | `incidents.incident-status-changed` | Camel Gateway | Incidents Service |
 | customers-customer-registered | `customers.customer-registered` | Camel Gateway | Customers, Billing, Incidents |
 | customers-customer-status-changed | `customers.customer-status-changed` | Camel Gateway | Customers Service |
+| policies-policy-events | `policies.policy-events` | Camel Gateway | — |
+| events-unclassified | `events.unclassified` | Camel Gateway | — (fallback) |
 | dlq-errors | `dlq.errors` | Todos | Monitoring |
 
 ## Diagrama de Canales
@@ -39,7 +43,9 @@ graph TD
         T6[customers.customer-status-changed]
     end
 
-    T7[dlq.errors]
+    T7[policies.policy-events]
+    T8[events.unclassified]
+    T9[dlq.errors]
 
     CG -->|publish| T1
     CG -->|publish| T2
@@ -47,6 +53,8 @@ graph TD
     CG -->|publish| T4
     CG -->|publish| T5
     CG -->|publish| T6
+    CG -->|publish| T7
+    CG -->|publish| T8
 
     T1 -->|subscribe| BS[Billing Service]
     T2 -->|subscribe| BS
@@ -58,10 +66,10 @@ graph TD
     T5 -->|subscribe| IS
     T6 -->|subscribe| CSvc
 
-    BS -.->|errors| T7
-    IS -.->|errors| T7
-    CSvc -.->|errors| T7
-    T7 -->|subscribe| MON[Monitoring]
+    BS -.->|errors| T9
+    IS -.->|errors| T9
+    CSvc -.->|errors| T9
+    T9 -->|subscribe| MON[Monitoring]
 ```
 
 ## Serialización

@@ -1,0 +1,38 @@
+{
+  "/api/camel": {
+    "target": "http://camel-gateway-guidewire-apps.apps-crc.testing",
+    "secure": false,
+    "changeOrigin": true,
+    "pathRewrite": { "^/api/camel": "" }
+  },
+  "/api/billing": {
+    "target": "http://billing-service-guidewire-apps.apps-crc.testing",
+    "secure": false,
+    "changeOrigin": true,
+    "pathRewrite": { "^/api/billing": "" }
+  },
+  "/api/incidents": {
+    "target": "http://incidents-service-guidewire-apps.apps-crc.testing",
+    "secure": false,
+    "changeOrigin": true,
+    "pathRewrite": { "^/api/incidents": "" }
+  },
+  "/api/customers": {
+    "target": "http://customers-service-guidewire-apps.apps-crc.testing",
+    "secure": false,
+    "changeOrigin": true,
+    "pathRewrite": { "^/api/customers": "" }
+  },
+  "/api/drools": {
+    "target": "http://drools-engine-guidewire-apps.apps-crc.testing",
+    "secure": false,
+    "changeOrigin": true,
+    "pathRewrite": { "^/api/drools": "" }
+  },
+  "/api/apicast": {
+    "target": "http://apicast-guidewire-infra.apps-crc.testing",
+    "secure": false,
+    "changeOrigin": true,
+    "pathRewrite": { "^/api/apicast": "" }
+  }
+}

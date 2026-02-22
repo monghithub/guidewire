@@ -4,7 +4,7 @@
 
 ## 3Scale API Registration
 
-Registro de las 6 APIs en el gateway 3Scale:
+Registro de las APIs en el gateway 3Scale (ver [3Scale docs](../infra/threescale/README.md) para detalle completo de las 26 proxy rules):
 
 | API | OpenAPI Source | Plan | Rate Limit |
 |-----|---------------|------|------------|
@@ -14,6 +14,7 @@ Registro de las 6 APIs en el gateway 3Scale:
 | Billing Service | `billing-service-api.yml` | microservices-standard | 200 req/min |
 | Incidents Service | `incidents-service-api.yml` | microservices-standard | 200 req/min |
 | Customers Service | `customers-service-api.yml` | microservices-standard | 200 req/min |
+| Drools Engine | `drools-engine-api.yml` | microservices-standard | 300 req/min |
 
 ## Diagrama de Routing 3Scale
 
@@ -80,5 +81,5 @@ newman run contracts/postman/guidewire-e2e.postman_collection.json \
 
 ## Documentacion relacionada
 
-- [3Scale API Management](../infra/3scale/README.md)
+- [3Scale API Gateway (APIcast)](../infra/threescale/README.md)
 - [DevOps / CI-CD](../devops/README.md)

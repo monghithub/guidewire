@@ -1,17 +1,17 @@
 # Incidents Service — Documentación
 
-> [Volver a OpenSpecs](../../README.md) · [Volver al README principal](../../../../README.md)
+> [Volver a OpenSpecs](../../../README.md) · [Volver al README principal](../../../../README.md)
 
 ## Descripción
 
-Microservicio de incidencias implementado con Quarkus 3.8. Gestiona incidencias derivadas de siniestros de ClaimCenter, alimentadas por eventos Kafka.
+Microservicio de incidencias implementado con Quarkus 3.32. Gestiona incidencias derivadas de siniestros de ClaimCenter, alimentadas por eventos Kafka.
 
 ## Stack Tecnológico
 
 | Capa | Tecnología |
 |------|-----------|
 | Runtime | Java 21 |
-| Framework | Quarkus 3.8.x |
+| Framework | Quarkus 3.32.0 |
 | ORM | Hibernate ORM with Panache |
 | DB | PostgreSQL 16 (base: `incidents`) |
 | Migración | Flyway |

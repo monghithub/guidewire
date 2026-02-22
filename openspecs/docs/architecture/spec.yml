@@ -31,8 +31,7 @@ deliverables:
       - 3Scale (API Gateway)
       - Camel Gateway (Integration)
       - Guidewire Mock (PolicyCenter, ClaimCenter, BillingCenter)
-      - Kafka (Event Streaming)
-      - ActiveMQ Artemis (JMS Messaging)
+      - Kafka (Event Streaming) — KRaft mode, Strimzi v0.50.0
       - Drools (Rules Engine)
       - Apicurio (Schema Registry)
       - Billing Service (Spring Boot)

@@ -1,0 +1,31 @@
+apiVersion: build.openshift.io/v1
+kind: BuildConfig
+metadata:
+  name: guidewire-simulator
+  namespace: guidewire-apps
+  labels:
+    app: guidewire-simulator
+    app.kubernetes.io/name: guidewire-simulator
+    app.kubernetes.io/part-of: guidewire-poc
+    app.kubernetes.io/component: frontend
+spec:
+  source:
+    type: Binary
+    binary: {}
+  strategy:
+    type: Docker
+    dockerStrategy:
+      dockerfilePath: Dockerfile
+  output:
+    to:
+      kind: ImageStreamTag
+      name: guidewire-simulator:latest
+  triggers: []
+---
+apiVersion: image.openshift.io/v1
+kind: ImageStream
+metadata:
+  name: guidewire-simulator
+  namespace: guidewire-apps
+  labels:
+    app: guidewire-simulator

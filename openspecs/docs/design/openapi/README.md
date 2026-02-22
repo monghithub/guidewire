@@ -1,10 +1,10 @@
 # OpenAPI Specs — Documentación
 
-> [Volver a OpenSpecs](../../../README.md) · [Volver al README principal](../../../../../README.md)
+> [Volver a OpenSpecs](../../../README.md) · [Volver al README principal](../../../../README.md)
 
 ## Descripción
 
-6 especificaciones OpenAPI 3.1 que definen los contratos REST del ecosistema. Se diseñan primero (API-First) y se usa generación de código para crear stubs.
+8 especificaciones OpenAPI 3.1 que definen los contratos REST del ecosistema. Se diseñan primero (API-First) y se usa generacion de codigo para crear stubs.
 
 ## Specs
 
@@ -15,6 +15,13 @@
 | PolicyCenter | `policycenter-api.yml` | `/api/v1/policies` | Policy, CreatePolicyRequest, UpdatePolicyRequest |
 | ClaimCenter | `claimcenter-api.yml` | `/api/v1/claims` | Claim, CreateClaimRequest, UpdateClaimRequest |
 | BillingCenter | `billingcenter-api.yml` | `/api/v1/gw-invoices` | GwInvoice, GwInvoiceItem |
+
+### APIs Gateway e Integracion
+
+| API | Archivo | Base Path | Modelos |
+|-----|---------|-----------|---------|
+| Camel Gateway | `camel-gateway-api.yml` | `/api/v1/policies`, `/api/v1/claims`, `/api/v1/gw-invoices` | Policy, Claim, GwInvoice |
+| Drools Engine | `drools-engine-api.yml` | `/api/v1/rules/*` | ClaimFact, PolicyFact, CommissionFact, IncidentRoutingFact |
 
 ### APIs Microservicios
 

@@ -1,6 +1,6 @@
 # Customers Service — Documentación
 
-> [Volver a OpenSpecs](../../README.md) · [Volver al README principal](../../../../README.md)
+> [Volver a OpenSpecs](../../../README.md) · [Volver al README principal](../../../../README.md)
 
 ## Descripción
 

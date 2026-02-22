@@ -15,6 +15,8 @@ Referencia arquitectonica de la plataforma de integracion Guidewire.
 5. [Decisiones de Arquitectura (ADRs)](#decisiones-de-arquitectura-adrs)
 6. [Stack Tecnologico](#stack-tecnologico)
 
+> **Infografia interactiva**: [infografia-arquitectura.html](infografia-arquitectura.html) — Presentacion corporativa con diagramas SVG, flujos de comunicacion y metricas.
+
 ---
 
 ## Vision General
@@ -23,7 +25,7 @@ Este POC demuestra patrones de integracion para **Guidewire InsuranceSuite** (Po
 
 Principios arquitectonicos:
 
-- **API-First / Contract-Driven**: Todas las interfaces definidas via OpenAPI 3.1, AsyncAPI 3.0 y schemas AVRO antes de implementar
+- **API-First / Contract-Driven**: Todas las interfaces definidas via OpenAPI 3.1, AsyncAPI 2.6.0 y schemas AVRO antes de implementar
 - **Arquitectura Orientada a Eventos (EDA)**: Apache Kafka como backbone de eventos para comunicacion asincrona y desacoplada
 - **Microservicios Poliglota**: Cada servicio elige la tecnologia optima para su dominio
 - **Infraestructura como Codigo**: Entorno reproducible via Red Hat OpenShift Local (CRC) + manifiestos Kubernetes
@@ -37,7 +39,7 @@ graph TD
     consumers["Consumidores Externos"]
     consumers --> threescale
 
-    threescale["3Scale API Gateway — APIcast<br/>:8000 / :8001"]
+    threescale["3Scale API Gateway — APIcast<br/>:8080 / :8090"]
     threescale --> camel
 
     camel["Camel Gateway<br/>Apache Camel 4 + Spring Boot :8083<br/>Rutas: PolicyCenter SOAP · ClaimCenter REST · BillingCenter REST"]
@@ -57,12 +59,14 @@ graph TD
     billing["Billing Service<br/>Spring Boot :8082"]
     incidents["Incidents Service<br/>Quarkus :8084"]
     customers["Customers Service<br/>Node.js/TS :8085"]
+    simulator["Guidewire Simulator<br/>Angular 21 :4200"]
 
+    simulator -->|HTTP| threescale
     billing --> pg
     incidents --> pg
     customers --> pg
 
-    pg["PostgreSQL :15432<br/>billing_db · incidents_db · customers_db · drools_audit · apicurio"]
+    pg["PostgreSQL :15432<br/>billing · incidents · customers · drools_audit · apicurio"]
 
     apicurio["Apicurio Schema Registry :8081"]
     kafdrop["Kafdrop — Kafka UI :9000"]
@@ -72,7 +76,7 @@ graph TD
 
 ## Componentes del Sistema
 
-El POC se compone de **5 servicios de aplicacion** y **5 componentes de infraestructura**, desplegados en dos namespaces separados de OpenShift.
+El POC se compone de **5 servicios de aplicacion**, **1 frontend** y **5 componentes de infraestructura**, desplegados en dos namespaces separados de OpenShift.
 
 ### Servicios de Aplicacion (namespace: guidewire-apps)
 
@@ -80,7 +84,7 @@ El POC se compone de **5 servicios de aplicacion** y **5 componentes de infraest
 
 Punto de entrada al ecosistema. Apache Camel 4 actua como mediador de protocolos entre los sistemas Guidewire (SOAP/REST) y la arquitectura interna basada en eventos. Implementa los Enterprise Integration Patterns (EIP): Content-Based Router, Message Translator, Dead Letter Channel y Wire Tap. Expone endpoints CXF para PolicyCenter, ClaimCenter y BillingCenter, transforma los mensajes a formato AVRO y los publica en los topics Kafka correspondientes.
 
-- **Stack**: Java 21, Spring Boot 3.3, Apache Camel 4.4
+- **Stack**: Java 21, Spring Boot 3.3, Apache Camel 4.18
 - **Puerto**: 8083
 - **Codigo**: [`components/camel-gateway/`](../../../components/camel-gateway/)
 
@@ -104,7 +108,7 @@ Microservicio de facturacion que gestiona el ciclo de vida completo de las factu
 
 Microservicio cloud-native para incidencias/siniestros. Demuestra Quarkus como alternativa a Spring Boot, con Panache ORM y SmallRye Reactive Messaging para Kafka. Los siniestros siguen el ciclo OPEN -> IN_PROGRESS -> RESOLVED -> CLOSED.
 
-- **Stack**: Java 21, Quarkus 3.8, Hibernate Panache, SmallRye Reactive Messaging
+- **Stack**: Java 21, Quarkus 3.32, Hibernate Panache, SmallRye Reactive Messaging
 - **Puerto**: 8084
 - **Codigo**: [`components/incidents-service/`](../../../components/incidents-service/)
 
@@ -115,6 +119,14 @@ Microservicio poliglota que demuestra interoperabilidad fuera del ecosistema JVM
 - **Stack**: Node.js 20, TypeScript, Express 4, Prisma ORM, KafkaJS
 - **Puerto**: 8085
 - **Codigo**: [`components/customers-service/`](../../../components/customers-service/)
+
+#### [Guidewire Simulator](../../../components/guidewire-simulator/) — Frontend de Simulacion
+
+Frontend Angular que simula las llamadas desde los sistemas Guidewire (PolicyCenter, ClaimCenter, BillingCenter) hacia la plataforma de integracion. Incluye dashboard con estado de servicios, formularios CRUD para cada entidad, interaccion interactiva con el motor de reglas Drools (fraude, validacion, comisiones, enrutamiento) y visualizador de flujos de eventos asincronos.
+
+- **Stack**: Angular 21, Angular Material, TypeScript
+- **Puerto**: 4200 (dev) / 8080 (nginx en OpenShift)
+- **Codigo**: [`components/guidewire-simulator/`](../../../components/guidewire-simulator/)
 
 ### Infraestructura (namespace: guidewire-infra)
 
@@ -141,10 +153,10 @@ Registro centralizado de schemas que garantiza la compatibilidad de los contrato
 
 #### [3Scale API Gateway](../infra/threescale/README.md) — Gestion de APIs
 
-Gateway empresarial que protege todos los endpoints publicos. Autenticacion por API Key, rate limiting diferenciado (100-200 req/min) y enrutamiento a backends.
+Gateway empresarial que protege todos los endpoints publicos. Autenticacion por API Key, rate limiting diferenciado (100-300 req/min) y enrutamiento a backends.
 
 - **Stack**: Red Hat 3Scale APIcast
-- **Puerto**: 8000 (proxy), 8001 (management)
+- **Puerto**: 8080 (proxy), 8090 (management)
 
 #### [Kafdrop](../infra/kafka/README.md#monitoreo--kafdrop) — UI de Kafka
 
@@ -277,7 +289,7 @@ stateDiagram-v2
 
 **Contexto**: La integracion entre Guidewire InsuranceSuite y los microservicios internos requiere interfaces bien definidas. Los equipos necesitan contratos estables para desarrollar en paralelo sin acoplamiento.
 
-**Decision**: Adoptar desarrollo API-First donde todas las interfaces (APIs REST, eventos asincronos, schemas de datos) se definen como contratos legibles por maquina (OpenAPI 3.1, AsyncAPI 3.0, Apache AVRO) antes de cualquier implementacion.
+**Decision**: Adoptar desarrollo API-First donde todas las interfaces (APIs REST, eventos asincronos, schemas de datos) se definen como contratos legibles por maquina (OpenAPI 3.1, AsyncAPI 2.6.0, Apache AVRO) antes de cualquier implementacion.
 
 **Consecuencias**:
 - Positivo: Desarrollo paralelo posible desde el dia uno
@@ -333,7 +345,7 @@ stateDiagram-v2
 
 **Decision**: Implementar microservicios con tres stacks diferentes:
 - **Billing Service**: Java 21 + Spring Boot 3.3 (framework enterprise mainstream)
-- **Incidents Service**: Java 21 + Quarkus 3.8 (cloud-native, arranque rapido, bajo consumo)
+- **Incidents Service**: Java 21 + Quarkus 3.32 (cloud-native, arranque rapido, bajo consumo)
 - **Customers Service**: Node.js 20 + TypeScript + Express (alternativa no-JVM)
 - **Camel Gateway**: Java 21 + Spring Boot 3.3 + Apache Camel 4 (patrones de integracion)
 - **Drools Engine**: Java 21 + Spring Boot 3.3 + Drools 8 (reglas de negocio)
@@ -373,7 +385,7 @@ stateDiagram-v2
 **Decision**: Usar Red Hat 3Scale (APIcast) como API Gateway, configurado declarativamente via JSON.
 
 **Consecuencias**:
-- Positivo: Alineacion con el stack enterprise Red Hat (OpenShift, Fuse, AMQ)
+- Positivo: Alineacion con el stack enterprise Red Hat (OpenShift, Fuse, AMQ Streams)
 - Positivo: APIcast soporta configuracion declarativa (sin base de datos para POC)
 - Positivo: Funcionalidades de gestion de APIs enterprise (rate limiting, analytics)
 - Negativo: Footprint mayor que alternativas ligeras (Traefik, Envoy)
@@ -401,20 +413,21 @@ stateDiagram-v2
 
 | Capa | Tecnologia | Version | Proposito |
 |------|-----------|---------|-----------|
-| Plataforma | Red Hat OpenShift Local (CRC) | 4.x | Cluster OpenShift single-node |
-| Orquestacion | Kubernetes / OpenShift | 4.x | Scheduling de pods, service discovery, routes |
+| Plataforma | Red Hat OpenShift Local (CRC) | 4.21.0 | Cluster OpenShift single-node |
+| Orquestacion | Kubernetes / OpenShift | 4.21.0 | Scheduling de pods, service discovery, routes |
 | API Gateway | Red Hat 3Scale (APIcast) | latest | Rate limiting, autenticacion, gestion de APIs |
-| Integracion | Apache Camel 4 | 4.4 | EIP, mediacion de protocolos, enrutamiento |
+| Integracion | Apache Camel 4 | 4.18.0 | EIP, mediacion de protocolos, enrutamiento |
 | Event Streaming | Apache Kafka (KRaft) | 4.0 | Backbone de eventos, log durable (Strimzi v0.50.0) |
-| Motor de Reglas | Drools 8 | 8.x | Reglas de negocio, deteccion de fraude, validacion |
-| Schema Registry | Apicurio Service Registry | 2.5 | Gobernanza de schemas AVRO, validacion de compatibilidad |
+| Motor de Reglas | Drools 8 | 8.44.0.Final | Reglas de negocio, deteccion de fraude, validacion |
+| Schema Registry | Apicurio Service Registry | 2.5.11.Final | Gobernanza de schemas AVRO, validacion de compatibilidad |
 | Base de Datos | PostgreSQL | 16 | Almacenamiento relacional para todos los microservicios |
 | Runtime Java | Eclipse Temurin | 21 | Distribucion LTS de Java |
 | Runtime Node.js | Node.js LTS | 20 | Runtime JavaScript/TypeScript |
 | Framework Java 1 | Spring Boot | 3.3 | Billing, Camel Gateway, Drools |
-| Framework Java 2 | Quarkus | 3.8 | Incidents Service (cloud-native) |
+| Framework Java 2 | Quarkus | 3.32.0 | Incidents Service (cloud-native) |
 | Framework Node.js | Express 4 + TypeScript | 4.x | Customers Service |
+| Framework Frontend | Angular + Material | 21 | Guidewire Simulator |
 | Specs API | OpenAPI 3.1 | 3.1 | Contratos REST |
-| Specs Eventos | AsyncAPI 3.0 | 3.0 | Contratos de eventos asincronos |
-| Serializacion | Apache AVRO | 1.9+ | Serializacion de mensajes Kafka |
-| UI Kafka | Kafdrop | 4.0 | Inspeccion de topics y mensajes |
+| Specs Eventos | AsyncAPI | 2.6.0 (Apicurio 2.5.x no soporta 3.0) | Contratos de eventos asincronos |
+| Serializacion | Apache AVRO | 1.12.1 | Serializacion de mensajes Kafka |
+| UI Kafka | Kafdrop | 4.0.1 | Inspeccion de topics y mensajes |

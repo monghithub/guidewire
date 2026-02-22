@@ -1,0 +1,74 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: guidewire-simulator
+  namespace: guidewire-apps
+  labels:
+    app: guidewire-simulator
+    app.kubernetes.io/name: guidewire-simulator
+    app.kubernetes.io/part-of: guidewire-poc
+    app.kubernetes.io/component: frontend
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: guidewire-simulator
+  template:
+    metadata:
+      labels:
+        app: guidewire-simulator
+    spec:
+      containers:
+        - name: guidewire-simulator
+          image: image-registry.openshift-image-registry.svc:5000/guidewire-apps/guidewire-simulator:latest
+          ports:
+            - containerPort: 8080
+              protocol: TCP
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 8080
+            initialDelaySeconds: 10
+            periodSeconds: 30
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 8080
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          resources:
+            requests:
+              memory: "64Mi"
+              cpu: "50m"
+            limits:
+              memory: "128Mi"
+              cpu: "200m"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: guidewire-simulator
+  namespace: guidewire-apps
+  labels:
+    app: guidewire-simulator
+spec:
+  selector:
+    app: guidewire-simulator
+  ports:
+    - port: 8080
+      targetPort: 8080
+      protocol: TCP
+---
+apiVersion: route.openshift.io/v1
+kind: Route
+metadata:
+  name: guidewire-simulator
+  namespace: guidewire-apps
+  labels:
+    app: guidewire-simulator
+spec:
+  to:
+    kind: Service
+    name: guidewire-simulator
+  port:
+    targetPort: 8080

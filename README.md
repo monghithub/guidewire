@@ -4,7 +4,7 @@ POC de arquitectura de integracion para **Guidewire InsuranceSuite**. Demuestra 
 
 ## Que hace cada componente
 
-El sistema se compone de **5 microservicios** y **5 componentes de infraestructura**:
+El sistema se compone de **5 microservicios**, **1 frontend** y **5 componentes de infraestructura**:
 
 ### Microservicios
 
@@ -16,6 +16,12 @@ El sistema se compone de **5 microservicios** y **5 componentes de infraestructu
 | **[Incidents Service](openspecs/docs/components/incidents-service/README.md)** | Gestion de siniestros. Registra incidencias desde eventos Kafka y las mueve por el flujo OPEN -> IN_PROGRESS -> RESOLVED -> CLOSED. Implementado en Quarkus como alternativa cloud-native a Spring Boot. |
 | **[Customers Service](openspecs/docs/components/customers-service/README.md)** | Gestion de clientes. Servicio poliglota (Node.js/TypeScript) que demuestra interoperabilidad fuera del ecosistema JVM. Registra clientes y gestiona su estado (ACTIVE/INACTIVE/SUSPENDED/BLOCKED). |
 
+### Frontend
+
+| Componente | Para que sirve |
+|-----------|----------------|
+| **[Guidewire Simulator](components/guidewire-simulator/)** | Frontend Angular 21 que simula llamadas desde los sistemas Guidewire (PolicyCenter, ClaimCenter, BillingCenter). Incluye dashboard, formularios CRUD para cada entidad, motor de reglas Drools interactivo, visualizador de flujos de eventos y panel de request/response. |
+
 ### Infraestructura
 
 | Componente | Para que sirve |
@@ -23,7 +29,7 @@ El sistema se compone de **5 microservicios** y **5 componentes de infraestructu
 | **[Apache Kafka](openspecs/docs/infra/kafka/README.md)** | Bus de eventos central. 9 topics organizados por dominio con serializacion AVRO. Modo KRaft (sin ZooKeeper), gestionado por Strimzi. |
 | **[PostgreSQL](openspecs/docs/infra/postgres/README.md)** | Base de datos relacional. 5 bases logicas aisladas (una por servicio) con el patron database-per-service. |
 | **[Apicurio Registry](openspecs/docs/infra/apicurio/README.md)** | Registro de schemas. Gobierna la compatibilidad de los schemas AVRO, OpenAPI y AsyncAPI entre productores y consumidores. |
-| **[3Scale APIcast](openspecs/docs/infra/threescale/README.md)** | API Gateway empresarial. Autenticacion por API Key, rate limiting (100-200 req/min) y enrutamiento a backends. |
+| **[3Scale APIcast](openspecs/docs/infra/threescale/README.md)** | API Gateway empresarial. Autenticacion por API Key, rate limiting (100-300 req/min) y enrutamiento a backends. |
 | **[Kafdrop](openspecs/docs/infra/kafka/README.md)** | UI web para inspeccion de topics, consumer groups y mensajes de Kafka. |
 
 > Documentacion detallada de arquitectura, ADRs y flujos de datos: [openspecs/docs/architecture/README.md](openspecs/docs/architecture/README.md)
@@ -47,10 +53,12 @@ graph TD
             gw["Guidewire Mock APIs<br/>Policy / Claim / Billing"]
             drools["Drools Rules Engine"]
             billing["Billing Service<br/>Spring Boot 3.3"]
-            incidents["Incidents Service<br/>Quarkus 3.8"]
+            incidents["Incidents Service<br/>Quarkus 3.32"]
             customers["Customers Service<br/>Node.js 20 + TS"]
+            simulator["Guidewire Simulator<br/>Angular 21 + Material"]
         end
 
+        simulator -->|HTTP| threescale
         threescale -->|proxy| camel
         camel -->|SOAP/REST| gw
         camel -->|validate / route| drools
@@ -68,6 +76,7 @@ graph TD
 
 ```mermaid
 sequenceDiagram
+    participant Sim as Guidewire Simulator
     participant Client as External Consumer
     participant GW as 3Scale Gateway
     participant Camel as Camel Gateway
@@ -78,6 +87,7 @@ sequenceDiagram
     participant Incidents as Incidents Service
     participant Customers as Customers Service
 
+    Sim->>GW: Simulated Guidewire Call
     Client->>GW: API Request
     GW->>Camel: Proxy (rate-limited)
     Camel->>GWire: SOAP/REST call
@@ -113,7 +123,7 @@ guidewire/
 │   └── docs/                          ← Documentación por componente
 │
 ├── contracts/                         ← Contratos API-First
-│   ├── openapi/                       ← 6 specs OpenAPI 3.1
+│   ├── openapi/                       ← 8 specs OpenAPI 3.1
 │   ├── asyncapi/                      ← 1 spec AsyncAPI 3.0
 │   └── avro/                          ← 6 schemas AVRO
 │
@@ -130,11 +140,12 @@ guidewire/
 │       └── config/
 │
 └── components/                        ← Código fuente
-    ├── camel-gateway/                 ← Java 21 + Spring Boot + Camel 4
+    ├── camel-gateway/                 ← Java 21 + Spring Boot + Camel 4.18
     ├── drools-engine/                 ← Java 21 + Spring Boot + Drools 8
     ├── billing-service/               ← Java 21 + Spring Boot 3.3
-    ├── incidents-service/             ← Java 21 + Quarkus 3.8
-    └── customers-service/             ← Node.js 20 + TypeScript
+    ├── incidents-service/             ← Java 21 + Quarkus 3.32
+    ├── customers-service/             ← Node.js 20 + TypeScript
+    └── guidewire-simulator/          ← Angular 21 + Material (Frontend)
 ```
 
 ---
@@ -185,11 +196,12 @@ guidewire/
 
 | Componente | Tech Stack | Spec | Documentación | Código |
 |-----------|-----------|------|---------------|--------|
-| Camel Gateway | Java 21 · Spring Boot 3.3 · Camel 4 | [spec.yml](openspecs/components/camel-gateway/spec.yml) | [docs](openspecs/docs/components/camel-gateway/README.md) | [src](components/camel-gateway/) |
+| Camel Gateway | Java 21 · Spring Boot 3.3 · Camel 4.18 | [spec.yml](openspecs/components/camel-gateway/spec.yml) | [docs](openspecs/docs/components/camel-gateway/README.md) | [src](components/camel-gateway/) |
 | Drools Engine | Java 21 · Spring Boot 3.3 · Drools 8 | [spec.yml](openspecs/components/drools-engine/spec.yml) | [docs](openspecs/docs/components/drools-engine/README.md) | [src](components/drools-engine/) |
 | Billing Service | Java 21 · Spring Boot 3.3 · JPA · Kafka | [spec.yml](openspecs/components/billing-service/spec.yml) | [docs](openspecs/docs/components/billing-service/README.md) | [src](components/billing-service/) |
-| Incidents Service | Java 21 · Quarkus 3.8 · Panache · Kafka | [spec.yml](openspecs/components/incidents-service/spec.yml) | [docs](openspecs/docs/components/incidents-service/README.md) | [src](components/incidents-service/) |
+| Incidents Service | Java 21 · Quarkus 3.32 · Panache · Kafka | [spec.yml](openspecs/components/incidents-service/spec.yml) | [docs](openspecs/docs/components/incidents-service/README.md) | [src](components/incidents-service/) |
 | Customers Service | Node.js 20 · TypeScript · Prisma · KafkaJS | [spec.yml](openspecs/components/customers-service/spec.yml) | [docs](openspecs/docs/components/customers-service/README.md) | [src](components/customers-service/) |
+| Guidewire Simulator | Angular 21 · Material · TypeScript 5.9 | — | — | [src](components/guidewire-simulator/) |
 
 ### Integración y DevOps
 
@@ -315,6 +327,7 @@ CRC se ejecuta en una VM con red virtual. Para acceder desde otras maquinas de l
    192.168.1.135  incidents-service-guidewire-apps.apps-crc.testing
    192.168.1.135  customers-service-guidewire-apps.apps-crc.testing
    192.168.1.135  drools-engine-guidewire-apps.apps-crc.testing
+   192.168.1.135  guidewire-simulator-guidewire-apps.apps-crc.testing
    ```
 
 ### Consola OpenShift
@@ -332,6 +345,7 @@ CRC se ejecuta en una VM con red virtual. Para acceder desde otras maquinas de l
 |-----------|-----|--------------|
 | Kafdrop (Kafka UI) | http://kafdrop-guidewire-infra.apps-crc.testing | Sin auth |
 | Apicurio (Schema Registry) | http://apicurio-guidewire-infra.apps-crc.testing | Sin auth |
+| Guidewire Simulator | http://guidewire-simulator-guidewire-apps.apps-crc.testing | Sin auth |
 
 ### APIs de microservicios
 
@@ -341,7 +355,7 @@ CRC se ejecuta en una VM con red virtual. Para acceder desde otras maquinas de l
 | Camel Gateway | http://camel-gateway-guidewire-apps.apps-crc.testing | `/api/v1/gw-invoices` | `/actuator/health` |
 | Incidents Service | http://incidents-service-guidewire-apps.apps-crc.testing | `/api/v1/incidents` | `/q/health` |
 | Customers Service | http://customers-service-guidewire-apps.apps-crc.testing | `/api/v1/customers` | `/health` |
-| Drools Engine | http://drools-engine-guidewire-apps.apps-crc.testing | `/api/v1/rules/evaluate` | `/actuator/health` |
+| Drools Engine | http://drools-engine-guidewire-apps.apps-crc.testing | `/api/v1/rules/fraud-check`, `/api/v1/rules/policy-validation`, `/api/v1/rules/commission`, `/api/v1/rules/incident-routing` | `/actuator/health` |
 
 ### API Gateway (APIcast / 3Scale)
 
@@ -353,7 +367,7 @@ Todas las APIs estan expuestas a traves del gateway en `http://apicast-guidewire
 | `/api/v1/gw-invoices` | Camel Gateway |
 | `/api/v1/incidents` | Incidents Service |
 | `/api/v1/customers` | Customers Service |
-| `/api/v1/rules/evaluate` | Drools Engine |
+| `/api/v1/rules/*` | Drools Engine |
 | `/api/v1/policies` | Camel Gateway (PolicyCenter) |
 | `/api/v1/claims` | Camel Gateway (ClaimCenter) |
 
@@ -363,7 +377,7 @@ Todas las APIs estan expuestas a traves del gateway en `http://apicast-guidewire
 |----------|---------|----------|-----|
 | OpenShift (admin) | `kubeadmin` | `xtLsK-LLIzY-6UVEd-UESLR` | Consola web, `oc login` |
 | OpenShift (dev) | `developer` | `developer` | Consola web, `oc login` |
-| PostgreSQL | `guidewire` | `guidewire123` | Todas las bases de datos |
+| PostgreSQL | `postgres` | `postgres123` | Superusuario (ver [postgres docs](openspecs/docs/infra/postgres/README.md) para credenciales por servicio) |
 
 ---
 
@@ -371,17 +385,17 @@ Todas las APIs estan expuestas a traves del gateway en `http://apicast-guidewire
 
 | Capa | Tecnología | Versión |
 |------|-----------|---------|
-| Plataforma | Red Hat OpenShift Local (CRC) | 4.x |
-| Orquestación | Kubernetes / OpenShift | 4.x |
+| Plataforma | Red Hat OpenShift Local (CRC) | 4.21.0 |
+| Orquestación | Kubernetes / OpenShift | 4.21.0 |
 | API Gateway | Red Hat 3Scale (APIcast) | latest |
-| Integración | Apache Camel | 4.4 |
+| Integración | Apache Camel | 4.18.0 |
 | Event Streaming | Apache Kafka (KRaft) | 4.0 (Strimzi v0.50.0) |
-| Reglas de Negocio | Drools / KIE Server | 8.x |
-| Schema Registry | Apicurio Service Registry | 2.5 |
+| Reglas de Negocio | Drools / KIE | 8.44.0.Final |
+| Schema Registry | Apicurio Service Registry | 2.5.11.Final |
 | Base de Datos | PostgreSQL | 16 |
 | Runtime Java | Eclipse Temurin | 21 |
 | Runtime Node.js | Node.js LTS | 20 |
-| Frameworks | Spring Boot 3.3 · Quarkus 3.8 · Express 4 | — |
+| Frameworks | Spring Boot 3.3 · Quarkus 3.32 · Express 4 · Angular 21 | — |
 | Specs | OpenAPI 3.1 · AsyncAPI 3.0 · Apache AVRO | — |
 
 ---

@@ -312,7 +312,7 @@ Todas las APIs se exponen a traves de un unico hostname: `apicast-guidewire-infr
 | `/api/v1/rules/calculate-commission` | POST | drools-engine:8086 | `rules_calculate_commission` |
 | `/api/v1/rules/route-incident` | POST | drools-engine:8086 | `rules_route_incident` |
 
-### Resumen: 28 proxy rules totales
+### Resumen: 26 proxy rules totales
 
 ```mermaid
 graph LR
@@ -471,15 +471,16 @@ graph TD
 APIcast se despliega en la **Fase 8** (despues de toda la infraestructura y antes de las aplicaciones):
 
 ```
-Fase 1: Namespaces
-Fase 2: Operators (Strimzi, Apicurio)
-Fase 3: PostgreSQL
-Fase 4: Kafka
-Fase 5: Apicurio Registry
-Fase 6: Registro de Contratos
-Fase 7: Kafdrop
-Fase 8: 3Scale APIcast  ← aqui
-Fase 9-11: Aplicaciones
+Fase 1:  Namespaces
+Fase 2:  Operadores (Strimzi, Apicurio)
+Fase 3:  PostgreSQL
+Fase 4:  Kafka
+Fase 5:  Apicurio Registry
+Fase 6:  Kafdrop
+Fase 7:  3Scale APIcast  ← aqui
+Fase 8:  Application BuildConfigs
+Fase 9:  Build images
+Fase 10: Deploy applications
 ```
 
 ---

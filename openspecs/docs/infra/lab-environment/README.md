@@ -4,21 +4,22 @@
 
 ## Descripción
 
-Entorno de laboratorio sobre CRC (OpenShift Local). Dos namespaces organizan el stack: `guidewire-infra` para infraestructura (PostgreSQL, Kafka, ActiveMQ, Apicurio, 3Scale, Kafdrop) y `guidewire-apps` para los microservicios de negocio. Todo se despliega con manifiestos Kubernetes nativos via `oc apply`.
+Entorno de laboratorio sobre CRC (OpenShift Local). Dos namespaces organizan el stack: `guidewire-infra` para infraestructura (PostgreSQL, Kafka, Apicurio, 3Scale, Kafdrop) y `guidewire-apps` para los microservicios de negocio. Todo se despliega con manifiestos Kubernetes nativos via `oc apply`.
+
+> **Nota**: ActiveMQ fue eliminado del stack. Kafka es el unico backbone de eventos. Ver [ActiveMQ — ELIMINADO](../../infra/activemq/README.md).
 
 ## Arquitectura
 
 ```mermaid
 graph TD
     HOST["HOST (tu maquina)"]
-    HOST --> CRC["CRC (OpenShift Local)<br/>14GB RAM / 6 CPUs / 60GB"]
+    HOST --> CRC["CRC (OpenShift Local)<br/>20GB RAM / 8 CPUs / 80GB"]
     CRC --> NS_INFRA["Namespace: guidewire-infra"]
     CRC --> NS_APPS["Namespace: guidewire-apps"]
 
     NS_INFRA --> PG["PostgreSQL"]
-    NS_INFRA --> KAFKA["Kafka (Strimzi)"]
+    NS_INFRA --> KAFKA["Kafka (Strimzi v0.50.0, KRaft)"]
     NS_INFRA --> KAFDROP["Kafdrop"]
-    NS_INFRA --> AMQ["ActiveMQ (AMQ Broker)"]
     NS_INFRA --> APICURIO["Apicurio Registry"]
     NS_INFRA --> THREESCALE["3Scale (APIcast)"]
 
@@ -27,6 +28,7 @@ graph TD
     NS_APPS --> BILLING["Billing Service"]
     NS_APPS --> INCIDENTS["Incidents Service"]
     NS_APPS --> CUSTOMERS["Customers Service"]
+    NS_APPS --> SIMULATOR["Guidewire Simulator (Angular)"]
 
     style HOST fill:#f9f,stroke:#333
     style CRC fill:#bbf,stroke:#333
@@ -44,7 +46,7 @@ Solo necesitas instalar:
 
 # 2. Instalar y configurar
 crc setup
-crc start --cpus 6 --memory 14336 --disk-size 60
+crc start --cpus 8 --memory 20480 --disk-size 80
 ```
 
 **Necesitas**: Cuenta gratuita en Red Hat (para descargar CRC y el pull secret).
@@ -94,16 +96,17 @@ Los servicios se exponen como Routes de OpenShift con TLS automatico:
 | Customers Service | https://customers-service-guidewire-apps.apps-crc.testing |
 | Camel Gateway | https://camel-gateway-guidewire-apps.apps-crc.testing |
 | Drools Engine | https://drools-engine-guidewire-apps.apps-crc.testing |
+| Guidewire Simulator | http://guidewire-simulator-guidewire-apps.apps-crc.testing |
 
 ## Recursos
 
 | Recurso | CRC (cluster) | Stack estimado | Libre |
 |---------|---------------|----------------|-------|
-| RAM | 14 GB | ~6 GB | ~8 GB |
-| CPU | 6 cores | ~4 cores | ~2 cores |
-| Disco | 60 GB | ~15 GB | ~45 GB |
+| RAM | 20 GB | ~10 GB | ~10 GB |
+| CPU | 8 cores | ~5 cores | ~3 cores |
+| Disco | 80 GB | ~20 GB | ~60 GB |
 
-> **Nota**: CRC reserva recursos para el propio OpenShift (~3-4GB RAM para etcd, API server, ingress, etc.). El stack Guidewire usa ~6GB adicionales.
+> **Nota**: CRC reserva recursos para el propio OpenShift (~5-6GB RAM para etcd, API server, ingress, etc.). El stack Guidewire completo (5 microservicios + 1 frontend + infra) usa ~10GB adicionales. Con 14GB se puede quedar corto; 20GB es el minimo recomendado.
 
 ## Estructura de Archivos
 
@@ -113,7 +116,6 @@ lab/openshift/
 ├── namespaces.yml                 # guidewire-infra + guidewire-apps
 ├── operators/
 │   ├── strimzi-subscription.yml   # Operador Strimzi (Kafka)
-│   ├── amq-broker-subscription.yml# Operador AMQ Broker (ActiveMQ)
 │   └── apicurio-subscription.yml  # Operador Apicurio Registry
 ├── infra/
 │   ├── postgres/
@@ -123,11 +125,8 @@ lab/openshift/
 │   │   ├── deployment.yml
 │   │   └── service.yml
 │   ├── kafka/
-│   │   ├── kafka-cluster.yml      # Strimzi Kafka CR
+│   │   ├── kafka-cluster.yml      # Strimzi Kafka CR (KRaft + KafkaNodePool)
 │   │   └── kafka-topics.yml       # KafkaTopic CRs
-│   ├── activemq/
-│   │   ├── activemq-broker.yml    # ActiveMQArtemis CR
-│   │   └── activemq-addresses.yml # ActiveMQArtemisAddress CRs
 │   ├── apicurio/
 │   │   └── apicurio-registry.yml  # ApicurioRegistry CR
 │   ├── kafdrop/
@@ -151,8 +150,11 @@ lab/openshift/
     │   └── ...
     ├── customers-service/
     │   └── ...
-    └── drools-engine/
-        └── ...
+    ├── drools-engine/
+    │   └── ...
+    └── guidewire-simulator/
+        ├── buildconfig.yaml
+        └── deployment.yaml
 ```
 
 ## Spec de referencia

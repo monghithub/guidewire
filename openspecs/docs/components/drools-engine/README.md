@@ -1,6 +1,6 @@
 # Drools Rules Engine — Documentacion
 
-> [Volver a OpenSpecs](../../README.md) · [Volver al README principal](../../../../README.md)
+> [Volver a OpenSpecs](../../../README.md) · [Volver al README principal](../../../../README.md)
 
 Motor de reglas de negocio centralizado basado en Apache Drools 8. Evalua hechos (facts) contra conjuntos de reglas DRL declarativas y devuelve resultados enriquecidos. Expone 4 endpoints REST para evaluacion de fraude, validacion de polizas, calculo de comisiones y enrutamiento de siniestros.
 
@@ -497,7 +497,7 @@ Si hay errores de compilacion en las reglas, lanza `IllegalStateException` y la 
 | `spring-boot-starter-data-jpa` | 3.3.5 | Persistencia |
 | `postgresql` | runtime | Driver de BD |
 | `micrometer-registry-prometheus` | — | Metricas |
-| `openapi-generator-maven-plugin` | 7.2.0 | Generacion de interfaces REST |
+| `openapi-generator-maven-plugin` | 7.20.0 | Generacion de interfaces REST |
 
 ### Dockerfile (multi-stage)
 
@@ -539,14 +539,14 @@ ENTRYPOINT ["sh", "-c", "java ${JAVA_OPTS} -jar app.jar"]
 
 ## Tests
 
-66 tests unitarios + 1 test de contexto = **67 tests totales**.
+65 tests unitarios + 1 test de contexto = **66 tests totales**.
 
 | Clase de Test | Tests | Cobertura |
 |---------------|-------|-----------|
 | `FraudDetectionRulesTest` | 5 | Escenarios end-to-end de fraude |
-| `FraudDetectionBoundaryTest` | 11 | Umbrales de monto, tiempo, excepciones FLOOD, nulls |
+| `FraudDetectionBoundaryTest` | 9 | Umbrales de monto, tiempo, excepciones FLOOD, nulls |
 | `PolicyValidationRulesTest` | 7 | Elegibilidad, limites, edad, campos requeridos |
-| `PolicyValidationAdditionalTest` | 15 | Limites por producto, restricciones de edad, warnings |
+| `PolicyValidationAdditionalTest` | 12 | Limites por producto, restricciones de edad, warnings |
 | `CommissionCalculationRulesTest` | 7 | Tasas base, bonificaciones, descuentos, calculo final |
 | `IncidentRoutingRulesTest` | 8 | Equipos, SLA, escalamiento VIP, boost PREMIUM |
 | `RulesServiceTest` | 8 | Mock de KieSession: insert → fire → dispose |
