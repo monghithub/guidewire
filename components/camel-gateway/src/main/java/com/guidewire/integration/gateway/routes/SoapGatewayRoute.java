@@ -42,7 +42,7 @@ public class SoapGatewayRoute extends RouteBuilder {
         // =====================================================================
         // PolicyCenter SOAP Endpoint
         // =====================================================================
-        from("cxf:/ws/policycenter?dataFormat=PAYLOAD")
+        from("cxf:/policycenter?dataFormat=PAYLOAD&wsdlURL=classpath:wsdl/PolicyCenter.wsdl&serviceName={http://guidewire.com/policycenter/ws}PolicyCenterService&portName={http://guidewire.com/policycenter/ws}PolicyCenterPort")
                 .routeId("soap-policycenter")
                 .log("SOAP PolicyCenter request - operation: ${header.operationName}")
                 .to("micrometer:counter:soap_requests?tags=center=PolicyCenter")
@@ -76,7 +76,7 @@ public class SoapGatewayRoute extends RouteBuilder {
         // =====================================================================
         // ClaimCenter SOAP Endpoint
         // =====================================================================
-        from("cxf:/ws/claimcenter?dataFormat=PAYLOAD")
+        from("cxf:/claimcenter?dataFormat=PAYLOAD&wsdlURL=classpath:wsdl/ClaimCenter.wsdl&serviceName={http://guidewire.com/claimcenter/ws}ClaimCenterService&portName={http://guidewire.com/claimcenter/ws}ClaimCenterPort")
                 .routeId("soap-claimcenter")
                 .log("SOAP ClaimCenter request - operation: ${header.operationName}")
                 .to("micrometer:counter:soap_requests?tags=center=ClaimCenter")
@@ -104,7 +104,7 @@ public class SoapGatewayRoute extends RouteBuilder {
         // =====================================================================
         // BillingCenter SOAP Endpoint
         // =====================================================================
-        from("cxf:/ws/billingcenter?dataFormat=PAYLOAD")
+        from("cxf:/billingcenter?dataFormat=PAYLOAD&wsdlURL=classpath:wsdl/BillingCenter.wsdl&serviceName={http://guidewire.com/billingcenter/ws}BillingCenterService&portName={http://guidewire.com/billingcenter/ws}BillingCenterPort")
                 .routeId("soap-billingcenter")
                 .log("SOAP BillingCenter request - operation: ${header.operationName}")
                 .to("micrometer:counter:soap_requests?tags=center=BillingCenter")

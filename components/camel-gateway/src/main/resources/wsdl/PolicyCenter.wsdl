@@ -129,7 +129,7 @@
 
     <service name="PolicyCenterService">
         <port name="PolicyCenterPort" binding="tns:PolicyCenterBinding">
-            <soap:address location="http://localhost:8083/ws/policycenter"/>
+            <soap:address location="/ws/policycenter"/>
         </port>
     </service>
 </definitions>

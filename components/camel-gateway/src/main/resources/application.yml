@@ -43,11 +43,13 @@ guidewire:
       wsdl: classpath:wsdl/PolicyCenter.wsdl
       address: /ws/policycenter
     claimcenter:
+      wsdl: classpath:wsdl/ClaimCenter.wsdl
       address: /ws/claimcenter
     billingcenter:
+      wsdl: classpath:wsdl/BillingCenter.wsdl
       address: /ws/billingcenter
 
-# CXF SOAP configuration
+# CXF SOAP configuration - endpoints exposed under /ws/*
 cxf:
   path: /ws
 

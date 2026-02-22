@@ -1,0 +1,98 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<definitions xmlns="http://schemas.xmlsoap.org/wsdl/"
+             xmlns:soap="http://schemas.xmlsoap.org/wsdl/soap/"
+             xmlns:tns="http://guidewire.com/billingcenter/ws"
+             xmlns:xsd="http://www.w3.org/2001/XMLSchema"
+             name="BillingCenterService"
+             targetNamespace="http://guidewire.com/billingcenter/ws">
+
+    <types>
+        <xsd:schema targetNamespace="http://guidewire.com/billingcenter/ws">
+            <xsd:element name="GetInvoiceRequest">
+                <xsd:complexType>
+                    <xsd:sequence>
+                        <xsd:element name="invoiceId" type="xsd:string"/>
+                    </xsd:sequence>
+                </xsd:complexType>
+            </xsd:element>
+            <xsd:element name="GetInvoiceResponse">
+                <xsd:complexType>
+                    <xsd:sequence>
+                        <xsd:element name="invoiceId" type="xsd:string"/>
+                        <xsd:element name="invoiceNumber" type="xsd:string"/>
+                        <xsd:element name="policyNumber" type="xsd:string"/>
+                        <xsd:element name="customerId" type="xsd:string"/>
+                        <xsd:element name="amount" type="xsd:decimal"/>
+                        <xsd:element name="dueDate" type="xsd:string"/>
+                        <xsd:element name="status" type="xsd:string"/>
+                        <xsd:element name="issueDate" type="xsd:string"/>
+                    </xsd:sequence>
+                </xsd:complexType>
+            </xsd:element>
+            <xsd:element name="CreateInvoiceRequest">
+                <xsd:complexType>
+                    <xsd:sequence>
+                        <xsd:element name="policyNumber" type="xsd:string"/>
+                        <xsd:element name="customerId" type="xsd:string"/>
+                        <xsd:element name="amount" type="xsd:decimal"/>
+                        <xsd:element name="dueDate" type="xsd:string"/>
+                    </xsd:sequence>
+                </xsd:complexType>
+            </xsd:element>
+            <xsd:element name="CreateInvoiceResponse">
+                <xsd:complexType>
+                    <xsd:sequence>
+                        <xsd:element name="invoiceId" type="xsd:string"/>
+                        <xsd:element name="invoiceNumber" type="xsd:string"/>
+                        <xsd:element name="status" type="xsd:string"/>
+                        <xsd:element name="message" type="xsd:string"/>
+                    </xsd:sequence>
+                </xsd:complexType>
+            </xsd:element>
+        </xsd:schema>
+    </types>
+
+    <message name="GetInvoiceInput">
+        <part name="parameters" element="tns:GetInvoiceRequest"/>
+    </message>
+    <message name="GetInvoiceOutput">
+        <part name="parameters" element="tns:GetInvoiceResponse"/>
+    </message>
+    <message name="CreateInvoiceInput">
+        <part name="parameters" element="tns:CreateInvoiceRequest"/>
+    </message>
+    <message name="CreateInvoiceOutput">
+        <part name="parameters" element="tns:CreateInvoiceResponse"/>
+    </message>
+
+    <portType name="BillingCenterPortType">
+        <operation name="getInvoice">
+            <input message="tns:GetInvoiceInput"/>
+            <output message="tns:GetInvoiceOutput"/>
+        </operation>
+        <operation name="createInvoice">
+            <input message="tns:CreateInvoiceInput"/>
+            <output message="tns:CreateInvoiceOutput"/>
+        </operation>
+    </portType>
+
+    <binding name="BillingCenterBinding" type="tns:BillingCenterPortType">
+        <soap:binding style="document" transport="http://schemas.xmlsoap.org/soap/http"/>
+        <operation name="getInvoice">
+            <soap:operation soapAction="http://guidewire.com/billingcenter/ws/getInvoice"/>
+            <input><soap:body use="literal"/></input>
+            <output><soap:body use="literal"/></output>
+        </operation>
+        <operation name="createInvoice">
+            <soap:operation soapAction="http://guidewire.com/billingcenter/ws/createInvoice"/>
+            <input><soap:body use="literal"/></input>
+            <output><soap:body use="literal"/></output>
+        </operation>
+    </binding>
+
+    <service name="BillingCenterService">
+        <port name="BillingCenterPort" binding="tns:BillingCenterBinding">
+            <soap:address location="/ws/billingcenter"/>
+        </port>
+    </service>
+</definitions>

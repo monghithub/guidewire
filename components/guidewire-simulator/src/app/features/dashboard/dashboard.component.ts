@@ -236,6 +236,7 @@ export class DashboardComponent implements OnInit {
     { name: 'Apicurio Registry', description: 'API & schema registry', url: 'https://apicurio-guidewire-infra.apps-crc.testing', icon: 'api', color: '#1a237e', credentials: { user: 'developer', pass: 'developer' } },
     { name: 'Kafdrop', description: 'Kafka topics & messages browser', url: 'http://kafdrop-guidewire-infra.apps-crc.testing', icon: 'stream', color: '#00695c', credentials: null },
     { name: 'Camel Gateway — Swagger', description: 'REST API documentation', url: 'http://camel-gateway-guidewire-apps.apps-crc.testing/swagger-ui.html', icon: 'route', color: '#85ea2d', credentials: null },
+    { name: 'Camel Gateway — SOAP/WSDL', description: 'CXF Service List (PolicyCenter, ClaimCenter, BillingCenter)', url: 'http://camel-gateway-guidewire-apps.apps-crc.testing/ws/', icon: 'integration_instructions', color: '#00838f', credentials: null },
     { name: 'Billing Service — Swagger', description: 'REST API documentation', url: 'http://billing-service-guidewire-apps.apps-crc.testing/swagger-ui.html', icon: 'receipt_long', color: '#ff6f00', credentials: null },
     { name: 'Incidents Service — Swagger', description: 'REST API documentation', url: 'http://incidents-service-guidewire-apps.apps-crc.testing/q/swagger-ui', icon: 'report_problem', color: '#b71c1c', credentials: null },
     { name: 'Customers Service — Health', description: 'Express health endpoint', url: 'http://customers-service-guidewire-apps.apps-crc.testing/health', icon: 'people', color: '#2e7d32', credentials: null },

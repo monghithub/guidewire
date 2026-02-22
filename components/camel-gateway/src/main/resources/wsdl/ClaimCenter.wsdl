@@ -1,0 +1,102 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<definitions xmlns="http://schemas.xmlsoap.org/wsdl/"
+             xmlns:soap="http://schemas.xmlsoap.org/wsdl/soap/"
+             xmlns:tns="http://guidewire.com/claimcenter/ws"
+             xmlns:xsd="http://www.w3.org/2001/XMLSchema"
+             name="ClaimCenterService"
+             targetNamespace="http://guidewire.com/claimcenter/ws">
+
+    <types>
+        <xsd:schema targetNamespace="http://guidewire.com/claimcenter/ws">
+            <xsd:element name="GetClaimRequest">
+                <xsd:complexType>
+                    <xsd:sequence>
+                        <xsd:element name="claimId" type="xsd:string"/>
+                    </xsd:sequence>
+                </xsd:complexType>
+            </xsd:element>
+            <xsd:element name="GetClaimResponse">
+                <xsd:complexType>
+                    <xsd:sequence>
+                        <xsd:element name="claimId" type="xsd:string"/>
+                        <xsd:element name="claimNumber" type="xsd:string"/>
+                        <xsd:element name="policyNumber" type="xsd:string"/>
+                        <xsd:element name="claimType" type="xsd:string"/>
+                        <xsd:element name="status" type="xsd:string"/>
+                        <xsd:element name="lossDate" type="xsd:string"/>
+                        <xsd:element name="reportedDate" type="xsd:string"/>
+                        <xsd:element name="description" type="xsd:string"/>
+                        <xsd:element name="claimAmount" type="xsd:decimal"/>
+                        <xsd:element name="customerId" type="xsd:string"/>
+                    </xsd:sequence>
+                </xsd:complexType>
+            </xsd:element>
+            <xsd:element name="CreateClaimRequest">
+                <xsd:complexType>
+                    <xsd:sequence>
+                        <xsd:element name="policyNumber" type="xsd:string"/>
+                        <xsd:element name="claimType" type="xsd:string"/>
+                        <xsd:element name="lossDate" type="xsd:string"/>
+                        <xsd:element name="description" type="xsd:string"/>
+                        <xsd:element name="claimAmount" type="xsd:decimal"/>
+                        <xsd:element name="customerId" type="xsd:string"/>
+                    </xsd:sequence>
+                </xsd:complexType>
+            </xsd:element>
+            <xsd:element name="CreateClaimResponse">
+                <xsd:complexType>
+                    <xsd:sequence>
+                        <xsd:element name="claimId" type="xsd:string"/>
+                        <xsd:element name="claimNumber" type="xsd:string"/>
+                        <xsd:element name="status" type="xsd:string"/>
+                        <xsd:element name="message" type="xsd:string"/>
+                    </xsd:sequence>
+                </xsd:complexType>
+            </xsd:element>
+        </xsd:schema>
+    </types>
+
+    <message name="GetClaimInput">
+        <part name="parameters" element="tns:GetClaimRequest"/>
+    </message>
+    <message name="GetClaimOutput">
+        <part name="parameters" element="tns:GetClaimResponse"/>
+    </message>
+    <message name="CreateClaimInput">
+        <part name="parameters" element="tns:CreateClaimRequest"/>
+    </message>
+    <message name="CreateClaimOutput">
+        <part name="parameters" element="tns:CreateClaimResponse"/>
+    </message>
+
+    <portType name="ClaimCenterPortType">
+        <operation name="getClaim">
+            <input message="tns:GetClaimInput"/>
+            <output message="tns:GetClaimOutput"/>
+        </operation>
+        <operation name="createClaim">
+            <input message="tns:CreateClaimInput"/>
+            <output message="tns:CreateClaimOutput"/>
+        </operation>
+    </portType>
+
+    <binding name="ClaimCenterBinding" type="tns:ClaimCenterPortType">
+        <soap:binding style="document" transport="http://schemas.xmlsoap.org/soap/http"/>
+        <operation name="getClaim">
+            <soap:operation soapAction="http://guidewire.com/claimcenter/ws/getClaim"/>
+            <input><soap:body use="literal"/></input>
+            <output><soap:body use="literal"/></output>
+        </operation>
+        <operation name="createClaim">
+            <soap:operation soapAction="http://guidewire.com/claimcenter/ws/createClaim"/>
+            <input><soap:body use="literal"/></input>
+            <output><soap:body use="literal"/></output>
+        </operation>
+    </binding>
+
+    <service name="ClaimCenterService">
+        <port name="ClaimCenterPort" binding="tns:ClaimCenterBinding">
+            <soap:address location="/ws/claimcenter"/>
+        </port>
+    </service>
+</definitions>
