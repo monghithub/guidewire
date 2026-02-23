@@ -28,7 +28,7 @@ El sistema se compone de **5 microservicios**, **1 frontend** y **5 componentes 
 |-----------|----------------|
 | **[Apache Kafka](openspecs/docs/infra/kafka/README.md)** | Bus de eventos central. 9 topics organizados por dominio con serializacion AVRO. Modo KRaft (sin ZooKeeper), gestionado por Strimzi. |
 | **[PostgreSQL](openspecs/docs/infra/postgres/README.md)** | Base de datos relacional. 5 bases logicas aisladas (una por servicio) con el patron database-per-service. |
-| **[Apicurio Registry](openspecs/docs/infra/apicurio/README.md)** | Registro de schemas. Gobierna la compatibilidad de los schemas AVRO, OpenAPI y AsyncAPI entre productores y consumidores. |
+| **[Apicurio Registry](openspecs/docs/infra/apicurio/README.md)** | Registro de schemas y studio de diseño de APIs. Gobierna la compatibilidad de los schemas AVRO, OpenAPI y AsyncAPI entre productores y consumidores. Incluye Apicurio Studio integrado para edición visual de artefactos en modo Draft. |
 | **[3Scale APIcast](openspecs/docs/infra/threescale/README.md)** | API Gateway empresarial. Autenticacion por API Key, rate limiting (100-300 req/min) y enrutamiento a backends. |
 | **[Kafdrop](openspecs/docs/infra/kafka/README.md)** | UI web para inspeccion de topics, consumer groups y mensajes de Kafka. |
 
@@ -321,6 +321,7 @@ CRC se ejecuta en una VM con red virtual. Para acceder desde otras maquinas de l
    192.168.1.135  oauth-openshift.apps-crc.testing
    192.168.1.135  kafdrop-guidewire-infra.apps-crc.testing
    192.168.1.135  apicurio-guidewire-infra.apps-crc.testing
+   192.168.1.135  apicurio-api-guidewire-infra.apps-crc.testing
    192.168.1.135  apicast-guidewire-infra.apps-crc.testing
    192.168.1.135  billing-service-guidewire-apps.apps-crc.testing
    192.168.1.135  camel-gateway-guidewire-apps.apps-crc.testing
@@ -344,7 +345,8 @@ CRC se ejecuta en una VM con red virtual. Para acceder desde otras maquinas de l
 | Componente | URL | Credenciales |
 |-----------|-----|--------------|
 | Kafdrop (Kafka UI) | http://kafdrop-guidewire-infra.apps-crc.testing | Sin auth |
-| Apicurio (Schema Registry) | http://apicurio-guidewire-infra.apps-crc.testing | Sin auth |
+| Apicurio (Registry + Studio) | http://apicurio-guidewire-infra.apps-crc.testing | Sin auth |
+| Apicurio API (REST backend) | http://apicurio-api-guidewire-infra.apps-crc.testing/apis/registry/v3 | Sin auth |
 | Guidewire Simulator | http://guidewire-simulator-guidewire-apps.apps-crc.testing | Sin auth |
 
 ### APIs de microservicios
@@ -391,7 +393,7 @@ Todas las APIs estan expuestas a traves del gateway en `http://apicast-guidewire
 | Integración | Apache Camel | 4.18.0 |
 | Event Streaming | Apache Kafka (KRaft) | 4.0 (Strimzi v0.50.0) |
 | Reglas de Negocio | Drools / KIE | 8.44.0.Final |
-| Schema Registry | Apicurio Service Registry | 2.5.11.Final |
+| Schema Registry & Design Studio | Apicurio Registry + Studio | 3.1.7 |
 | Base de Datos | PostgreSQL | 16 |
 | Runtime Java | Eclipse Temurin | 21 |
 | Runtime Node.js | Node.js LTS | 20 |

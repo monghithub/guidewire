@@ -1,0 +1,37 @@
+---
+apiVersion: route.openshift.io/v1
+kind: Route
+metadata:
+  name: apicurio
+  namespace: guidewire-infra
+  labels:
+    app: apicurio-registry-ui
+    app.kubernetes.io/part-of: guidewire-poc
+spec:
+  host: apicurio-guidewire-infra.apps-crc.testing
+  to:
+    kind: Service
+    name: apicurio-registry-ui
+    weight: 100
+  port:
+    targetPort: http
+  wildcardPolicy: None
+---
+# API route — direct access to Registry backend API (for scripts, Serde clients, etc.)
+apiVersion: route.openshift.io/v1
+kind: Route
+metadata:
+  name: apicurio-api
+  namespace: guidewire-infra
+  labels:
+    app: apicurio-registry
+    app.kubernetes.io/part-of: guidewire-poc
+spec:
+  host: apicurio-api-guidewire-infra.apps-crc.testing
+  to:
+    kind: Service
+    name: apicurio-registry
+    weight: 100
+  port:
+    targetPort: http
+  wildcardPolicy: None

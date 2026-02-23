@@ -7,7 +7,7 @@ metadata:
   name: apicurio-registry
   type: infra
   issue: 30
-  labels: [infra, apicurio, registry]
+  labels: [infra, apicurio, registry, studio]
   status: pending
   priority: critical
   depends_on:
@@ -16,13 +16,15 @@ metadata:
 description: >
   Registro centralizado de contratos y esquemas. Almacena OpenAPI, AsyncAPI
   y AVRO schemas. Actúa como fuente de verdad para la validación de contratos
-  en tiempo de compilación y runtime.
+  en tiempo de compilación y runtime. Desde v3.x incluye Apicurio Studio
+  integrado para diseño visual de APIs mediante artefactos en estado Draft.
 
 technology:
   product: Apicurio Registry
   enterprise_name: Red Hat Service Registry
-  version: "2.5.x"
-  image: apicurio/apicurio-registry-sql:2.5.11.Final
+  version: "3.1.x"
+  image_backend: apicurio/apicurio-registry:3.1.7
+  image_ui: apicurio/apicurio-registry-ui:3.1.7
   storage: PostgreSQL
 
 configuration:
@@ -32,6 +34,24 @@ configuration:
     database: apicurio
     username: apicurio
     password: apicurio123
+    env_vars:
+      - APICURIO_STORAGE_KIND=sql
+      - APICURIO_STORAGE_SQL_KIND=postgresql
+      - APICURIO_DATASOURCE_URL=jdbc:postgresql://...
+      - APICURIO_DATASOURCE_USERNAME=apicurio
+      - APICURIO_DATASOURCE_PASSWORD=apicurio123
+
+  studio:
+    enabled: true
+    description: >
+      Apicurio Studio integrado como feature opt-in. Permite crear artefactos
+      en estado DRAFT que son editables desde la UI. Al finalizar (Finalize),
+      pasan a estado ENABLED e inmutables.
+    env_vars:
+      - APICURIO_REST_MUTABILITY_ARTIFACT__VERSION__CONTENT_ENABLED=true
+      - APICURIO_CORS_ALLOWED_ORIGINS=*
+    ui_env_vars:
+      - REGISTRY_API_URL=http://apicurio-registry:8080/apis/registry/v3
 
   artifact_groups:
     - group_id: guidewire.policycenter
@@ -88,24 +108,42 @@ configuration:
 
 networking:
   ports:
-    - host: 8081
-      container: 8080
-      description: Apicurio UI y API REST
+    - container: 8080
+      description: Apicurio backend API
+    - container: 8080
+      component: ui
+      description: Apicurio UI (separate deployment)
 
   api_endpoints:
+    - path: /apis/registry/v3
+      description: API REST v3 del registry (recomendada)
     - path: /apis/registry/v2
-      description: API REST v2 del registry
-    - path: /ui
-      description: Interfaz web de administración
+      description: API REST v2 del registry (deprecated, compatibilidad)
+    - path: /health/ready
+      description: Readiness probe
+    - path: /health/live
+      description: Liveness probe
+
+  routes:
+    - host: apicurio-guidewire-infra.apps-crc.testing
+      service: apicurio-registry-ui
+      description: UI web del registry y studio
+    - host: apicurio-api-guidewire-infra.apps-crc.testing
+      service: apicurio-registry
+      description: API REST del backend
 
 runtime:
   platform: Red Hat OpenShift Local (CRC)
-  orchestration: Kubernetes / OpenShift (Apicurio Operator)
+  orchestration: Kubernetes / OpenShift (direct Deployment, no operator)
   namespace: guidewire-infra
 
 resources:
-  memory: 512MB
-  cpu: 0.5
+  backend:
+    memory: 512MB
+    cpu: 0.3
+  ui:
+    memory: 128MB
+    cpu: 0.1
 
 healthcheck:
   endpoint: /health/ready
@@ -119,11 +157,21 @@ convention: >
   En CI/CD, las specs se publican automáticamente al detectar cambios en
   contracts/openapi/ y contracts/asyncapi/ (ver issue #88).
 
+migration_notes: >
+  La base de datos de Apicurio 2.x NO es compatible con 3.x. Al desplegar
+  3.x, la DB se recrea automáticamente. Los contratos se re-registran con
+  register-contracts.sh (usa API v2 que sigue funcionando en 3.x).
+  Los Serde libraries 2.x de los microservicios son compatibles con
+  Registry 3.x a través de la API v2 deprecated.
+
 acceptance_criteria:
-  - Apicurio arranca y se conecta a PostgreSQL
-  - La UI es accesible en http://localhost:8081
+  - Apicurio backend arranca y se conecta a PostgreSQL
+  - La UI es accesible en https://apicurio-guidewire-infra.apps-crc.testing
+  - La API es accesible en https://apicurio-api-guidewire-infra.apps-crc.testing
   - Se pueden registrar schemas AVRO en el grupo "guidewire"
   - Se pueden registrar specs OpenAPI en "guidewire-openapi"
   - Se pueden registrar specs AsyncAPI en "guidewire-asyncapi"
   - La regla FULL compatibility rechaza schemas incompatibles
-  - Los clientes Kafka pueden resolver schemas por ID desde el registry
+  - Los clientes Kafka pueden resolver schemas por ID desde el registry (via API v2)
+  - Se pueden crear artefactos en estado Draft desde la UI (Studio feature)
+  - Los Drafts se pueden editar y finalizar desde la UI

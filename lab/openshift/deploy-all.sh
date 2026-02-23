@@ -101,10 +101,15 @@ deploy_infra() {
   info " Phase 5: Apicurio Registry"
   info "============================================================"
   oc apply -f infra/apicurio/apicurio-registry.yml
+  oc apply -f infra/apicurio/route.yml
 
-  warn "Waiting for Apicurio Registry to be ready..."
+  warn "Waiting for Apicurio Registry backend to be ready..."
   oc wait --for=condition=Available deploy/apicurio-registry -n guidewire-infra --timeout=120s 2>/dev/null || \
-    warn "Apicurio Registry may still be starting, continuing..."
+    warn "Apicurio Registry backend may still be starting, continuing..."
+
+  warn "Waiting for Apicurio Registry UI to be ready..."
+  oc wait --for=condition=Available deploy/apicurio-registry-ui -n guidewire-infra --timeout=120s 2>/dev/null || \
+    warn "Apicurio Registry UI may still be starting, continuing..."
 
   info "============================================================"
   info " Phase 6: Register API Contracts in Apicurio"

@@ -5,6 +5,10 @@
 # Registers all OpenAPI, AsyncAPI, and Avro contracts from the contracts/
 # directory into the Apicurio Registry using the REST API v2.
 #
+# NOTE: This script uses the v2 API (/apis/registry/v2) which is still
+# supported in Apicurio Registry 3.x as a deprecated compatibility layer.
+# A future migration to the v3 API will require JSON envelope requests.
+#
 # Usage:
 #   ./register-contracts.sh                           # Uses internal cluster URL
 #   ./register-contracts.sh http://my-registry:8080   # Custom base URL

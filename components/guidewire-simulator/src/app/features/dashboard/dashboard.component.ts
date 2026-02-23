@@ -233,7 +233,7 @@ export class DashboardComponent implements OnInit {
 
   readonly infraLinks = [
     { name: 'OpenShift Console', description: 'Cluster management & monitoring', url: 'https://console-openshift-console.apps-crc.testing', icon: 'cloud', color: '#e00', credentials: { user: 'kubeadmin', pass: 'xtLsK-LLIzY-6UVEd-UESLR' } },
-    { name: 'Apicurio Registry', description: 'API & schema registry', url: 'https://apicurio-guidewire-infra.apps-crc.testing', icon: 'api', color: '#1a237e', credentials: { user: 'developer', pass: 'developer' } },
+    { name: 'Apicurio Registry', description: 'API registry & design studio', url: 'https://apicurio-guidewire-infra.apps-crc.testing', icon: 'api', color: '#1a237e', credentials: { user: 'developer', pass: 'developer' } },
     { name: 'Kafdrop', description: 'Kafka topics & messages browser', url: 'http://kafdrop-guidewire-infra.apps-crc.testing', icon: 'stream', color: '#00695c', credentials: null },
     { name: 'Camel Gateway — Swagger', description: 'REST API documentation', url: 'http://camel-gateway-guidewire-apps.apps-crc.testing/swagger-ui.html', icon: 'route', color: '#85ea2d', credentials: null },
     { name: 'Camel Gateway — SOAP/WSDL', description: 'CXF Service List (PolicyCenter, ClaimCenter, BillingCenter)', url: 'http://camel-gateway-guidewire-apps.apps-crc.testing/ws/', icon: 'integration_instructions', color: '#00838f', credentials: null },
