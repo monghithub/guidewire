@@ -4,7 +4,7 @@ html {
   height: 100%;
   @include mat.theme((
     color: (
-      primary: mat.$indigo-palette,
+      primary: mat.$violet-palette,
       tertiary: mat.$orange-palette,
     ),
     typography: Roboto,
