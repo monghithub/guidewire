@@ -19,7 +19,7 @@
 
     <properties>
         <java.version>21</java.version>
-        <drools.version>8.44.0.Final</drools.version>
+        <drools.version>10.1.0</drools.version>
     </properties>
 
     <dependencies>
